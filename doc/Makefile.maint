@@ -6,8 +6,6 @@
 # for i in *.1; do echo "$i: "|tr -d '\012'; \
 #   grep -A1 SH.NAME $i|sed '/SH NAME/d;s/^[^ ][^ ]* .- //'; done
 
-include Makefile.summ
-
 # Depend on configure.in to get version number changes.
 $(dyn_MANS): $(top_srcdir)/configure.in
 
