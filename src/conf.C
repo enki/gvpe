@@ -75,8 +75,7 @@ void configuration::init ()
   default_node.udp_port    = DEFAULT_UDPPORT;
   default_node.connectmode = conf_node::C_ALWAYS;
   default_node.compress    = true;
-  default_node.can_send    = PROT_UDPv4;
-  default_node.can_recv    = PROT_IPv4;
+  default_node.protocols   = PROT_UDPv4;
 }
 
 void configuration::cleanup()
@@ -293,21 +292,13 @@ retry:
               parse_bool (node->compress, "compress", true, false);
             }
           // all these bool options really really cost a lot of executable size!
-          else if (!strcmp (var, "can-send-udp"))
+          else if (!strcmp (var, "enable-udp"))
             {
-              u8 v; parse_bool (v, "can-send-udp", PROT_UDPv4, 0); node->can_send = (node->can_send & ~PROT_UDPv4) | v;
+              u8 v; parse_bool (v, "enable-udp" , PROT_UDPv4, 0); node->protocols = (node->protocols & ~PROT_UDPv4) | v;
             }
-          else if (!strcmp (var, "can-recv-udp"))
+          else if (!strcmp (var, "enable-rawip"))
             {
-              u8 v; parse_bool (v, "can-recv-udp", PROT_UDPv4, 0); node->can_recv = (node->can_recv & ~PROT_UDPv4) | v;
-            }
-          else if (!strcmp (var, "can-send-rawip"))
-            {
-              u8 v; parse_bool (v, "can-send-rawip", PROT_IPv4, 0); node->can_send = (node->can_send & ~PROT_IPv4) | v;
-            }
-          else if (!strcmp (var, "can-recv-rawip"))
-            {
-              u8 v; parse_bool (v, "can-recv-rawip", PROT_IPv4, 0); node->can_recv = (node->can_recv & ~PROT_IPv4) | v;
+              u8 v; parse_bool (v, "enable-rawip", PROT_IPv4, 0); node->protocols = (node->protocols & ~PROT_IPv4 ) | v;
             }
 
           // unknown or misplaced

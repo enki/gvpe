@@ -41,6 +41,7 @@
 enum {
   PROT_UDPv4 = 1, // udp over ipv4
   PROT_IPv4  = 2, // generic ip protocol
+  PROT_TCPv4 = 4, // tcp over ipv4 (NYI)
 };
 
 struct conf_node {
@@ -51,7 +52,7 @@ struct conf_node {
 
   char *hostname; // hostname, if known, or NULL.
 
-  u8 can_send, can_recv;
+  u8 protocols;   // protocols this host can send & receive
   u16 udp_port;   // the port to bind to
 
   enum connectmode { C_ONDEMAND, C_NEVER, C_ALWAYS, C_DISABLED } connectmode;
@@ -82,10 +83,10 @@ struct configuration {
   double keepalive; // keepalive probes interval
   char *ifname;     // the interface name (tap0 ...)
   bool ifpersist;   // should the interface be persistent
-  u8 ip_proto;    // the ip protocol to use
   char *prikeyfile;
-  loglevel llevel;
   RSA *rsa_key;     // our private rsa key
+  loglevel llevel;
+  u8 ip_proto;    // the ip protocol to use
 
   char *script_if_up;
   char *script_node_up;

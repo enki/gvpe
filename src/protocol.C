@@ -583,17 +583,18 @@ bool config_packet::chk_config () const
 struct auth_req_packet : config_packet
 {
   char magic[8];
-  u8 initiate, can_recv; // false if this is just an automatic reply
+  u8 initiate; // false if this is just an automatic reply
+  u8 protocols; // supported protocols (will get patches on forward)
   u8 pad2, pad3;
   rsaid id;
   rsaencrdata encr;
 
-  auth_req_packet (int dst, bool initiate_, u8 can_recv_)
+  auth_req_packet (int dst, bool initiate_, u8 protocols_)
   {
     config_packet::setup (PT_AUTH_REQ, dst);
     strncpy (magic, MAGIC, 8);
     initiate = !!initiate_;
-    can_recv = can_recv_;
+    protocols = protocols_;
 
     len = sizeof (*this) - sizeof (net_packet);
   }
@@ -616,12 +617,13 @@ struct auth_res_packet : config_packet
 
 struct connect_req_packet : vpn_packet
 {
-  u8 id;
-  u8 pad1, pad2, pad3;
+  u8 id, protocols;
+  u8 pad1, pad2;
 
-  connect_req_packet (int dst, int id_)
+  connect_req_packet (int dst, int id_, u8 protocols_)
+  : id(id_)
+  , protocols(protocols_)
   {
-    id = id_;
     set_hdr (PT_CONNECT_REQ, dst);
     len = sizeof (*this) - sizeof (net_packet);
   }
@@ -629,15 +631,15 @@ struct connect_req_packet : vpn_packet
 
 struct connect_info_packet : vpn_packet
 {
-  u8 id, can_recv;
+  u8 id, protocols;
   u8 pad1, pad2;
   sockinfo si;
 
-  connect_info_packet (int dst, int id_, sockinfo &si_, u8 can_recv_)
+  connect_info_packet (int dst, int id_, const sockinfo &si_, u8 protocols_)
+  : id(id_)
+  , protocols(protocols_)
+  , si(si_)
   {
-    id = id_;
-    can_recv = can_recv_;
-    si = si_;
     set_hdr (PT_CONNECT_INFO, dst);
 
     len = sizeof (*this) - sizeof (net_packet);
@@ -680,10 +682,9 @@ connection::send_reset (const sockinfo &si)
 void
 connection::send_auth_request (const sockinfo &si, bool initiate)
 {
-  auth_req_packet *pkt = new auth_req_packet (conf->id, initiate, THISNODE->can_recv);
+  auth_req_packet *pkt = new auth_req_packet (conf->id, initiate, THISNODE->protocols);
 
-  // the next line is very conservative
-  prot_send = best_protocol (THISNODE->can_send & THISNODE->can_recv & conf->can_recv);
+  prot_send = best_protocol (THISNODE->protocols & conf->protocols);
 
   rsachallenge chg;
 
@@ -717,6 +718,20 @@ connection::send_auth_response (const sockinfo &si, const rsaid &id, const rsach
   send_vpn_packet (pkt, si, IPTOS_RELIABILITY); // rsa is very very costly
 
   delete pkt;
+}
+
+void
+connection::send_connect_info (int rid, const sockinfo &rsi, u8 rprotocols)
+{
+  slog (L_TRACE, ">>%d PT_CONNECT_INFO(%d,%s)\n",
+                 conf->id, rid, (const char *)rsi);
+
+  connect_info_packet *r = new connect_info_packet (conf->id, rid, rsi, rprotocols);
+
+  r->hmac_set (octx);
+  send_vpn_packet (r, si);
+
+  delete r;
 }
 
 void
@@ -911,7 +926,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                   octx   = new crypto_ctx (k, 1);
                   oseqno = ntohl (*(u32 *)&k[CHG_SEQNO]) & 0x7fffffff;
 
-                  conf->can_recv = p->can_recv;
+                  conf->protocols = p->protocols;
                   send_auth_response (rsi, p->id, k);
 
                   break;
@@ -1054,7 +1069,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
           connect_req_packet *p = (connect_req_packet *) pkt;
 
           assert (p->id > 0 && p->id <= vpn->conns.size ()); // hmac-auth does not mean we accept anything
-
+          conf->protocols = p->protocols;
           connection *c = vpn->conns[p->id - 1];
 
           slog (L_TRACE, "<<%d PT_CONNECT_REQ(%d) [%d]\n",
@@ -1064,29 +1079,8 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
             {
               // send connect_info packets to both sides, in case one is
               // behind a nat firewall (or both ;)
-              {
-                slog (L_TRACE, ">>%d PT_CONNECT_INFO(%d,%s)\n",
-                               c->conf->id, conf->id, (const char *)si);
-
-                connect_info_packet *r = new connect_info_packet (c->conf->id, conf->id, si, conf->can_recv);
-
-                r->hmac_set (c->octx);
-                send_vpn_packet (r, c->si);
-
-                delete r;
-              }
-
-              {
-                slog (L_TRACE, ">>%d PT_CONNECT_INFO(%d,%s)\n",
-                               conf->id, c->conf->id, (const char *)c->si);
-
-                connect_info_packet *r = new connect_info_packet (conf->id, c->conf->id, c->si, c->conf->can_recv);
-
-                r->hmac_set (octx);
-                send_vpn_packet (r, si);
-
-                delete r;
-              }
+              c->send_connect_info (conf->id, si, conf->protocols);
+              send_connect_info (c->conf->id, c->si, c->conf->protocols);
             }
         }
 
@@ -1098,13 +1092,12 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
           connect_info_packet *p = (connect_info_packet *) pkt;
 
           assert (p->id > 0 && p->id <= vpn->conns.size ()); // hmac-auth does not mean we accept anything
-
+          conf->protocols = p->protocols;
           connection *c = vpn->conns[p->id - 1];
 
           slog (L_TRACE, "<<%d PT_CONNECT_INFO(%d,%s) (%d)",
                          conf->id, p->id, (const char *)p->si, !c->ictx && !c->octx);
 
-          c->conf->can_recv = p->can_recv;
           c->send_auth_request (p->si, true);
         }
 
@@ -1138,9 +1131,9 @@ void connection::keepalive_cb (tstamp &ts)
 
 void connection::connect_request (int id)
 {
-  connect_req_packet *p = new connect_req_packet (conf->id, id);
+  connect_req_packet *p = new connect_req_packet (conf->id, id, conf->protocols);
 
-  slog (L_TRACE, ">>%d PT_CONNECT_REQ(%d)", id, conf->id);
+  slog (L_TRACE, ">>%d PT_CONNECT_REQ(%d)", conf->id, id);
   p->hmac_set (octx);
   send_vpn_packet (p, si);
 
@@ -1237,19 +1230,13 @@ const char *vpn::script_if_up (int)
 int
 vpn::setup ()
 {
-  u8 prots = 0;
-
-  for (configuration::node_vector::iterator i = conf.nodes.begin ();
-       i != conf.nodes.end (); ++i)
-    prots |= (*i)->can_send | (*i)->can_recv;
-
   sockinfo si;
 
   si.set (THISNODE);
 
   udpv4_fd = -1;
 
-  if (prots & PROT_UDPv4)
+  if (THISNODE->protocols & PROT_UDPv4)
     {
       udpv4_fd = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
@@ -1282,7 +1269,7 @@ vpn::setup ()
     }
 
   ipv4_fd = -1;
-  if (prots & PROT_IPv4)
+  if (THISNODE->protocols & PROT_IPv4)
     {
       ipv4_fd = socket (PF_INET, SOCK_RAW, ::conf.ip_proto);
 
@@ -1347,22 +1334,28 @@ vpn::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
   slog (L_NOISE, _("<<?/%s received possible vpn packet type %d from %d to %d, length %d"),
         (const char *)rsi, pkt->typ (), pkt->src (), pkt->dst (), pkt->len);
 
-  if (dst > conns.size () || pkt->typ () >= vpn_packet::PT_MAX)
-    slog (L_WARN, _("<<? received CORRUPTED packet type %d from %d to %d"),
-          pkt->typ (), pkt->src (), pkt->dst ());
-  else if (dst == 0 && !THISNODE->routerprio)
-    slog (L_WARN, _("<<%d received broadcast, but we are no router"), dst);
-  else if (dst != 0 && dst != THISNODE->id)
-    slog (L_WARN,
-         _("received frame for node %d ('%s') from %s, but this is node %d ('%s')"),
-         dst, conns[dst - 1]->conf->nodename,
-         (const char *)rsi,
-         THISNODE->id, THISNODE->nodename);
-  else if (src == 0 || src > conns.size ())
-    slog (L_WARN, _("received frame from unknown node %d (%s)"),
-          src, (const char *)rsi);
+  if (src == 0 || src > conns.size ()
+      || dst > conns.size ()
+      || pkt->typ () >= vpn_packet::PT_MAX)
+    slog (L_WARN, _("(%s): received corrupted packet type %d (src %d, dst %d)"),
+          (const char *)rsi, pkt->typ (), pkt->src (), pkt->dst ());
   else
-    conns[src - 1]->recv_vpn_packet (pkt, rsi);
+    {
+      connection *c = conns[src - 1];
+
+      if (dst == 0 && !THISNODE->routerprio)
+        slog (L_WARN, _("%s(%s): received broadcast, but we are no router"),
+              c->conf->nodename, (const char *)rsi);
+      else if (dst != 0 && dst != THISNODE->id)
+        // FORWARDING NEEDED ;)
+        slog (L_WARN,
+              _("received frame for node %d ('%s') from %s, but this is node %d ('%s')"),
+              dst, conns[dst - 1]->conf->nodename,
+              (const char *)rsi,
+              THISNODE->id, THISNODE->nodename);
+      else
+        c->recv_vpn_packet (pkt, rsi);
+    }
 }
 
 void
