@@ -204,10 +204,10 @@ struct net_rateinfo {
 // but low on resources.
 struct net_rate_limiter : list<net_rateinfo>
 {
-# define NRL_ALPHA  1. - 1. / 600.     // allow bursts
-# define NRL_CUTOFF 10.                // one event every CUTOFF seconds
-# define NRL_EXPIRE NRL_CUTOFF * 30.   // expire entries after this time
-# define NRL_MAXDIF NRL_CUTOFF * (1. / (1. - NRL_ALPHA)) // maximum diff /count value
+# define NRL_ALPHA  (1. - 1. / 600.)     // allow bursts
+# define NRL_CUTOFF 10.                  // one event every CUTOFF seconds
+# define NRL_EXPIRE (NRL_CUTOFF * 30.)   // expire entries after this time
+# define NRL_MAXDIF (NRL_CUTOFF * (1. / (1. - NRL_ALPHA))) // maximum diff /count value
 
   bool can (const sockinfo &si) { return can((u32)si.host); }
   bool can (u32 host);
