@@ -332,8 +332,8 @@ vpndata_packet::unpack (connection *conn, u32 &seqno)
   
   seqno = *(u32 *)(d + RAND_SIZE);
 
-  id2mac (dst (), p->dst);
-  id2mac (src (), p->src);
+  id2mac (dst () ? dst() : THISNODE->id, p->dst);
+  id2mac (src (),                        p->src);
 
 #if ENABLE_COMPRESSION
   if (type == PT_DATA_COMPRESSED)
