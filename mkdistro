@@ -44,6 +44,9 @@ case "$1" in
       HOST=vm
       CONFIGURE="$CONFIGURE --enable-icmp"
    ;;
+   * )
+      exit 1
+   ;;
 esac
 
 make distdir="$TARGET/vpe" distdir

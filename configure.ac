@@ -331,13 +331,13 @@ if $CXX -v --help 2>&1 | grep -q fexceptions; then
    CXXFLAGS="$CXXFLAGS -fno-exceptions"
 fi
 
-if $CXX -v --help 2>&1 | grep -q ffunction-sections; then
-   CXXFLAGS="$CXXFLAGS -ffunction-sections"
-fi
-
-if $LD -v --help 2>&1 | grep -q gc-sections; then
-   LDFLAGS="$LDFLAGS -Wl,--gc-sections"
-fi
+dnl if $CXX -v --help 2>&1 | grep -q ffunction-sections; then
+dnl    CXXFLAGS="$CXXFLAGS -ffunction-sections"
+dnl fi
+dnl 
+dnl if $LD -v --help 2>&1 | grep -q gc-sections; then
+dnl    LDFLAGS="$LDFLAGS -Wl,--gc-sections"
+dnl fi
 
 AC_CONFIG_COMMANDS_POST([
 

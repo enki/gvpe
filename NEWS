@@ -1,4 +1,4 @@
-1.1
+1.2 Fri Oct 17 03:44:44 CEST 2003
    - tincd kernel interface code imported, more supported platforms
      (native/linux (2.4), tincd/linux (2.2 and 2.4), tincd/freebsd,
      native/cygwin).
