@@ -9219,7 +9219,7 @@ fi
 fi
 
 
-CXXFLAGS="-I$openssl_include"
+CXXFLAGS="$CXXFLAGS -I$openssl_include"
 
 # Check whether --enable-rohc or --disable-rohc was given.
 if test "${enable_rohc+set}" = set; then
