@@ -36,7 +36,6 @@ build-stamp:
 		--localstatedir=/var --enable-hmac-length=4 --enable-trust \
 		--enable-rand-length=0 --enable-cipher=bf --enable-digest=md4
 	$(MAKE)
-#	cd doc && texi2html -split=chapter tinc.texi
 
 	touch build-stamp
 
@@ -66,7 +65,7 @@ binary-arch: build install
 	dh_testdir
 	dh_testroot
 	#dh_movefiles
-	#install -o root -g root -m 755 debian/init.d debian/tinc/etc/init.d/tinc
+	#install -o root -g root -m 755 debian/init.d debian/vpe/etc/init.d/vpe
 	dh_installmanpages
 	dh_installinfo
 	dh_installchangelogs ChangeLog

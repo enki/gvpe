@@ -1,4 +1,11 @@
-vpe (0.1-0.1) unstable; urgency=low
+vpe (0.1-2.0) unstable; urgency=low
+
+  * updating debian files.
+  * change to protcol 2.0
+
+ -- Paul Bettinger <debian@n8geil.de>  Mon, 10 Mar 2003 12:38:45 +0200
+
+vpe (0.1-1.0) unstable; urgency=low
 
   * Initial Release.
 

@@ -95,7 +95,7 @@ USE_NLS = @USE_NLS@
 VERSION = @VERSION@
 l = @l@
 
-EXTRA_DIST = README.Debian changelog conffiles control copyright dirs 	docs info init.d postinst rules doc-base.tinc
+EXTRA_DIST = README.Debian changelog conffiles control copyright dirs 	docs info init.d rules 
 
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = ../config.h

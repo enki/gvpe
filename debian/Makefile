@@ -34,9 +34,9 @@ oldincludedir = /usr/include
 
 DESTDIR =
 
-pkgdatadir = $(datadir)/tinc
-pkglibdir = $(libdir)/tinc
-pkgincludedir = $(includedir)/tinc
+pkgdatadir = $(datadir)/vpe
+pkglibdir = $(libdir)/vpe
+pkgincludedir = $(includedir)/vpe
 
 top_builddir = ..
 
@@ -85,7 +85,7 @@ MAKEINFO = makeinfo
 MKINSTALLDIRS = ./mkinstalldirs
 MSGFMT = /usr/bin/msgfmt
 OBJDUMP = @OBJDUMP@
-PACKAGE = tinc
+PACKAGE = vpe
 PERL = perl
 POFILES =  es.po nl.po
 POSUB = po
@@ -95,7 +95,7 @@ USE_NLS = yes
 VERSION = 1.0-cvs
 l = 
 
-EXTRA_DIST = README.Debian changelog conffiles control copyright dirs 	docs info init.d postinst rules doc-base.tinc
+EXTRA_DIST = README.Debian changelog conffiles control copyright dirs 	docs info init.d rules 
 
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = ../config.h

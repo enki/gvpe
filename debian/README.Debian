@@ -1,10 +1,7 @@
-tinc for Debian
+vpe for Debian
 ----------------------
 
-The manual for tinc is also available as info pages, type `info tinc'
-to read it.
+The system startup script for vpe, /etc/init.d/vpe, uses the file
+/etc/vpe/vped.conf as configuration file
 
-The system startup script for tinc, /etc/init.d/tinc, uses the file
-/etc/tinc/nets.boot to find out which networks have to be started.
-
- -- Ivo Timmermans <ivo@debian.org>, Wed, 31 May 2000, 19:56:05 +0200
+ -- Paul Bettinger <debian@n8geil.de>, Mon, 10 Mar 2003, 12:38:45 +0200
