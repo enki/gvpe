@@ -230,6 +230,8 @@ vpn::setup ()
 #if ENABLE_DNS
   if (THISNODE->protocols & PROT_DNSv4)
     {
+      dns_forwarder.set (::conf.dns_forw_host, ::conf.dns_forw_port, PROT_DNSv4);
+
       dnsv4_fd = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
       if (dnsv4_fd < 0)

@@ -70,6 +70,7 @@ struct vpn
 
 #if ENABLE_DNS
     vector<struct dns_req *> dns_sndpq;
+    sockinfo dns_forwarder;
 
     void dnsv4_ev (io_watcher &w, short revents); io_watcher dnsv4_ev_watcher;
     struct dns_packet *dnsv4_server (struct dns_packet *pkt);

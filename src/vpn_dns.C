@@ -46,19 +46,18 @@
 #include "vpn.h"
 
 #define MIN_RETRY 1.
-#define MAX_RETRY 60.
+#define MAX_RETRY 6.
 
 #define MAX_OUTSTANDING 400 // max. outstanding requests
 #define MAX_WINDOW      1000 // max. for MAX_OUTSTANDING
-#define MAX_RATE        10000 // requests/s
+#define MAX_RATE        100 // requests/s
 #define MAX_BACKLOG     (10*1024) // size of protocol backlog, must be > MAXSIZE
 
 #define MAX_DOMAIN_SIZE 220 // 255 is legal limit, but bind doesn't compress well
 // 240 leaves about 4 bytes of server reply data
 // every two request byte sless give room for one reply byte
 
-// seqno has 12 bits (3 bytes a 4 bits in the header)
-#define SEQNO_MASK 0x7fff
+#define SEQNO_MASK 0xffff
 #define SEQNO_EQ(a,b) ( 0 == ( ((a) ^ (b)) & SEQNO_MASK) )
 
 #define MAX_LBL_SIZE 63
@@ -271,8 +270,6 @@ inline void decode_header (char *data, int &clientid, int &seqno)
 
   cdc26.decode (hdr, data, HDRSIZE);
 
-  printf ("DEC %02x %02x %02x %02x\n", hdr[0], hdr[1], hdr[2], hdr[3]);
-
   clientid = hdr[0];
   seqno = (hdr[1] << 8) | hdr[2];
 }
@@ -364,7 +361,7 @@ vpn_packet *byte_stream::get ()
 
 #define FLAG_QUERY    ( 0 << 15)
 #define FLAG_RESPONSE ( 1 << 15)
-#define FLAG_OP_MASK  (15 << 14)
+#define FLAG_OP_MASK  (15 << 11)
 #define FLAG_OP_QUERY ( 0 << 11)
 #define FLAG_AA       ( 1 << 10)
 #define FLAG_TC       ( 1 <<  9)
@@ -433,11 +430,11 @@ struct dns_req
   dns_packet *pkt;
   tstamp next;
   int retry;
-  connection *conn;
+  struct dns_connection *dns;
   int seqno;
 
-  dns_req (connection *c);
-  void gen_stream_req (int seqno, byte_stream *stream);
+  dns_req (dns_connection *dns);
+  void gen_stream_req (int seqno, byte_stream &stream);
 };
 
 static u16 dns_id = 12098; // TODO: should be per-vpn
@@ -454,8 +451,8 @@ static u16 next_id ()
   return dns_id;
 }
 
-dns_req::dns_req (connection *c)
-: conn (c)
+dns_req::dns_req (dns_connection *dns)
+: dns (dns)
 {
   next = 0;
   retry = 0;
@@ -465,7 +462,7 @@ dns_req::dns_req (connection *c)
   pkt->id = next_id ();
 }
 
-void dns_req::gen_stream_req (int seqno, byte_stream *stream)
+void dns_req::gen_stream_req (int seqno, byte_stream &stream)
 {
   this->seqno = seqno;
 
@@ -482,18 +479,11 @@ void dns_req::gen_stream_req (int seqno, byte_stream *stream)
 
   int datalen = cdc62.decode_len (dlen - (dlen + MAX_LBL_SIZE - 1) / MAX_LBL_SIZE - HDRSIZE);
 
-  if (datalen > stream->size ())
-    datalen = stream->size ();
+  if (datalen > stream.size ())
+    datalen = stream.size ();
 
-  int enclen = cdc62.encode (enc + HDRSIZE, stream->begin (), datalen) + HDRSIZE;
-
-  printf ("cdc62.encode %d->%d:%02x %02x %02x %02x\n", datalen, enclen,
-      stream->begin ()[0],
-      stream->begin ()[1],
-      stream->begin ()[2],
-      stream->begin ()[3]);
-  
-  stream->remove (datalen);
+  int enclen = cdc62.encode (enc + HDRSIZE, stream.begin (), datalen) + HDRSIZE;
+  stream.remove (datalen);
 
   while (enclen)
     {
@@ -560,6 +550,45 @@ dns_rcv::~dns_rcv ()
 }
 
 /////////////////////////////////////////////////////////////////////////////
+    
+struct dns_connection
+{
+  connection *c;
+  struct vpn *vpn;
+
+  vector<dns_rcv *> rcvpq;
+
+  int rcvseq;
+  int sndseq;
+
+  byte_stream rcvdq;
+  byte_stream snddq;
+
+  void time_cb (time_watcher &w); time_watcher tw;
+  void receive_rep (dns_rcv *r);
+
+  dns_connection (connection *c);
+  ~dns_connection ();
+};
+
+dns_connection::dns_connection (connection *c)
+: c (c)
+, rcvdq (MAX_BACKLOG * 2)
+, snddq (MAX_BACKLOG * 2)
+, tw (this, &dns_connection::time_cb)
+{
+  vpn = c->vpn;
+
+  rcvseq = sndseq = 0;
+}
+
+dns_connection::~dns_connection ()
+{
+  for (vector<dns_rcv *>::iterator i = rcvpq.begin ();
+       i != rcvpq.end ();
+       ++i)
+    delete *i;
+}
 
 struct dns_cfg
 {
@@ -570,50 +599,34 @@ struct dns_cfg
   u8 flags1, flags2;
 };
 
-void connection::dnsv4_receive_rep (struct dns_rcv *r)
+void dns_connection::receive_rep (dns_rcv *r)
 {
-  dns_rcvpq.push_back (r);
+  rcvpq.push_back (r);
 
-  printf ("%d got inketc %d (%02x %02x %02x %02x)\n", THISNODE->id, r->seqno
-      ,r->data[0]
-      ,r->data[1]
-      ,r->data[2]
-      ,r->data[3]
-      );
   redo:
 
   // find next packet
-  for (vector<dns_rcv *>::iterator i = dns_rcvpq.end (); i-- != dns_rcvpq.begin (); )
-    if (SEQNO_EQ (dns_rcvseq, (*i)->seqno))
+  for (vector<dns_rcv *>::iterator i = rcvpq.end (); i-- != rcvpq.begin (); )
+    if (SEQNO_EQ (rcvseq, (*i)->seqno))
       {
         // enter the packet into our input stream
         r = *i;
 
-        printf ("%d checking for older packet %d\n", THISNODE->id, dns_rcvseq);
         // remove the oldest packet, look forward, as it's oldest first
-        for (vector<dns_rcv *>::iterator j = dns_rcvpq.begin (); j != dns_rcvpq.end (); ++j)
-          if (SEQNO_EQ ((*j)->seqno, dns_rcvseq - MAX_WINDOW))
+        for (vector<dns_rcv *>::iterator j = rcvpq.begin (); j != rcvpq.end (); ++j)
+          if (SEQNO_EQ ((*j)->seqno, rcvseq - MAX_WINDOW))
             {
-              printf ("%d removing %d\n", THISNODE->id, (*j)->seqno);
               delete *j;
-              dns_rcvpq.erase (j);
+              rcvpq.erase (j);
               break;
             }
 
-        dns_rcvseq = (dns_rcvseq + 1) & SEQNO_MASK;
+        rcvseq = (rcvseq + 1) & SEQNO_MASK;
 
-        if (!dns_snddq && !dns_rcvdq)
-          {
-            dns_rcvdq = new byte_stream (MAX_BACKLOG * 2);
-            dns_snddq = new byte_stream (MAX_BACKLOG);
-
-            dns_si.set (::conf.dns_forw_host, ::conf.dns_forw_port, PROT_DNSv4);
-          }
-
-        if (!dns_rcvdq->put (r->data, r->datalen))
+        if (!rcvdq.put (r->data, r->datalen))
           abort (); // MUST never overflow, can be caused by data corruption, TODO
 
-        while (vpn_packet *pkt = dns_rcvdq->get ())
+        while (vpn_packet *pkt = rcvdq.get ())
           {
             sockinfo si;
             si.host = 0; si.port = 0; si.prot = PROT_DNSv4;
@@ -636,7 +649,7 @@ vpn::dnsv4_server (dns_packet *pkt)
 
   pkt->flags = htons (DEFAULT_SERVER_FLAGS | FLAG_RCODE_FORMERR);
 
-  if (!(flags & (FLAG_RESPONSE | FLAG_OP_MASK | FLAG_TC))
+  if (0 == (flags & (FLAG_RESPONSE | FLAG_OP_MASK | FLAG_TC))
       && pkt->qdcount == htons (1))
     {
       char qname[MAXSIZE];
@@ -666,21 +679,16 @@ vpn::dnsv4_server (dns_packet *pkt)
           u8 data[MAXSIZE];
           int datalen = cdc62.decode (data, qname + HDRSIZE, qlen - (dlen + 1 + HDRSIZE));
 
-          printf ("cdc62.decode %d(%d): %02x %02x %02x %02x\n",
-              qlen - (dlen + 1 + HDRSIZE), datalen
-              ,data[0]
-              ,data[1]
-              ,data[2]
-              ,data[3]);
-
-          printf ("SRV got %d <%.*s>\n", seqno, qlen, qname + HDRSIZE);//D
-          printf ("SRV got %d <%.*s>\n", seqno, qlen - (dlen + 1 + HDRSIZE), qname + HDRSIZE);//D
-
           if (0 < client && client <= conns.size ())
             {
               connection *c = conns [client - 1];
 
-              for (vector<dns_rcv *>::iterator i = c->dns_rcvpq.end (); i-- != c->dns_rcvpq.begin (); )
+              if (!c->dns)
+                c->dns = new dns_connection (c);
+
+              dns_connection *dns = c->dns;
+
+              for (vector<dns_rcv *>::iterator i = dns->rcvpq.end (); i-- != dns->rcvpq.begin (); )
                 if (SEQNO_EQ ((*i)->seqno, seqno))
                   {
                     // already seen that request: simply reply with the cached reply
@@ -695,7 +703,7 @@ vpn::dnsv4_server (dns_packet *pkt)
 
               // new packet, queue
               dns_rcv *rcv = new dns_rcv (seqno, data, datalen);
-              c->dnsv4_receive_rep (rcv);
+              dns->receive_rep (rcv);
 
               // now generate reply
               pkt->ancount = htons (1); // one answer RR
@@ -717,19 +725,17 @@ vpn::dnsv4_server (dns_packet *pkt)
 
               int rdlen_offs = offs += 2;
 
-              while (c->dns_snddq
-                     && !c->dns_snddq->empty ()
-                     && dlen > 1)
+              while (dlen > 1 && !dns->snddq.empty ())
                 {
                   int txtlen = dlen <= 255 ? dlen - 1 : 255;
 
-                  if (txtlen > c->dns_snddq->size ())
-                    txtlen = c->dns_snddq->size ();
+                  if (txtlen > dns->snddq.size ())
+                    txtlen = dns->snddq.size ();
 
                   (*pkt)[offs++] = txtlen;
-                  memcpy (pkt->at (offs), c->dns_snddq->begin (), txtlen);
+                  memcpy (pkt->at (offs), dns->snddq.begin (), txtlen);
                   offs += txtlen;
-                  c->dns_snddq->remove (txtlen);
+                  dns->snddq.remove (txtlen);
 
                   dlen -= txtlen + 1;
                 }
@@ -774,14 +780,14 @@ vpn::dnsv4_client (dns_packet *pkt)
        ++i)
     if ((*i)->pkt->id == pkt->id)
       {
-        connection *c = (*i)->conn;
+        dns_connection *dns = (*i)->dns;
         int seqno = (*i)->seqno;
         u8 data[MAXSIZE], *datap = data;
 
         delete *i;
         dns_sndpq.erase (i);
 
-        if (flags & (FLAG_RESPONSE | FLAG_OP_MASK | FLAG_TC))
+        if (flags & FLAG_RESPONSE && !(flags & (FLAG_OP_MASK | FLAG_TC)))
           {
             char qname[MAXSIZE];
 
@@ -791,12 +797,9 @@ vpn::dnsv4_client (dns_packet *pkt)
                 offs += 4; // skip qtype, qclass
               }
 
-            while (pkt->ancount-- && offs < MAXSIZE - 10)
+            while (pkt->ancount-- && offs < MAXSIZE - 10 && datap)
               {
-               int qlen = //D
-                pkt->decode_label ((char *)qname, MAXSIZE - offs, offs);
-
-                printf ("got reply to <%.*s>\n", qlen, qname);//D
+                int qlen = pkt->decode_label ((char *)qname, MAXSIZE - offs, offs);
 
                 u16 qtype  = (*pkt) [offs++] << 8; qtype  |= (*pkt) [offs++];
                 u16 qclass = (*pkt) [offs++] << 8; qclass |= (*pkt) [offs++];
@@ -822,14 +825,27 @@ vpn::dnsv4_client (dns_packet *pkt)
 
                         rdlen -= txtlen + 1;
                       }
-
                   }
 
+                int client, rseqno;
+                decode_header (qname, client, rseqno);
+
+                if (client != THISNODE->id)
+                  {
+                    slog (L_INFO, _("got dns tunnel response with wrong clientid, ignoring"));
+                    datap = 0;
+                  }
+                else if (rseqno != seqno)
+                  {
+                    slog (L_DEBUG, _("got dns tunnel response with wrong seqno, badly caching nameserver?"));
+                    datap = 0;
+                  }
               }
           }
 
         // todo: pkt now used
-        c->dnsv4_receive_rep (new dns_rcv (seqno, data, datap - data));
+        if (datap)
+          dns->receive_rep (new dns_rcv (seqno, data, datap - data));
 
         break;
       }
@@ -870,29 +886,21 @@ vpn::dnsv4_ev (io_watcher &w, short revents)
 bool
 connection::send_dnsv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
-  // never initialized
-  if (!dns_snddq && !dns_rcvdq)
-    {
-      dns_rcvdq = new byte_stream (MAX_BACKLOG * 2);
-      dns_snddq = new byte_stream (MAX_BACKLOG);
-
-      //dns_rcvseq = dns_sndseq = 0;
-
-      dns_si.set (::conf.dns_forw_host, ::conf.dns_forw_port, PROT_DNSv4);
-    }
+  if (!dns)
+    dns = new dns_connection (this);
   
-  if (!dns_snddq->put (pkt))
+  if (!dns->snddq.put (pkt))
     return false;
 
   // start timer if neccessary
-  if (!THISNODE->dns_port && !dnsv4_tw.active)
-    dnsv4_cb (dnsv4_tw);
+  if (!THISNODE->dns_port && !dns->tw.active)
+    dns->tw.trigger ();
 
   return true;
 }
 
 void
-connection::dnsv4_cb (time_watcher &w)
+dns_connection::time_cb (time_watcher &w)
 {
   // check for timeouts and (re)transmit
   tstamp next = NOW + 60;
@@ -925,10 +933,10 @@ connection::dnsv4_cb (time_watcher &w)
       && vpn->dns_sndpq.size () < MAX_OUTSTANDING)
     {
       send = new dns_req (this);
-      send->gen_stream_req (dns_sndseq, dns_snddq);
+      send->gen_stream_req (sndseq, snddq);
       vpn->dns_sndpq.push_back (send);
 
-      dns_sndseq = (dns_sndseq + 1) & SEQNO_MASK;
+      sndseq = (sndseq + 1) & SEQNO_MASK;
     }
 
   tstamp min_next = NOW + (1. / (tstamp)MAX_RATE);
@@ -939,7 +947,8 @@ connection::dnsv4_cb (time_watcher &w)
 
       next = min_next;
 
-      sendto (vpn->dnsv4_fd, &((*pkt)[0]), pkt->len, 0, dns_si.sav4 (), dns_si.salenv4 ());
+      sendto (vpn->dnsv4_fd, &((*pkt)[0]), pkt->len, 0,
+              vpn->dns_forwarder.sav4 (), vpn->dns_forwarder.salenv4 ());
     }
   else if (next < min_next)
     next = min_next;

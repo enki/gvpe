@@ -1226,9 +1226,7 @@ connection::connection (struct vpn *vpn, conf_node *conf)
 , keepalive (this, &connection::keepalive_cb)
 , establish_connection (this, &connection::establish_connection_cb)
 #if ENABLE_DNS
-, dnsv4_tw (this, &connection::dnsv4_cb)
-, dns_rcvdq (0), dns_snddq (0)
-, dns_rcvseq (0), dns_sndseq (0)
+, dns (0)
 #endif
 {
   octx = ictx = 0;
