@@ -19,8 +19,8 @@
     Foundation, Inc. 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef VPE_VPN_H__
-#define VPE_VPN_H__
+#ifndef GVPE_VPN_H__
+#define GVPE_VPN_H__
 
 #include "global.h"
 #include "conf.h"

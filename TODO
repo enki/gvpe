@@ -1,5 +1,6 @@
 TODO items:
 
+- mac=xxxxx config directive, to allow windows etc.
 - on shell xyz
 - add a general vpn introduction to the manual
 - reformat the texinfo manual to look less manpagish

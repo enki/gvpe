@@ -251,9 +251,12 @@ gvpe.osdep(5) for OS-depedendent information, gvpe.conf(5), gvpectrl(8),
 and for a description of the transports, protocol, and routing algorithm,
 gvpe.protocol(7).
 
+The GVPE mailinglist, at L<http://lists.schmorp.de/>, or
+C<gvpe@lists.schmorp.de>.
+
 =head1 AUTHOR
 
-Marc Lehmann <gvpe@plan9.de>
+Marc Lehmann <gvpe@schmorp.de>
 
 =head1 COPYRIGHTS AND LICENSES
 

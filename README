@@ -7,31 +7,58 @@
 ==== DESCRIPTION ====
 
     GVPE is a suite designed to provide a virtual private network for
-    multiple nodes over an untrusted network.
-
-    "Virtual" means that no physical network is created (of course), but an
-    ethernet is emulated by creating multiple tunnels between the member
-    nodes.
-
-    "Private" means that non-participating nodes cannot decode ("sniff)" nor
-    inject ("spoof") packets.
-
-    In the case of gvpe, even participating nodes cannot sniff packets send
-    to other nodes or spoof packets as if sent from other nodes.
-
-    "Network" means that more than two parties can participate in the
-    network, so for instance it's possible to connect multiple branches of a
-    company into a single network. Many so-called "vpn" solutions only
-    create point-to-point tunnels.
+    multiple nodes over an untrusted network. This document first gives an
+    introduction to VPNs in general and then describes the specific
+    implementation of GVPE.
 
 
-==   DESIGN GOALS   ==
+==   WHAT IS A VPN?   ==
+
+    VPN is an acronym, it stands for:
+
+:       Virtual means that no physical network is created (of course), but a
+        network is *emulated* by creating multiple tunnels between the
+        member nodes by encapsulating and sending data over another
+        transport network.
+
+        Usually the emulated network is a normal IP or Ethernet, and the
+        transport network is the Internet. However, using a VPN system like
+        GVPE to connect nodes over other untrusted networks such as Wireless
+        LAN is not uncommon.
+
+:       Private means that non-participating nodes cannot decode ("sniff)"
+        nor inject ("spoof") packets. This means that nodes can be connected
+        over untrusted networks such as the public Internet without fear of
+        being eavesdropped while at the same time being able to trust data
+        sent by other nodes.
+
+        In the case of GVPE, even participating nodes cannot sniff packets
+        send to other nodes or spoof packets as if sent from other nodes, so
+        communications between any two nodes is private to those two nodes.
+
+:       Network means that more than two parties can participate in the
+        network, so for instance it's possible to connect multiple branches
+        of a company into a single network. Many so-called "vpn" solutions
+        only create point-to-point tunnels, which in turn can be used to
+        build larger networks.
+
+        GVPE provides a true multi-point network in wich any number of nodes
+        (at least a few dozen in practise, the theoretical limit is 4095
+        nodes) can participate.
+
+
+==   GVPE DESIGN GOALS   ==
 
 :   SIMPLE DESIGN
         Cipher, HMAC algorithms and other key parameters must be selected at
         compile time - this makes it possible to only link in algorithms you
         actually need. It also makes the crypto part of the source very
-        transparent and easy to inspect.
+        transparent and easy to inspect, and last not least this makes it
+        possible to hardcode the layout of all packets into the binary. GVPE
+        goes a step further and internally reserves blocks of the same
+        length for all packets, which virtually removes all possibilities of
+        buffer overflows, as there is only a single type of buffer and it's
+        always of fixed length.
 
 :   EASY TO SETUP
         A few lines of config (the config file is shared unmodified between
@@ -65,7 +92,9 @@
     Please have a look at the ``gvpe.osdep(5)'' manpage for
     platform-specific information.
 
-    Here are a few recipes for compiling your gvpe:
+    Here are a few recipes for compiling your gvpe, showing the extremes
+    (fast, small, insecure OR slow, large, more secure), between you should
+    choose:
 
 
 ==   AS LOW PACKET OVERHEAD AS POSSIBLE   ==
@@ -73,7 +102,9 @@
        ./configure --enable-hmac-length=4 --enable-rand-length=0
 
     Minimize the header overhead of VPN packets (the above will result in
-    only 4 bytes of overhead over the raw ethernet frame).
+    only 4 bytes of overhead over the raw ethernet frame). This is a
+    insecure configuration because a HMAC length of 4 makes collision
+    attacks based on the birthday paradox easy, though.
 
 
 ==   MINIMIZE CPU TIME REQUIRED   ==
@@ -81,7 +112,7 @@
        ./configure --enable-cipher=bf --enable-digest=md4
 
     Use the fastest cipher and digest algorithms currently available in
-    gvpe.
+    gvpe. MD4 has been broken and is quite insecure, though.
 
 
 ==   MAXIMIZE SECURITY   ==
@@ -90,7 +121,9 @@
 
     This uses a 16 byte HMAC checksum to authenticate packets (I guess 8-12
     would also be pretty secure ;) and will additionally prefix each packet
-    with 8 bytes of random data.
+    with 8 bytes of random data. In the long run, people should move to
+    SHA-224 and beyond, but support in openssl is missing as of writing this
+    document.
 
     In general, remember that AES-128 seems to be more secure and faster
     than AES-192 or AES-256, more randomness helps against sniffing and a
@@ -215,42 +248,23 @@
 ==== SEE ALSO ====
 
     gvpe.osdep(5) for OS-depedendent information, gvpe.conf(5), gvpectrl(8),
-    and for a description of the protocol and routing algorithms,
-    gvpe.protocol(7).
+    and for a description of the transports, protocol, and routing
+    algorithm, gvpe.protocol(7).
+
+    The GVPE mailinglist, at <http://lists.schmorp.de/>, or
+    ``gvpe@lists.schmorp.de''.
 
 
 ==== AUTHOR ====
 
-    Marc Lehmann <gvpe@plan9.de>
+    Marc Lehmann <gvpe@schmorp.de>
 
 
 ==== COPYRIGHTS AND LICENSES ====
 
-    Vpe itself is distributed under the GENERAL PUBLIC LICENSE (see the file
-    COPYING that should be part of your distribution).
+    GVPE itself is distributed under the GENERAL PUBLIC LICENSE (see the
+    file COPYING that should be part of your distribution).
 
     In some configurations it uses modified versions of the tinc vpn suite,
     which is also available under the GENERAL PUBLIC LICENSE.
-
-    In some configurations (notably darwin), it uses a poll emulation
-    library that comes with the following license notice:
-
-      Copyright (c) 1995-2002 Brian M. Clapper
-      All rights reserved.
-
-      Redistribution and use in source and binary forms are permitted
-      provided that: (1) source distributions retain this entire
-      copyright notice and comment; (2) modifications made to the
-      software are prominently mentioned, and a copy of the original
-      software (or a pointer to its location) are included; and (3)
-      distributions including binaries display the following
-      acknowledgement: "This product includes software developed by Brian
-      M. Clapper <bmc@clapper.org>" in the documentation or other
-      materials provided with the distribution. The name of the author
-      may not be used to endorse or promote products derived from this
-      software without specific prior written permission.
-
-      THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
-      IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
-      WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 

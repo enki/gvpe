@@ -2,7 +2,7 @@ dnl Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
 AC_INIT
-AC_CONFIG_SRCDIR([src/vped.C])
+AC_CONFIG_SRCDIR([src/gvpe.C])
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE(gvpe, 1.8)
 AC_CONFIG_HEADERS([config.h])
@@ -40,6 +40,14 @@ typedef int32_t s32;
 #endif
 
 #endif
+
+// include clocale first because gettext.h might overwrite setlocale
+#if defined(HAVE_CLOCALE) && defined(__cplusplus)
+# include <clocale>
+#else
+# include <locale.h>
+#endif
+#include "gettext.h"
 ])
 
 dnl Include the macros from the m4/ directory
@@ -152,7 +160,7 @@ AC_CACHE_SAVE
 dnl Checks for libraries.
 
 AC_LANG(C++)
-AC_CHECK_HEADERS(ext/hash_map)
+AC_CHECK_HEADERS(ext/hash_map clocale)
 
 dnl Checks for header files.
 AC_CHECK_HEADERS([fcntl.h inttypes.h limits.h malloc.h stdint.h strings.h syslog.h unistd.h \

@@ -19,12 +19,12 @@
     Foundation, Inc. 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef VPE_DEVICE_H__
-#define VPE_DEVICE_H__
+#ifndef GVPE_DEVICE_H__
+#define GVPE_DEVICE_H__
+
+#include "config.h"
 
 #define IFNAMESIZE 256 // be conservative
-
-#include "gettext.h"
 
 #include "global.h"
 #include "util.h"

@@ -271,7 +271,7 @@ PACKAGE_VERSION=
 PACKAGE_STRING=
 PACKAGE_BUGREPORT=
 
-ac_unique_file="src/vped.C"
+ac_unique_file="src/gvpe.C"
 # Factoring default headers for most tests.
 ac_includes_default="\
 #include <stdio.h>
@@ -874,8 +874,9 @@ Optional Features:
                           "tincd/linux" "tincd/freebsd" "tincd/openbsd"
                           "tincd/darwin" "native/cygwin"; Untested
                           combinations are: "tincd/netbsd" "tincd/solaris"
-                          "tincd/mingw"; Broken combinations are:
-                          "tincd/cygwin"; The default is to autodetect.
+                          "tincd/mingw" "tincd/raw_socket" "tincd/uml_socket";
+                          Broken combinations are: "tincd/cygwin"; The default
+                          is to autodetect.
   --enable-static-daemon  enable statically linked daemon.
   --enable-rohc           enable robust header compression (rfc3095).
   --enable-icmp           enable icmp protocol support (default disabled).
@@ -7015,7 +7016,8 @@ done
 
 
 
-for ac_header in ext/hash_map
+
+for ac_header in ext/hash_map clocale
 do
 as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
 if eval "test \"\${$as_ac_Header+set}\" = set"; then

@@ -59,6 +59,9 @@
 /* Define to 1 if you have the `asprintf' function. */
 #undef HAVE_ASPRINTF
 
+/* Define to 1 if you have the <clocale> header file. */
+#undef HAVE_CLOCALE
+
 /* Cygwin */
 #undef HAVE_CYGWIN
 
@@ -92,6 +95,9 @@
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
+
+/* Define to 1 if you have the `gmp' library (-lgmp). */
+#undef HAVE_LIBGMP
 
 /* Define to 1 if you have the `nsl' library (-lnsl). */
 #undef HAVE_LIBNSL
@@ -334,4 +340,12 @@ typedef int32_t s32;
 #endif
 
 #endif
+
+// include clocale first because gettext.h might overwrite setlocale
+#if defined(HAVE_CLOCALE) && defined(__cplusplus)
+# include <clocale>
+#else
+# include <locale.h>
+#endif
+#include "gettext.h"
 

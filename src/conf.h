@@ -19,8 +19,8 @@
     Foundation, Inc. 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef VPE_CONF_H__
-#define VPE_CONF_H__
+#ifndef GVPE_CONF_H__
+#define GVPE_CONF_H__
 
 #include <vector>
 

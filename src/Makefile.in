@@ -174,17 +174,17 @@ COMMON = global.h conf.h conf.C util.h util.C \
          slog.h slog.C netcompat.h
 
 
-gvpe_SOURCES = vped.C hash_map.h vpn.h vpn.C vpn_tcp.C vpn_dns.C \
+gvpe_SOURCES = gvpe.C hash_map.h vpn.h vpn.C vpn_tcp.C vpn_dns.C \
                sockinfo.h sockinfo.C \
                lzf/lzf.h lzf/lzfP.h iom.h iom_conf.h iom.C \
                connection.h connection.C callback.h device.h device.C \
                $(COMMON)
 
-gvpe_LDADD = $(top_builddir)/lib/libvpe.a $(ROHCLIB)
+gvpe_LDADD = $(top_builddir)/lib/libgvpe.a $(ROHCLIB)
 gvpe_LDFLAGS = @LDFLAGS_DAEMON@
 
-gvpectrl_SOURCES = vpectrl.C $(COMMON)
-gvpectrl_LDADD = $(top_builddir)/lib/libvpe.a
+gvpectrl_SOURCES = gvpectrl.C $(COMMON)
+gvpectrl_LDADD = $(top_builddir)/lib/libgvpe.a
 
 localedir = $(datadir)/locale
 
@@ -205,26 +205,26 @@ sbin_PROGRAMS = gvpe$(EXEEXT)
 PROGRAMS = $(bin_PROGRAMS) $(sbin_PROGRAMS)
 
 am__objects_1 = conf.$(OBJEXT) util.$(OBJEXT) slog.$(OBJEXT)
-am_gvpe_OBJECTS = vped.$(OBJEXT) vpn.$(OBJEXT) vpn_tcp.$(OBJEXT) \
+am_gvpe_OBJECTS = gvpe.$(OBJEXT) vpn.$(OBJEXT) vpn_tcp.$(OBJEXT) \
 	vpn_dns.$(OBJEXT) sockinfo.$(OBJEXT) iom.$(OBJEXT) \
 	connection.$(OBJEXT) device.$(OBJEXT) $(am__objects_1)
 gvpe_OBJECTS = $(am_gvpe_OBJECTS)
-@ROHC_TRUE@gvpe_DEPENDENCIES = $(top_builddir)/lib/libvpe.a \
+@ROHC_TRUE@gvpe_DEPENDENCIES = $(top_builddir)/lib/libgvpe.a \
 @ROHC_TRUE@	rohc/librohc.a
-@ROHC_FALSE@gvpe_DEPENDENCIES = $(top_builddir)/lib/libvpe.a
-am_gvpectrl_OBJECTS = vpectrl.$(OBJEXT) $(am__objects_1)
+@ROHC_FALSE@gvpe_DEPENDENCIES = $(top_builddir)/lib/libgvpe.a
+am_gvpectrl_OBJECTS = gvpectrl.$(OBJEXT) $(am__objects_1)
 gvpectrl_OBJECTS = $(am_gvpectrl_OBJECTS)
-gvpectrl_DEPENDENCIES = $(top_builddir)/lib/libvpe.a
+gvpectrl_DEPENDENCIES = $(top_builddir)/lib/libgvpe.a
 gvpectrl_LDFLAGS =
 
 DEFAULT_INCLUDES =  -I. -I$(srcdir) -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 @AMDEP_TRUE@DEP_FILES = ./$(DEPDIR)/conf.Po ./$(DEPDIR)/connection.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/device.Po ./$(DEPDIR)/iom.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/device.Po ./$(DEPDIR)/gvpe.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/gvpectrl.Po ./$(DEPDIR)/iom.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/slog.Po ./$(DEPDIR)/sockinfo.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/util.Po ./$(DEPDIR)/vpectrl.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/vped.Po ./$(DEPDIR)/vpn.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/util.Po ./$(DEPDIR)/vpn.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/vpn_dns.Po ./$(DEPDIR)/vpn_tcp.Po
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
@@ -312,12 +312,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/conf.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/connection.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/device.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gvpe.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gvpectrl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iom.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/slog.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sockinfo.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vpectrl.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vped.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vpn.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vpn_dns.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vpn_tcp.Po@am__quote@

@@ -12,6 +12,7 @@
         - added an exemption to allow distribution of binaries linked against
           OpenSSL, as suggested by Guus Sliepen (author of tinc). No
           GNUTLS conversion in sight.
+        - some portability fixes with respect to --disable-nls.
 
 1.7 Tue Feb 22 23:58:59 CET 2005
 	- protocol version 0.1, compatible with older releases.

@@ -26,16 +26,16 @@ endif
 COMMON = global.h conf.h conf.C util.h util.C \
          slog.h slog.C netcompat.h
 
-gvpe_SOURCES = vped.C hash_map.h vpn.h vpn.C vpn_tcp.C vpn_dns.C \
+gvpe_SOURCES = gvpe.C hash_map.h vpn.h vpn.C vpn_tcp.C vpn_dns.C \
                sockinfo.h sockinfo.C \
                lzf/lzf.h lzf/lzfP.h iom.h iom_conf.h iom.C \
                connection.h connection.C callback.h device.h device.C \
                $(COMMON)
-gvpe_LDADD = $(top_builddir)/lib/libvpe.a $(ROHCLIB)
+gvpe_LDADD = $(top_builddir)/lib/libgvpe.a $(ROHCLIB)
 gvpe_LDFLAGS = @LDFLAGS_DAEMON@
 
-gvpectrl_SOURCES = vpectrl.C $(COMMON)
-gvpectrl_LDADD = $(top_builddir)/lib/libvpe.a
+gvpectrl_SOURCES = gvpectrl.C $(COMMON)
+gvpectrl_LDADD = $(top_builddir)/lib/libgvpe.a
 
 localedir = $(datadir)/locale
 

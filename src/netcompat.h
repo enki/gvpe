@@ -19,8 +19,8 @@
     Foundation, Inc. 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef VPE_NETCOMPAT_H
-#define VPE_NETCOMPAT_H
+#ifndef GVPE_NETCOMPAT_H
+#define GVPE_NETCOMPAT_H
 
 #include <sys/types.h>
 #include <sys/socket.h>

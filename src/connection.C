@@ -30,8 +30,6 @@
 #include <openssl/rsa.h>
 #include <openssl/err.h>
 
-#include "gettext.h"
-
 #include "conf.h"
 #include "slog.h"
 #include "device.h"

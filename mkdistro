@@ -7,7 +7,7 @@ autoheader
 automake
 #./configure
 
-CONFIGURE="--prefix=/opt/vpe --sysconfdir=/etc --localstatedir=/var --enable-tcp --enable-http-proxy"
+CONFIGURE="--prefix=/opt/gvpe --sysconfdir=/etc --localstatedir=/var --enable-tcp --enable-http-proxy"
 
 eval $(grep VERSION= configure)
 
@@ -23,13 +23,13 @@ case "$ARCH" in
       CONFIGURE="$CONFIGURE --enable-icmp"
    ;;
    freebsd )
-      HOST=root@192.168.108.4
+      HOST=root@192.168.108.6
       CONFIGURE="$CONFIGURE --enable-icmp"
       MAKE=gmake
       ARCH="$ARCH-x86"
    ;;
    openbsd )
-      HOST=root@192.168.108.6
+      HOST=root@192.168.108.7
       CONFIGURE="$CONFIGURE --enable-icmp"
       ARCH="$ARCH-x86"
    ;;
@@ -54,25 +54,25 @@ case "$ARCH" in
    ;;
 esac
 
-make distdir="$TARGET/vpe" distdir
-rsync -avzPessh $TARGET/vpe $HOST:$BASE/. --delete
-rm -rf $TARGET/vpe
+make distdir="$TARGET/gvpe" distdir
+rsync -avzPessh $TARGET/gvpe $HOST:$BASE/. --delete
+rm -rf $TARGET/gvpe
 
 echo "$CONFIGURE" >$TARGET/configure
 
 ssh $HOST "
    set -x
-   cd $BASE/vpe || exit 1;
+   cd $BASE/gvpe || exit 1;
    ./configure $CONFIGURE || exit 2;
    rm -rf $BASE/dist;
    $MAKE all || exit 3;
    $MAKE prefix=$BASE/dist install || exit 4;
-   strip $BASE/dist/sbin/vped $BASE/dist/bin/vpectrl;
-   strip $BASE/dist/sbin/vped.exe $BASE/dist/bin/vpectrl.exe;
-   echo vpectrl;
-   ldd $BASE/dist/bin/vpectrl;
-   echo vped;
-   ldd $BASE/dist/sbin/vped;
+   strip $BASE/dist/sbin/gvpe $BASE/dist/bin/gvpectrl;
+   strip $BASE/dist/sbin/gvpe.exe $BASE/dist/bin/gvpectrl.exe;
+   echo gvpectrl;
+   ldd $BASE/dist/bin/gvpectrl;
+   echo gvpe;
+   ldd $BASE/dist/sbin/gvpe;
    uname -a
    true;
 " 2>&1 | tee $TARGET/buildlog || exit 1
@@ -82,13 +82,13 @@ rsync -avzPessh $HOST:$BASE/dist/. $TARGET/opt/. --delete
 (
    cd $TARGET || exit 99
    mkdir opt/doc
-   mkdir opt/doc/vped
-   mv buildlog opt/doc/vped/README.buildlog
-   mv configure opt/doc/vped/README.configure
+   mkdir opt/doc/gvpe
+   mv buildlog opt/doc/gvpe/README.buildlog
+   mv configure opt/doc/gvpe/README.configure
    chmod u=rwX,go=rX -R opt
 )
 
 mkdir -p bindist
-tar cCf $TARGET - . | gzip -9 >bindist/vpe-$VERSION-$ARCH.tar.gz
+tar cCf $TARGET - . | gzip -9 >bindist/gvpe-$VERSION-$ARCH.tar.gz
 rm -rf $TARGET
 

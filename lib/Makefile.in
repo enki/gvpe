@@ -151,12 +151,12 @@ target_alias = @target_alias@
 target_cpu = @target_cpu@
 target_os = @target_os@
 target_vendor = @target_vendor@
-noinst_LIBRARIES = libvpe.a
+noinst_LIBRARIES = libgvpe.a
 
-libvpe_a_SOURCES = pidfile.c getopt.c getopt1.c dropin.c
+libgvpe_a_SOURCES = pidfile.c getopt.c getopt1.c dropin.c
 
-libvpe_a_LIBADD = @LIBOBJS@ @ALLOCA@
-libvpe_a_DEPENDENCIES = $(libvpn_a_LIBADD)
+libgvpe_a_LIBADD = @LIBOBJS@ @ALLOCA@
+libgvpe_a_DEPENDENCIES = $(libgvpe_a_LIBADD)
 
 noinst_HEADERS = pidfile.h getopt.h dropin.h gettext.h
 subdir = lib
@@ -166,10 +166,10 @@ CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 LIBRARIES = $(noinst_LIBRARIES)
 
-libvpe_a_AR = $(AR) cru
-am_libvpe_a_OBJECTS = pidfile.$(OBJEXT) getopt.$(OBJEXT) \
+libgvpe_a_AR = $(AR) cru
+am_libgvpe_a_OBJECTS = pidfile.$(OBJEXT) getopt.$(OBJEXT) \
 	getopt1.$(OBJEXT) dropin.$(OBJEXT)
-libvpe_a_OBJECTS = $(am_libvpe_a_OBJECTS)
+libgvpe_a_OBJECTS = $(am_libgvpe_a_OBJECTS)
 
 DEFAULT_INCLUDES =  -I. -I$(srcdir) -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -181,12 +181,12 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-DIST_SOURCES = $(libvpe_a_SOURCES)
+DIST_SOURCES = $(libgvpe_a_SOURCES)
 HEADERS = $(noinst_HEADERS)
 
 DIST_COMMON = $(noinst_HEADERS) $(srcdir)/Makefile.in Makefile.am \
 	alloca.c
-SOURCES = $(libvpe_a_SOURCES)
+SOURCES = $(libgvpe_a_SOURCES)
 
 all: all-am
 
@@ -202,10 +202,10 @@ AR = ar
 
 clean-noinstLIBRARIES:
 	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
-libvpe.a: $(libvpe_a_OBJECTS) $(libvpe_a_DEPENDENCIES) 
-	-rm -f libvpe.a
-	$(libvpe_a_AR) libvpe.a $(libvpe_a_OBJECTS) $(libvpe_a_LIBADD)
-	$(RANLIB) libvpe.a
+libgvpe.a: $(libgvpe_a_OBJECTS) $(libgvpe_a_DEPENDENCIES) 
+	-rm -f libgvpe.a
+	$(libgvpe_a_AR) libgvpe.a $(libgvpe_a_OBJECTS) $(libgvpe_a_LIBADD)
+	$(RANLIB) libgvpe.a
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT) core *.core

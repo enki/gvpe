@@ -26,7 +26,6 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
-#include <locale.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -44,7 +43,6 @@
 #include <openssl/err.h>
 #include <openssl/rand.h>
 
-#include "gettext.h"
 #include "pidfile.h"
 
 #include "conf.h"
