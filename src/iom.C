@@ -258,7 +258,6 @@ io_manager::io_manager ()
   set_now ();
 
   tw0.start (TSTAMP_MAX);
-  printf ("abort, %f but inly on %f\n", NOW, tw0.at);
 #endif
 }
 
