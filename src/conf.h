@@ -47,7 +47,7 @@ struct conf_node {
   char *hostname; // hostname, if known, or NULL.
   u16 port;       // the port to bind to
 
-  enum connectmode { C_ONDEMAND, C_NEVER, C_ALWAYS } connectmode;
+  enum connectmode { C_ONDEMAND, C_NEVER, C_ALWAYS, C_DISABLED } connectmode;
   bool compress;
   bool inherit_tos; // inherit TOS in packets send to this destination
   u32 can_recv, can_send;

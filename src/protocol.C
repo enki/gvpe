@@ -18,6 +18,8 @@
 
 #include "config.h"
 
+#include <list>
+
 #include <cstdlib>
 #include <cstring>
 #include <cstdio>
@@ -73,6 +75,97 @@ challenge_bytes ()
   return challenge;
 }
 
+// caching of rsa operations really helps slow computers
+struct rsa_entry {
+  tstamp expire;
+  rsachallenge chg;
+  RSA *key; // which key
+  rsaencrdata encr;
+
+  rsa_entry ()
+    {
+      expire = NOW + CHALLENGE_TTL;
+    }
+};
+
+struct rsa_cache : list<rsa_entry>
+{
+  void cleaner_cb (tstamp &ts); time_watcher cleaner;
+  
+  const rsaencrdata *public_encrypt (RSA *key, const rsachallenge &chg)
+    {
+      for (iterator i = begin (); i != end (); ++i)
+       {
+        if (i->key == key && !memcmp (&chg, &i->chg, sizeof chg))
+          return &i->encr;
+       }
+
+      if (cleaner.at < NOW)
+        cleaner.start (NOW + CHALLENGE_TTL);
+
+      resize (size () + 1);
+      rsa_entry *e = &(*rbegin ());
+
+      e->key = key;
+      memcpy (&e->chg, &chg, sizeof chg);
+
+      if (0 > RSA_public_encrypt (sizeof chg,
+                                  (unsigned char *)&chg, (unsigned char *)&e->encr,
+                                  key, RSA_PKCS1_OAEP_PADDING))
+        fatal ("RSA_public_encrypt error");
+
+      return &e->encr;
+    }
+
+  const rsachallenge *private_decrypt (RSA *key, const rsaencrdata &encr)
+    {
+      for (iterator i = begin (); i != end (); ++i)
+        if (i->key == key && !memcmp (&encr, &i->encr, sizeof encr))
+          return &i->chg;
+
+      if (cleaner.at < NOW)
+        cleaner.start (NOW + CHALLENGE_TTL);
+
+      resize (size () + 1);
+      rsa_entry *e = &(*rbegin ());
+
+      e->key = key;
+      memcpy (&e->encr, &encr, sizeof encr);
+
+      if (0 > RSA_private_decrypt (sizeof encr,
+                                   (unsigned char *)&encr, (unsigned char *)&e->chg,
+                                   key, RSA_PKCS1_OAEP_PADDING))
+        {
+          pop_back ();
+          return 0;
+        }
+
+      return &e->chg;
+    }
+
+  rsa_cache ()
+    : cleaner (this, &rsa_cache::cleaner_cb)
+    { }
+
+} rsa_cache;
+
+void rsa_cache::cleaner_cb (tstamp &ts)
+{
+  if (empty ())
+    ts = TSTAMP_CANCEL;
+  else
+    {
+      ts = NOW + 3;
+      for (iterator i = begin (); i != end (); )
+        {
+          if (i->expire >= NOW)
+            i = erase (i);
+          else
+            ++i;
+        }
+    }
+}
+
 // run a script. yes, it's a template function. yes, c++
 // is not a functional language. yes, this suxx.
 template<class owner>
@@ -114,11 +207,11 @@ struct crypto_ctx
     EVP_CIPHER_CTX cctx;
     HMAC_CTX hctx;
 
-    crypto_ctx (rsachallenge &challenge, int enc);
+    crypto_ctx (const rsachallenge &challenge, int enc);
     ~crypto_ctx ();
   };
 
-crypto_ctx::crypto_ctx (rsachallenge &challenge, int enc)
+crypto_ctx::crypto_ctx (const rsachallenge &challenge, int enc)
 {
   EVP_CIPHER_CTX_init (&cctx);
   EVP_CipherInit_ex (&cctx, CIPHER, 0, &challenge[CHG_CIPHER_KEY], 0, enc);
@@ -583,7 +676,7 @@ connection::send_reset (SOCKADDR *dsa)
 {
   static net_rate_limiter limiter(1);
 
-  if (limiter.can (dsa))
+  if (limiter.can (dsa) && connectmode != conf_node::C_DISABLED)
     {
       config_packet *pkt = new config_packet;
 
@@ -595,33 +688,30 @@ connection::send_reset (SOCKADDR *dsa)
 }
 
 static rsachallenge *
-gen_challenge (SOCKADDR *sa)
+gen_challenge (u32 seqrand, SOCKADDR *sa)
 {
   static rsachallenge k;
 
   memcpy (&k, &challenge_bytes (), sizeof (k));
-  RAND_bytes ((unsigned char *)&k[CHG_SEQNO], sizeof (u32));
+  *(u32 *)&k[CHG_SEQNO] ^= seqrand;
   xor_sa (k, sa);
 
   return &k;
 }
 
 void
-connection::send_auth (auth_subtype subtype, SOCKADDR *sa, rsachallenge *k)
+connection::send_auth (auth_subtype subtype, SOCKADDR *sa, const rsachallenge *k)
 {
-  static net_rate_limiter limiter(2);
+  static net_rate_limiter limiter(0.2);
 
   if (subtype != AUTH_INIT || limiter.can (sa))
     {
+      if (!k)
+        k = gen_challenge (seqrand, sa);
+
       auth_packet *pkt = new auth_packet (conf->id, subtype);
 
-      if (!k)
-        k = gen_challenge (sa);
-
-      if (0 > RSA_public_encrypt (sizeof (*k),
-                                  (unsigned char *)k, (unsigned char *)&pkt->challenge,
-                                  conf->rsa_key, RSA_PKCS1_OAEP_PADDING))
-        fatal ("RSA_public_encrypt error");
+      memcpy (pkt->challenge, rsa_cache.public_encrypt (conf->rsa_key, *k), sizeof (rsaencrdata));
 
       slog (L_TRACE, ">>%d PT_AUTH(%d) [%s]", conf->id, subtype, (const char *)sockinfo (sa));
 
@@ -674,11 +764,10 @@ connection::reset_connection ()
         run_script (this, &connection::script_node_down, false);
     }
 
-  delete ictx;
-  ictx = 0;
+  delete ictx; ictx = 0;
+  delete octx; octx = 0;
 
-  delete octx;
-  octx = 0;
+  RAND_bytes ((unsigned char *)&seqrand, sizeof (u32));
 
   sa.sin_port = 0;
   sa.sin_addr.s_addr = 0;
@@ -776,8 +865,8 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
         config_packet *p = (config_packet *) pkt;
         if (!p->chk_config ())
           {
-            slog (L_WARN, _("disabling node '%s' because of differing protocol"), conf->nodename);
-            connectmode = conf_node::C_NEVER;
+            slog (L_WARN, _("protocol mismatch, disabling node '%s'"), conf->nodename);
+            connectmode = conf_node::C_DISABLED;
           }
         else if (connectmode == conf_node::C_ALWAYS)
           establish_connection ();
@@ -800,11 +889,9 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
             if (p->subtype == AUTH_INIT)
               send_auth (AUTH_INITREPLY, ssa);
 
-            rsachallenge k;
+            const rsachallenge *k = rsa_cache.private_decrypt (::conf.rsa_key, p->challenge);
 
-            if (0 > RSA_private_decrypt (sizeof (rsaencrdata),
-                                         (unsigned char *)&p->challenge, (unsigned char *)&k,
-                                         ::conf.rsa_key, RSA_PKCS1_OAEP_PADDING))
+            if (!k)
               {
                 slog (L_ERR, _("challenge from %s (%s) illegal or corrupted"),
                       conf->nodename, (const char *)sockinfo (ssa));
@@ -825,20 +912,19 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
 
                 delete octx;
 
-                octx   = new crypto_ctx (k, 1);
+                octx   = new crypto_ctx (*k, 1);
                 oseqno = *(u32 *)&k[CHG_SEQNO] & 0x7fffffff;
 
-                send_auth (AUTH_REPLY, ssa, &k);
+                send_auth (AUTH_REPLY, ssa, k);
                 break;
 
               case AUTH_REPLY:
 
-                if (!memcmp ((u8 *)gen_challenge (ssa) + sizeof (u32), (u8 *)&k + sizeof (u32),
-                             sizeof (rsachallenge) - sizeof (u32)))
+                if (!memcmp ((u8 *)gen_challenge (seqrand, ssa), (u8 *)k, sizeof (rsachallenge)))
                   {
                     delete ictx;
 
-                    ictx = new crypto_ctx (k, 0);
+                    ictx = new crypto_ctx (*k, 0);
                     iseqno.reset (*(u32 *)&k[CHG_SEQNO] & 0x7fffffff);	// at least 2**31 sequence numbers are valid
 
                     sa = *ssa;

@@ -62,10 +62,13 @@ class pkt_queue
 
 enum auth_subtype { AUTH_INIT, AUTH_INITREPLY, AUTH_REPLY };
 
+struct auth_packet;
+
 struct connection
   {
     conf_node *conf;
     struct vpn *vpn;
+    u32 seqrand;
 
     SOCKADDR sa;
     int retry_cnt;
@@ -89,7 +92,7 @@ struct connection
     void rekey_cb (tstamp &ts); time_watcher rekey; // next rekying (actually current reset + reestablishing)
     void keepalive_cb (tstamp &ts); time_watcher keepalive; // next keepalive probe
 
-    void send_auth (auth_subtype subtype, SOCKADDR *sa, rsachallenge *k = 0);
+    void send_auth (auth_subtype subtype, SOCKADDR *sa, const rsachallenge *k = 0);
     void send_reset (SOCKADDR *dsa);
     void send_ping (SOCKADDR *dss, u8 pong = 0);
     void send_data_packet (tap_packet *pkt, bool broadcast = false);

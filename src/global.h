@@ -28,7 +28,7 @@
 #define RSA_KEYLEN	((RSA_KEYBITS) >> 3)
 #define RSA_OVERHEAD	(41 + 1)	// well, no define for OAEP
 
-#define CHALLENGE_TTL	30		// challenge bytes timeout after 30 seconds
+#define CHALLENGE_TTL	30		// challenge bytes timeout after n seconds
 
 #define CIPHER		ENABLE_CIPHER ()
 #define CIPHER_KEYLEN	(EVP_CIPHER_key_length (CIPHER))
@@ -51,7 +51,7 @@
 
 #define QUEUEDEPTH 16			// the number of packets that will be queued (should be low)
 
-#define WINDOWSIZE 1024			// sliding window size
+#define WINDOWSIZE 512			// sliding window size
 
 extern char *confbase;		// directory in which all config files are
 extern char *thisnode;		// config for current node (TODO: remove)
