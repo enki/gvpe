@@ -4,7 +4,7 @@
           priorities
         - renamed vped => gvpe and vpectrl => gvpectrl, as well as
           vped.conf => gvpe.conf.
-	- new per-mode option "max-retry".
+	- new per-node option "max-retry".
 	- asymmetric rekeying behaviour, so hosts don't rekey simultaneously.
         - new configure option --enable-static-daemon.
         - fix configure --help output.
