@@ -67,12 +67,16 @@ AC_ARG_ENABLE(iftype,
   [AC_HELP_STRING(--enable-iftype[=TYPE/SUBTYPE], [
      Use kernel/net device interface TYPE/SUBTYPE.
      Working combinations are:
-        "native/linux" "tincd/linux" "tincd/freebsd";
+        "native/linux"
+        "tincd/linux"
+        "tincd/freebsd";
      Untested combinations are:
-        "tincd/netbsd" "tincd/darwin" "tincd/solaris"
-        "tincd/openbsd" "tincd/cygwin";
+        "tincd/netbsd"
+        "tincd/darwin"
+        "tincd/solaris"
+        "tincd/openbsd";
      Broken combinations are:
-        "native/cygwin";
+        "tincd/cygwin";
      The default is to autodetect.
   ])],
   [
@@ -139,7 +143,7 @@ AC_CHECK_HEADERS(ext/hash_map)
 
 dnl Checks for header files.
 AC_CHECK_HEADERS([fcntl.h inttypes.h limits.h malloc.h stdint.h strings.h syslog.h unistd.h \
-	sys/file.h sys/ioctl.h sys/param.h sys/time.h netinet/in_systm.h cygwin.h arpa/inet.h \
+	sys/file.h sys/ioctl.h sys/param.h sys/time.h netinet/in_systm.h sys/cygwin.h arpa/inet.h \
         sys/poll.h sys/mman.h netinet/in.h])
 AC_CHECK_HEADERS([net/ethernet.h net/if.h netinet/ip.h netinet/tcp.h netinet/in_systm.h], [], [],
 [

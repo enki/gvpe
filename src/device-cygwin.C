@@ -174,8 +174,8 @@ tap_device::tap_device ()
 
   if (device_handle == INVALID_HANDLE_VALUE)
     {
-      slog (L_ERR, _("%s (%s) is not a usable Windows tap device: %s"),
-	      device, iface, wstrerror (GetLastError ()));
+      slog (L_ERR, _("%s is not a usable Windows tap device: %s"),
+	      adaptername, wstrerror (GetLastError ()));
       exit (1);
     }
 
@@ -187,8 +187,8 @@ tap_device::tap_device ()
       (device_handle, TAP_IOCTL_GET_MAC, &mac, sizeof (mac), &mac, sizeof (mac), &len, 0))
     {
       slog (L_ERR,
-	      _("Could not get MAC address from Windows tap device %s (%s): %s"),
-	      device, iface, wstrerror (GetLastError ()));
+	      _("Could not get MAC address from Windows tap device %s: %s"),
+	      adaptername, wstrerror (GetLastError ()));
       exit (1);
     }
 }

@@ -872,8 +872,8 @@ Optional Features:
                           Working combinations are: "native/linux"
                           "tincd/linux" "tincd/freebsd"; Untested combinations
                           are: "tincd/netbsd" "tincd/darwin" "tincd/solaris"
-                          "tincd/openbsd" "tincd/cygwin"; Broken combinations
-                          are: "native/cygwin"; The default is to autodetect.
+                          "tincd/openbsd"; Broken combinations are:
+                          "tincd/cygwin"; The default is to autodetect.
   --enable-rohc           enable robust header compression (rfc3095).
   --enable-icmp           enable icmp protocol support (default disabled).
   --enable-tcp            enable tcp protocol support (default disabled).
@@ -6986,7 +6986,7 @@ done
 
 
 for ac_header in fcntl.h inttypes.h limits.h malloc.h stdint.h strings.h syslog.h unistd.h \
-	sys/file.h sys/ioctl.h sys/param.h sys/time.h netinet/in_systm.h cygwin.h arpa/inet.h \
+	sys/file.h sys/ioctl.h sys/param.h sys/time.h netinet/in_systm.h sys/cygwin.h arpa/inet.h \
         sys/poll.h sys/mman.h netinet/in.h
 do
 as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
