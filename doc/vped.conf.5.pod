@@ -136,18 +136,6 @@ firewalls (but note that the rawip protocol is not GRE compatible). Other
 common choices are 50 (IPSEC, ESP), 51 (IPSEC, AH), 4 (IPIP tunnels) or 98
 (ENCAP, rfc1241)
 
-=item enable-udp = yes|true|on | no|false|off
-
-Enable the UDPv4 transport using the C<udp-port> port
-(default: C<yes>). This is a good general choice since UDP tunnels well
-through many firewalls.
-
-=item enable-rawip = yes|true|on | no|false|off
-
-Enable the RAW IPv4 transport using the C<ip-proto> protocol
-(default: C<no>). This is the best choice, since the overhead per packet
-is only 38 bytes, as opposed to UDP's 58 (or TCP's 60+).
-
 =item if-up = relative-or-absolute-path
 
 Sets the path of a script that should be called immediately after the
@@ -260,6 +248,30 @@ executed within a node section only apply to the given node.
 
 Sets the port number used by the UDP protocol (default: C<407>, not
 officially assigned by IANA!).
+
+=item tcp-port = port-number
+
+Similar to C<udp-port> (default: C<407>), but sets the TCP port number.
+
+=item enable-rawip = yes|true|on | no|false|off
+
+Enable the RAW IPv4 transport using the C<ip-proto> protocol
+(default: C<no>). This is the best choice, since the overhead per packet
+is only 38 bytes, as opposed to UDP's 58 (or TCP's 60+).
+
+=item enable-udp = yes|true|on | no|false|off
+
+Enable the UDPv4 transport using the C<udp-port> port
+(default: C<yes>). This is a good general choice since UDP tunnels well
+through many firewalls.
+
+=item enable-tcp = yes|true|on | no|false|off
+
+Enable the TCPv4 transport using the C<tcp-port> port
+(default: C<no>). Support for this horribly unsuitable protocol is only
+available when vpe was compiled using the C<--enable-tcp> option. Never
+use this transport unless you really must, it is horribly ineffiecent and
+resource-intensive compared to the other transports.
 
 =item router-priority = positive-number
 
