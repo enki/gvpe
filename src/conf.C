@@ -95,6 +95,7 @@ conf_node::~conf_node ()
 
   free (nodename);
   free (hostname);
+  free (domain);
 }
 
 void configuration::init ()
@@ -127,11 +128,14 @@ void configuration::cleanup()
 
   rsa_key = 0;
 
-  free (pidfilename); pidfilename = 0;
-  free (ifname);      ifname      = 0;
+  free (pidfilename);   pidfilename   = 0;
+  free (ifname);        ifname        = 0;
 #if ENABLE_HTTP_PROXY
-  free (proxy_host);  proxy_host  = 0;
-  free (proxy_auth);  proxy_auth  = 0;
+  free (proxy_host);    proxy_host    = 0;
+  free (proxy_auth);    proxy_auth    = 0;
+#endif
+#if ENABLE_DNS
+  free (dns_forw_host); dns_forw_host = 0;
 #endif
 }
 
@@ -309,6 +313,18 @@ retry:
             free (script_node_down), script_node_down = strdup (val);
           else if (!strcmp (var, "pid-file"))
             free (pidfilename), pidfilename = strdup (val);
+          else if (!strcmp (var, "dns-forwarder-host"))
+            {
+#if ENABLE_DNS
+              free (dns_forw_host), dns_forw_host = strdup (val);
+#endif
+            }
+          else if (!strcmp (var, "dns-forwarder-port"))
+            {
+#if ENABLE_DNS
+              dns_forw_port = atoi (val);
+#endif
+            }
           else if (!strcmp (var, "http-proxy-host"))
             {
 #if ENABLE_HTTP_PROXY
@@ -338,7 +354,17 @@ retry:
           else if (!strcmp (var, "tcp-port"))
             node->tcp_port = atoi (val);
           else if (!strcmp (var, "dns-port"))
-            node->dns_port = atoi (val);
+            {
+#if ENABLE_DNS
+              node->dns_port = atoi (val);
+#endif
+            }
+          else if (!strcmp (var, "dns-domain"))
+            {
+#if ENABLE_DNS
+              free (node->domain), node->domain = strdup (val);
+#endif
+            }
           else if (!strcmp (var, "router-priority"))
             node->routerprio = atoi (val);
           else if (!strcmp (var, "max-retry"))
@@ -390,7 +416,7 @@ retry:
               u8 v; parse_bool (v, "enable-udp" , PROT_UDPv4, 0); node->protocols = (node->protocols & ~PROT_UDPv4) | v;
             }
           else if (!strcmp (var, "enable-rawip"))
-            {;
+            {
               u8 v; parse_bool (v, "enable-rawip", PROT_IPv4, 0); node->protocols = (node->protocols & ~PROT_IPv4 ) | v;
             }
 

@@ -36,9 +36,9 @@
 enum {
   PROT_UDPv4  = 0x01, // udp over ipv4
   PROT_IPv4   = 0x02, // generic ip protocol
-  PROT_TCPv4  = 0x04, // tcp over ipv4
+  PROT_TCPv4  = 0x04, // tcp over ipv4 (server)
   PROT_ICMPv4 = 0x08, // icmp over ipv4
-  PROT_DNSv4  = 0x10, // dns tunnel over ipv4
+  PROT_DNSv4  = 0x10, // dns tunnel ipv4 (server)
 };
 
 // select the "best" protocol of the available ones
@@ -50,11 +50,14 @@ struct conf_node {
 
   RSA *rsa_key;   // his public key
   char *nodename; // nodename, an internal nickname.
-
   char *hostname; // hostname, if known, or NULL.
+#if ENABLE_DNS
+  char *domain;   // dns tunnel domain
+  u16 dns_port;
+#endif
 
   u8 protocols;   // protocols this host can send & receive
-  u16 udp_port, tcp_port, dns_port;   // the port to bind to
+  u16 udp_port, tcp_port;   // the port to bind to
   int max_retry;
 
   enum connectmode { C_ONDEMAND, C_NEVER, C_ALWAYS, C_DISABLED } connectmode;
@@ -95,6 +98,10 @@ struct configuration {
   char *proxy_auth;	// login:password
   char *proxy_host;	// the proxy hostname, e.g. proxy1.example.net
   u16 proxy_port;	// the proxy port, e.g. 3128
+#endif
+#if ENABLE_DNS
+  char *dns_forw_host;
+  u16 dns_forw_port;
 #endif
 
   void init ();
