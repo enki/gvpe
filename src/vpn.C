@@ -21,9 +21,9 @@
 
 #include <list>
 
-#include <cstdlib>
-#include <cstring>
 #include <cstdio>
+#include <cstring>
+#include <cstdlib>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -100,7 +100,7 @@ vpn::setup ()
       if (bind (ipv4_fd, si.sav4 (), si.salenv4 ()))
         {
           slog (L_ERR, _("can't bind ipv4 socket on %s: %s"), (const char *)si, strerror (errno));
-          exit (1);
+          exit (EXIT_FAILURE);
         }
 
       ipv4_ev_watcher.start (ipv4_fd, EVENT_READ);
@@ -138,7 +138,7 @@ vpn::setup ()
       if (bind (udpv4_fd, si.sav4 (), si.salenv4 ()))
         {
           slog (L_ERR, _("can't bind udpv4 on %s: %s"), (const char *)si, strerror (errno));
-          exit (1);
+          exit (EXIT_FAILURE);
         }
 
       udpv4_ev_watcher.start (udpv4_fd, EVENT_READ);
@@ -182,7 +182,7 @@ vpn::setup ()
       if (bind (icmpv4_fd, si.sav4 (), si.salenv4 ()))
         {
           slog (L_ERR, _("can't bind icmpv4 on %s: %s"), (const char *)si, strerror (errno));
-          exit (1);
+          exit (EXIT_FAILURE);
         }
 
       icmpv4_ev_watcher.start (icmpv4_fd, EVENT_READ);
@@ -212,13 +212,13 @@ vpn::setup ()
       if (bind (tcpv4_fd, si.sav4 (), si.salenv4 ()))
         {
           slog (L_ERR, _("can't bind tcpv4 on %s: %s"), (const char *)si, strerror (errno));
-          exit (1);
+          exit (EXIT_FAILURE);
         }
 
       if (listen (tcpv4_fd, 5))
         {
           slog (L_ERR, _("can't listen tcpv4 on %s: %s"), (const char *)si, strerror (errno));
-          exit (1);
+          exit (EXIT_FAILURE);
         }
 
       tcpv4_ev_watcher.start (tcpv4_fd, EVENT_READ);
@@ -229,7 +229,7 @@ vpn::setup ()
   if (!tap) //D this, of course, never catches
     {
       slog (L_ERR, _("cannot create network interface '%s'"), conf.ifname);
-      exit (1);
+      exit (EXIT_FAILURE);
     }
   
   run_script (run_script_cb (this, &vpn::script_if_up), true);
@@ -432,7 +432,7 @@ vpn::ipv4_ev (io_watcher &w, short revents)
       slog (L_ERR,
               _("FATAL: unknown revents %08x in socket, terminating\n"),
               revents);
-      exit (1);
+      exit (EXIT_FAILURE);
     }
 }
 
@@ -480,7 +480,7 @@ vpn::icmpv4_ev (io_watcher &w, short revents)
       slog (L_ERR,
               _("FATAL: unknown revents %08x in socket, terminating\n"),
               revents);
-      exit (1);
+      exit (EXIT_FAILURE);
     }
 }
 #endif
@@ -518,7 +518,7 @@ vpn::udpv4_ev (io_watcher &w, short revents)
       slog (L_ERR,
               _("FATAL: unknown revents %08x in socket, terminating\n"),
               revents);
-      exit (1);
+      exit (EXIT_FAILURE);
     }
 }
 
@@ -543,13 +543,13 @@ vpn::tap_ev (io_watcher &w, short revents)
           if (src != THISNODE->id)
             {
               slog (L_ERR, _("FATAL: tap packet not originating on current node received, exiting."));
-              exit (1);
+              exit (EXIT_FAILURE);
             }
 
           if (dst == THISNODE->id)
             {
               slog (L_ERR, _("FATAL: tap packet destined for current node received, exiting."));
-              exit (1);
+              exit (EXIT_FAILURE);
             }
 
           if (dst > conns.size ())
@@ -576,7 +576,7 @@ vpn::event_cb (time_watcher &w)
           shutdown_all ();
           remove_pid (pidfilename);
           slog (L_INFO, _("terminating"));
-          exit (0);
+          exit (EXIT_SUCCESS);
         }
 
       if (events & EVENT_RECONNECT)

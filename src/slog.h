@@ -74,6 +74,9 @@ extern void slog_ (const loglevel l, const char *m, ...);
 #endif
 
 extern void fatal (const char *m);
+extern void require_failed (const char *file, int line, const char *info);
+
+#define require(expr) if (!(expr)) require_failed (__FILE__,  __LINE__, #expr)
 
 #endif
 

@@ -30,13 +30,14 @@
 
 #include "config.h"
 
-#include <stdio.h>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <cstring>
 
 #include "conf.h"
 #include "util.h"
@@ -102,7 +103,7 @@ read_thread(void *)
           else
             {
               slog (L_ERR, "WIN32 TAP: ReadFile returned error: %s", wstrerror (GetLastError ()));
-              exit (1);
+              exit (EXIT_FAILURE);
             }
         }
 
@@ -142,7 +143,7 @@ tap_device::tap_device ()
     {
       slog (L_ERR, _("WIN32 TAP: unable to read registry: %s"),
 	    wstrerror (GetLastError ()));
-      exit (1);
+      exit (EXIT_FAILURE);
     }
 
   for (i = 0;; i++)
@@ -193,7 +194,7 @@ tap_device::tap_device ()
   if (!found)
     {
       slog (L_ERR, _("WIN32 TAP: no windows tap device found!"));
-      exit (1);
+      exit (EXIT_FAILURE);
     }
 
   /* Try to open the corresponding tap device */
@@ -211,7 +212,7 @@ tap_device::tap_device ()
     {
       slog (L_ERR, _("WIN32 TAP: %s is not a usable windows tap device %s: %s"),
 	      adaptername, tapname, wstrerror (GetLastError ()));
-      exit (1);
+      exit (EXIT_FAILURE);
     }
 
   strcpy (ifrname, (char *)tapname);
@@ -225,7 +226,7 @@ tap_device::tap_device ()
       slog (L_ERR,
 	      _("WIN32 TAP: could not get MAC address from windows tap device %s: %s"),
 	      adaptername, wstrerror (GetLastError ()));
-      exit (1);
+      exit (EXIT_FAILURE);
     }
 
   pipe (iopipe);

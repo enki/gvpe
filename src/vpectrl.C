@@ -23,6 +23,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
 #include <clocale>
 
 #include <errno.h>
@@ -237,7 +238,7 @@ keygen (int bits)
       if (!f)
         {
           perror (fname);
-          exit (1);
+          exit (EXIT_FAILURE);
         }
 
       if (ftell (f))
@@ -261,7 +262,7 @@ keygen (int bits)
       else
         fprintf (stderr, _("Done.\n"));
 
-      PEM_write_RSAPublicKey (f, rsa_key);
+      require (PEM_write_RSAPublicKey (f, rsa_key));
       fclose (f);
       free (fname);
 
@@ -271,10 +272,10 @@ keygen (int bits)
       if (!f)
         {
           perror (fname);
-          exit (1);
+          exit (EXIT_FAILURE);
         }
 
-      PEM_write_RSAPrivateKey (f, rsa_key, NULL, NULL, 0, NULL, NULL);
+      require (PEM_write_RSAPrivateKey (f, rsa_key, NULL, NULL, 0, NULL, NULL));
       fclose (f);
       free (fname);
     }
@@ -327,7 +328,7 @@ main (int argc, char **argv, char **envp)
   if (show_config)
     {
       conf.print ();
-      exit (0);
+      exit (EXIT_SUCCESS);
     }
 
   usage (1);

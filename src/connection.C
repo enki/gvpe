@@ -60,14 +60,14 @@ struct crypto_ctx
 crypto_ctx::crypto_ctx (const rsachallenge &challenge, int enc)
 {
   EVP_CIPHER_CTX_init (&cctx);
-  EVP_CipherInit_ex (&cctx, CIPHER, 0, &challenge[CHG_CIPHER_KEY], 0, enc);
+  require (EVP_CipherInit_ex (&cctx, CIPHER, 0, &challenge[CHG_CIPHER_KEY], 0, enc));
   HMAC_CTX_init (&hctx);
   HMAC_Init_ex (&hctx, &challenge[CHG_HMAC_KEY], HMAC_KEYLEN, DIGEST, 0);
 }
 
 crypto_ctx::~crypto_ctx ()
 {
-  EVP_CIPHER_CTX_cleanup (&cctx);
+  require (EVP_CIPHER_CTX_cleanup (&cctx));
   HMAC_CTX_cleanup (&hctx);
 }
 
@@ -77,10 +77,10 @@ rsa_hash (const rsaid &id, const rsachallenge &chg, rsaresponse &h)
   EVP_MD_CTX ctx;
 
   EVP_MD_CTX_init (&ctx);
-  EVP_DigestInit (&ctx, RSA_HASH);
-  EVP_DigestUpdate(&ctx, &chg, sizeof chg);
-  EVP_DigestUpdate(&ctx, &id, sizeof id);
-  EVP_DigestFinal (&ctx, (unsigned char *)&h, 0);
+  require (EVP_DigestInit (&ctx, RSA_HASH));
+  require (EVP_DigestUpdate(&ctx, &chg, sizeof chg));
+  require (EVP_DigestUpdate(&ctx, &id, sizeof id));
+  require (EVP_DigestFinal (&ctx, (unsigned char *)&h, 0));
   EVP_MD_CTX_cleanup (&ctx);
 }
 
@@ -349,7 +349,7 @@ vpndata_packet::setup (connection *conn, int dst, u8 *d, u32 l, u32 seqno)
     }
 #endif
 
-  EVP_EncryptInit_ex (cctx, 0, 0, 0, 0);
+  require (EVP_EncryptInit_ex (cctx, 0, 0, 0, 0));
 
   struct {
 #if RAND_SIZE
@@ -363,17 +363,17 @@ vpndata_packet::setup (connection *conn, int dst, u8 *d, u32 l, u32 seqno)
   RAND_pseudo_bytes ((unsigned char *) datahdr.rnd, RAND_SIZE);
 #endif
 
-  EVP_EncryptUpdate (cctx,
+  require (EVP_EncryptUpdate (cctx,
                      (unsigned char *) data + outl, &outl2,
-                     (unsigned char *) &datahdr, DATAHDR);
+                     (unsigned char *) &datahdr, DATAHDR));
   outl += outl2;
 
-  EVP_EncryptUpdate (cctx,
+  require (EVP_EncryptUpdate (cctx,
                      (unsigned char *) data + outl, &outl2,
-                     (unsigned char *) d, l);
+                     (unsigned char *) d, l));
   outl += outl2;
 
-  EVP_EncryptFinal_ex (cctx, (unsigned char *) data + outl, &outl2);
+  require (EVP_EncryptFinal_ex (cctx, (unsigned char *) data + outl, &outl2));
   outl += outl2;
 
   len = outl + data_hdr_size ();
@@ -392,7 +392,7 @@ vpndata_packet::unpack (connection *conn, u32 &seqno)
   u8 *d;
   u32 l = len - data_hdr_size ();
 
-  EVP_DecryptInit_ex (cctx, 0, 0, 0, 0);
+  require (EVP_DecryptInit_ex (cctx, 0, 0, 0, 0));
 
 #if ENABLE_COMPRESSION
   u8 cdata[MAX_MTU];
@@ -404,12 +404,12 @@ vpndata_packet::unpack (connection *conn, u32 &seqno)
     d = &(*p)[6 + 6 - DATAHDR];
 
   /* this overwrites part of the src mac, but we fix that later */
-  EVP_DecryptUpdate (cctx,
+  require (EVP_DecryptUpdate (cctx,
                      d, &outl2,
-                     (unsigned char *)&data, len - data_hdr_size ());
+                     (unsigned char *)&data, len - data_hdr_size ()));
   outl += outl2;
 
-  EVP_DecryptFinal_ex (cctx, (unsigned char *)d + outl, &outl2);
+  require (EVP_DecryptFinal_ex (cctx, (unsigned char *)d + outl, &outl2));
   outl += outl2;
   
   seqno = ntohl (*(u32 *)(d + RAND_SIZE));

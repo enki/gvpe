@@ -35,6 +35,7 @@
 #include <openssl/pem.h>
 #include <openssl/rsa.h>
 #include <openssl/rand.h>
+#include <openssl/bn.h>
 
 #include "gettext.h"
 
@@ -260,10 +261,10 @@ retry:
                       {
                         ERR_load_RSA_strings (); ERR_load_PEM_strings ();
                         slog (L_ERR, _("unable to open public rsa key file '%s': %s"), fname, ERR_error_string (ERR_get_error (), 0));
-                        exit (1);
+                        exit (EXIT_FAILURE);
                       }
 
-                    RSA_blinding_on (node->rsa_key, 0);
+                    require (RSA_blinding_on (node->rsa_key, 0));
 
                     fclose (f);
                   }
@@ -272,7 +273,7 @@ retry:
                     slog (need_keys ? L_ERR : L_NOTICE, _("unable to read public rsa key file '%s': %s"), fname, strerror (errno));
 
                     if (need_keys)
-                      exit (1);
+                      exit (EXIT_FAILURE);
                   }
 
                 free (fname);
@@ -391,7 +392,7 @@ retry:
   else
     {
       slog (L_ERR, _("unable to read config file '%s': %s"), fname, strerror (errno));
-      exit (1);
+      exit (EXIT_FAILURE);
     }
 
   free (fname);
@@ -407,10 +408,10 @@ retry:
         {
           ERR_load_RSA_strings (); ERR_load_PEM_strings ();
           slog (L_ERR, _("unable to read private rsa key file '%s': %s"), fname, ERR_error_string (ERR_get_error (), 0));
-          exit (1);
+          exit (EXIT_FAILURE);
         }
 
-      RSA_blinding_on (rsa_key, 0);
+      require (RSA_blinding_on (rsa_key, 0));
 
       fclose (f);
     }
@@ -419,8 +420,16 @@ retry:
       slog (need_keys ? L_ERR : L_NOTICE, _("unable to open private rsa key file '%s': %s"), fname, strerror (errno));
 
       if (need_keys)
-        exit (1);
+        exit (EXIT_FAILURE);
     }
+
+  if (need_keys && rsa_key && thisnode && thisnode->rsa_key)
+    if (BN_cmp (rsa_key->n, thisnode->rsa_key->n) != 0
+        || BN_cmp (rsa_key->e, thisnode->rsa_key->e) != 0)
+      {
+        slog (L_NOTICE, _("private hostkey and public node key mismatch: is '%s' the correct node?"), ::thisnode);
+        exit (EXIT_FAILURE);
+      }
 
   free (fname);
 }

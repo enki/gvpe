@@ -92,6 +92,18 @@ void slog_ (const loglevel l, const char *m, ...)
 void fatal (const char *m)
 {
   slog (L_CRIT, m);
-  exit (1);
+  exit (EXIT_FAILURE);
+}
+
+extern void require_failed (const char *file, int line, const char *info)
+{
+  slog (L_CRIT, "FATAL: This program encountered a SHOULD NOT HAPPEN condition and will exit:");
+  slog (L_CRIT, "FATAL+ %s:%d '%s' is false", file, line, info);
+  slog (L_CRIT, "FATAL+ This might indicates a bug in this program, a bug in your libraries,");
+  slog (L_CRIT, "FATAL+ your system setup or operating system. Or it might indicate a very");
+  slog (L_CRIT, "FATAL+ unusual, unanticipated operating condition, library version mismatch");
+  slog (L_CRIT, "FATAL+ or similar problem. If it's not obvious to you what was causing it,");
+  slog (L_CRIT, "FATAL+ then please report this to the program author(s).");
+  exit (126);
 }
 

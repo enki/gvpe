@@ -23,6 +23,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
 #include <clocale>
 
 #include <errno.h>
@@ -256,23 +257,23 @@ main (int argc, char **argv, char **envp)
 
   if (!THISNODE)
     {
-      slog (L_ERR, _("current node not set, or node '%s' not found in configfile, use the -n switch when starting vped."),
+      slog (L_ERR, _("current node not set, or node '%s' not found in configfile, specify the nodename when starting vped."),
             thisnode ? thisnode : "<unset>");
-      exit (1);
+      exit (EXIT_FAILURE);
     }
 
   if (detach (do_detach))
-    exit (0);
+    exit (EXIT_SUCCESS);
 
   setup_signals ();
 
   if (!network.setup ())
     {
       iom.loop ();
-      cleanup_and_exit (1);
+      cleanup_and_exit (EXIT_FAILURE);
     }
 
   slog (L_ERR, _("unable to setup network, unrecoverable error, exiting."));
-  cleanup_and_exit (1);
+  cleanup_and_exit (EXIT_FAILURE);
 }
 

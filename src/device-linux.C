@@ -66,7 +66,7 @@ tap_device::tap_device ()
   if (fd < 0)
     {
       slog (L_ERR, _("could not open device %s: %s"), device, strerror (errno));
-      exit (1);
+      exit (EXIT_FAILURE);
     }
 
   memset (&ifr, 0, sizeof (ifr));
@@ -89,7 +89,7 @@ tap_device::tap_device ()
   else
     {
       slog (L_CRIT, _("unable to configure tun/tap interface: %s"), strerror (errno));
-      exit (1);
+      exit (EXIT_FAILURE);
     }
 
   if (ioctl (fd, TUNSETPERSIST, conf.ifpersist ? 1 : 0))

@@ -22,6 +22,7 @@
 #include "config.h"
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 #include <errno.h>
@@ -145,7 +146,7 @@ void run_script (const run_script_cb &cb, bool wait)
       char *filename;
       asprintf (&filename, "%s/%s", confbase, cb());
       execl (filename, filename, (char *) 0);
-      exit (255);
+      exit (126);
     }
   else if (pid > 0)
     {

@@ -147,7 +147,7 @@ tap_device::tap_device ()
   else
     {
       slog (L_ERR, _("error while configuring tincd device %s on %s"), info (), device);
-      exit (1);
+      exit (EXIT_FAILURE);
     }
 }
 
