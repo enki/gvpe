@@ -127,8 +127,6 @@ parse_options (int argc, char **argv, char **envp)
                 kill_vped = SIGUSR1;
               else if (!strcasecmp (optarg, "USR2"))
                 kill_vped = SIGUSR2;
-              else if (!strcasecmp (optarg, "WINCH"))
-                kill_vped = SIGWINCH;
               else if (!strcasecmp (optarg, "INT"))
                 kill_vped = SIGINT;
               else if (!strcasecmp (optarg, "ALRM"))

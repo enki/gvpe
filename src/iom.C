@@ -21,8 +21,16 @@
 #include <cstdlib>
 #include <cerrno>
 
-#include <sys/select.h>
 #include <sys/time.h>
+
+#if 1 // older unices need these includes for select(2)
+# include <unistd.h>
+# include <sys/types.h>
+#endif
+
+// if the BSDs would at least be marginally POSIX-compatible.. *sigh*
+// until that happens, sys/select.h must come last
+#include <sys/select.h>
 
 #include "iom.h"
 

@@ -449,10 +449,6 @@
 #undef _GNU_SOURCE
 
 /* 
-   Enable BSD extensions */
-#undef __USE_BSD
-
-/* 
    Define to empty if `const' does not conform
    to ANSI C. */
 #undef const

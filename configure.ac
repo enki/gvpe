@@ -46,7 +46,10 @@ AM_GNU_GETTEXT_VERSION(0.11.5)
 # Define this here, not in acconfig's @TOP@ section, since definitions
 # in the latter don't make it into the configure-time tests.
 AC_DEFINE([_GNU_SOURCE], 1, [Enable GNU extenstions])
-AC_DEFINE([__USE_BSD], 1, [Enable BSD extensions])
+
+# do NOT define POSIX_SOURCE, sicne this clashes with many BSDs
+dnl AC_DEFINE([_POSIX_SOURCE], 1, [Enable POSIX 1003.1 extensions])
+dnl AC_DEFINE([_XOPEN_SOURCE], 500, [Enable XOPEN extensions])
 
 ALL_LINGUAS=""
 
@@ -60,8 +63,6 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
-
-AC_ISC_POSIX
 
 AC_ARG_ENABLE(iftype,
   [AC_HELP_STRING(--enable-iftype[=TYPE/SUBTYPE], [
@@ -147,9 +148,9 @@ AC_CHECK_HEADERS(ext/hash_map)
 
 dnl Checks for header files.
 AC_CHECK_HEADERS([fcntl.h inttypes.h limits.h malloc.h stdint.h strings.h syslog.h unistd.h \
-	sys/file.h sys/ioctl.h sys/param.h sys/time.h netinet/in_systm.h sys/cygwin.h arpa/inet.h \
+	sys/file.h sys/ioctl.h sys/param.h sys/time.h netinet/in_systm.h sys/cygwin.h \
         sys/mman.h netinet/in.h])
-AC_CHECK_HEADERS([net/ethernet.h net/if.h netinet/ip.h netinet/tcp.h netinet/in_systm.h], [], [],
+AC_CHECK_HEADERS([arpa/inet.h net/ethernet.h net/if.h netinet/ip.h netinet/tcp.h netinet/in_systm.h], [], [],
 [
 #include <sys/types.h>
 #include <sys/socket.h>
