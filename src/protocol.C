@@ -1127,14 +1127,13 @@ void connection::keepalive_cb (tstamp &ts)
   else if (NOW < last_activity + ::conf.keepalive)
     ts = last_activity + ::conf.keepalive;
   else if (conf->connectmode != conf_node::C_ONDEMAND
-        || THISNODE->connectmode != conf_node::C_ONDEMAND)
+           || THISNODE->connectmode != conf_node::C_ONDEMAND)
     {
       send_ping (si);
       ts = NOW + 5;
     }
   else
     reset_connection ();
-
 }
 
 void connection::connect_request (int id)

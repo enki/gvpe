@@ -45,9 +45,9 @@ public:
 
   // register a watcher
   void reg (int fd, short events, io_watcher *w);
-  void unreg (const io_watcher *w);
+  void unreg (io_watcher *w);
   void reg (time_watcher *w);
-  void unreg (const time_watcher *w);
+  void unreg (time_watcher *w);
   
   void loop ();
 
@@ -116,7 +116,7 @@ struct io_watcher : callback<void, short> {
       iom.reg (fd, events, this);
     }
 
-  void stop () const
+  void stop ()
     {
       iom.unreg (this);
     }
@@ -153,7 +153,7 @@ struct time_watcher : callback<void, tstamp &> {
       set (when);
     }
 
-  void stop () const
+  void stop ()
     {
       iom.unreg (this);
     }

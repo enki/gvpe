@@ -72,7 +72,7 @@ void io_manager::reg (int fd, short events, io_watcher *w)
   iow.push_back (w);
 }
 
-void io_manager::unreg (const io_watcher *w)
+void io_manager::unreg (io_watcher *w)
 {
   unsigned int sz = iow.size ();
   unsigned int i = find (iow.begin (), iow.end (), w) - iow.begin ();
@@ -107,22 +107,29 @@ void io_manager::reg (time_watcher *w)
   if (w->registered)
     slog (L_CRIT, "FATAL: io_manager::reg(time_watcher) called on already-registered watcher");
 
+  w->registered = true;
+
   tw.push_back (w);
   push_heap (tw.begin (), tw.end (), lowest_first);
 }
 
-void io_manager::unreg (const time_watcher *w)
+void io_manager::unreg (time_watcher *w)
 {
-  unsigned int sz = tw.size ();
-  unsigned int i = find (tw.begin (), tw.end (), w) - tw.begin ();
-
-  if (i != sz)
+  if (w->registered)
     {
-      if (i != sz - 1)
-        tw[i] = tw[sz - 1];
+      unsigned int sz = tw.size ();
+      unsigned int i = find (tw.begin (), tw.end (), w) - tw.begin ();
 
-      tw.pop_back ();
-      reschedule_time_watchers ();
+      if (i != sz)
+        {
+          if (i != sz - 1)
+            tw[i] = tw[sz - 1];
+
+          tw.pop_back ();
+          reschedule_time_watchers ();
+        }
+
+      w->registered = false;
     }
 }
 
@@ -143,17 +150,20 @@ void io_manager::loop ()
     {
       while (tw[0]->at <= NOW)
         {
+          // remove the first watcher
+          time_watcher *w = tw[0];
+
           pop_heap (tw.begin (), tw.end (), lowest_first);
-          time_watcher *w = *(tw.end () - 1);
           tw.pop_back ();
 
-          if (w->at >= 0)
-            {
-              w->call (w->at);
+          w->registered = false;
 
-              if (!w->registered)
-                reg (w);
-            }
+          // call it
+          w->call (w->at);
+
+          // re-add it if necessary
+          if (w->at >= 0 && !w->registered)
+            reg (w);
         }
 
       int timeout = (int) ((tw[0]->at - NOW) * 1000);
