@@ -124,6 +124,12 @@ tap_device::info ()
   return _("cygwin cipe/openvpn tap device");
 }
 
+const char *
+tap_device::if_up ()
+{
+  return "";
+}
+
 tap_device::tap_device ()
 {
   HKEY key, key2;

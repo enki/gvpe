@@ -48,7 +48,8 @@ vpn network; // THE vpn (bad design...)
 
 /////////////////////////////////////////////////////////////////////////////
 
-const char *vpn::script_if_up ()
+void
+vpn::script_init_env ()
 {
   // the tunnel device mtu should be the physical mtu - overhead
   // the tricky part is rounding to the cipher key blocksize
@@ -67,10 +68,29 @@ const char *vpn::script_if_up ()
   asprintf (&env, "MTU=%d", mtu); putenv (env);
   asprintf (&env, "MAC=%02x:%02x:%02x:%02x:%02x:%02x",
             0xfe, 0xfd, 0x80, 0x00, THISNODE->id >> 8,
-            THISNODE->id & 0xff);
-  putenv (env);
+            THISNODE->id & 0xff); putenv (env);
 
-  return ::conf.script_if_up ? ::conf.script_if_up : "if-up";
+  // TODO: info for other nodes, maybe?
+}
+
+const char *vpn::script_if_init ()
+{
+  script_init_env ();
+
+  return tap->if_up ();
+}
+
+const char *vpn::script_if_up ()
+{
+  script_init_env ();
+
+  char *filename;
+  asprintf (&filename,
+            "%s/%s",
+            confbase,
+            ::conf.script_if_up ? ::conf.script_if_up : "if-up");
+
+  return filename;
 }
 
 int
@@ -274,7 +294,19 @@ vpn::setup ()
       exit (EXIT_FAILURE);
     }
   
-  run_script (run_script_cb (this, &vpn::script_if_up), true);
+  if (tap->if_up () &&
+      !run_script (run_script_cb (this, &vpn::script_if_init), true))
+    {
+      slog (L_ERR, _("interface initialization command '%s' failed, exiting."),
+            tap->if_up ());
+      exit (EXIT_FAILURE);
+    }
+
+  if (!run_script (run_script_cb (this, &vpn::script_if_up), true))
+    {
+      slog (L_ERR, _("if-up command execution failed, exiting."));
+      exit (EXIT_FAILURE);
+    }
 
   tap_ev_watcher.start (tap->fd, EVENT_READ);
 

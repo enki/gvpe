@@ -93,38 +93,47 @@ get_config_string(const char *key, char **res)
 
 #if IF_linux
 # include "tincd/linux/device.c"
+const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME hw ether $MAC mtu $MTU up"; }
 
 #elif IF_freebsd
 # include "tincd/freebsd/device.c"
+const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME ether $MAC mtu $MTU up"; }
 
 #elif IF_netbsd
 # define IF_istun 1
 # include "tincd/netbsd/device.c"
+const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME mtu $MTU up"; }
 
 #elif IF_openbsd
 # define IF_istun 1
 # include "tincd/openbsd/device.c"
+const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME mtu $MTU up"; }
 
 #elif IF_solaris
 # define IF_istun 1
 # include "tincd/solaris/device.c"
+const char * tap_device::if_up () { return ""; }
 
 #elif IF_cygwin
 # include "tincd/cygwin/device.c"
+const char * tap_device::if_up () { return ""; }
 
 #elif IF_mingw
 # include "tincd/mingw/device.c"
+const char * tap_device::if_up () { return ""; }
 
 #elif IF_darwin
 # define IF_istun 1
 # include "tincd/darwin/device.c"
+const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME ether $MAC mtu $MTU up"; }
 
 #elif IF_raw_socket
-# define IF_istun 1
 # include "tincd/raw_socket/device.c"
+const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME ether $MAC mtu $MTU up"; }
 
 #elif IF_uml_socket
 # include "tincd/uml_socket/device.c"
+const char * tap_device::if_up () { return 0; }
 
 #else
 # error No interface implementation for your IFTYPE/IFSUBTYPE combination.

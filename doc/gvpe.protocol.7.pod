@@ -18,7 +18,7 @@ reliability, and robustness.
 
 The following sections describe each transport protocol in more
 detail. They are sorted by overhead/efficiency, the most efficient
-transprot is listed first:
+transport is listed first:
 
 =head2 RAW IP
 

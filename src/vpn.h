@@ -93,6 +93,8 @@ struct vpn
 
     void dump_status ();
 
+    void script_init_env ();
+    const char *script_if_init ();
     const char *script_if_up ();
   };
 

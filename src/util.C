@@ -129,25 +129,37 @@ detach (int do_detach)
   return 0;
 }
 
-void run_script (const run_script_cb &cb, bool wait)
+bool run_script (const run_script_cb &cb, bool wait)
 {
   int pid;
 
   if ((pid = fork ()) == 0)
     {
-      char *filename;
-      asprintf (&filename, "%s/%s", confbase, cb());
-      execl (filename, filename, (char *) 0);
-      exit (126);
+      execl ("/bin/sh", "/bin/sh", "-c", cb (), (char *) 0);
+      exit (EXIT_FAILURE);
     }
   else if (pid > 0)
     {
       if (wait)
         {
-          waitpid (pid, 0, 0);
-          /* TODO: check status */
+          int status;
+
+          if (waitpid (pid, &status, 0) < 0)
+            {
+              slog (L_WARN, _("waiting for an external command failed: %s."),
+                    strerror (errno));
+              return false;
+            }
+          else if (!WIFEXITED (status) || WEXITSTATUS (status) != EXIT_SUCCESS)
+            {
+              slog (L_WARN, _("external command returned with exit status %d (%04x)."),
+                    WEXITSTATUS (status), status);
+              return false;
+            }
         }
     }
+
+  return true;
 }
 
 #if ENABLE_HTTP_PROXY

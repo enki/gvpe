@@ -57,6 +57,12 @@ tap_device::info ()
   return _("Linux tun/tap device");
 }
 
+const char *
+tap_device::if_up ()
+{
+  return "/sbin/ifconfig $IFNAME hw ether $MAC mtu $MTU up";
+}
+
 tap_device::tap_device ()
 {
   struct ifreq ifr;

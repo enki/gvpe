@@ -119,6 +119,7 @@ struct tap_device {
 
   const char *interface () { return ifrname; }
   const char *info ();
+  const char *if_up ();
 
   tap_packet *recv ();
   void send (tap_packet *pkt);

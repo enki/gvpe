@@ -30,22 +30,20 @@ for TUN-style hosts on all networks (and avoid ARP altogether, which is
 possible), or you need to send a packet from these hosts into the vpn
 network to tell gvpe the local interface address.
 
+=head2 Interface Initialisation
+
+Unless otherwise notes, the network interface will be set "UP" with the
+correct MAC address and correct MTU value. With most interface drivers,
+this is done by running C</sbin/ifconfig>, so make sure that this command
+exists.
+
 =head2 native/linux
 
 TAP-device; already part of the kernel (only 2.4+ supported, but see
 tincd/linux). This is the configuration tested best, as gvpe is being
 developed on this platform.
 
-To configure the interface, use either iproute2:
-
-  ip set $IFNAME address $MAC mtu $MTU up
-  ip addr add $IFNAME 10.11.12.13
-  ip route add $IFNAME 10.11.12.13/8
-
-Or C<ifconfig>:
-
-  ifconfig $IFNAME hw ether $MAC mtu $MTU
-  ifconfig $IFNAME 10.11.12.13 netmask 255.0.0.0
+C<ifname> should be set to the name of the network device.
 
 To hardwire ARP addresses, use iproute2 (C<arp> can do it, too):
 
@@ -54,8 +52,11 @@ To hardwire ARP addresses, use iproute2 (C<arp> can do it, too):
 
 =head2 tincd/linux
 
-TAP-device; already part of the kernel (2.2+ supported). See
+TAP-device; already part of the kernel (2.2 only). See
 C<native/linux> for more info.
+
+C<ifname> should be set to the path of a tap device,
+e.g. C</dev/tap0>. The interface will be named accordingly.
 
 =head2 native/cygwin
 
@@ -65,16 +66,20 @@ TAP-Win32 driver bundled with openvpn (http://openvpn.sf.net/). Just
 download and run the openvpn installer. The only option you need to select
 is the TAP driver.
 
-The MAC need not be set (and in fact I<cannot> be set). The MAC address
-is dynamically being patched into packets and ARP-requests, so only IPv4
-works with ARP on this platform.
+C<ifname> should be set to the name of the device, found in the registry
+at (no kidding :):
+
+      HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Network\{4D36E972-E325-11CE-BFC1-08002BE10318}\<adapterid>\Connection\Name
+
+The MAC address is dynamically being patched into packets and
+ARP-requests, so only IPv4 works with ARP on this platform.
 
 =head2 tincd/freebsd
 
-TAP-device; part of the kernel (since 4.x, maybe earlier). To initialize
-the interface, use this command:
+TAP-device; part of the kernel (since 4.x, maybe earlier).
 
-  ifconfig $IFNAME ether $MAC mtu $MTU up
+C<ifname> should be set to the path of a tap device,
+e.g. C</dev/tap0>. The interface will be named accordingly.
 
 These commands might be helpful examples:
 
@@ -83,14 +88,20 @@ These commands might be helpful examples:
 
 =head2 tincd/netbsd
 
-TUN-device; The interface is a point to point-device. To initialize it,
-you currently need to configure it as such, giving it an address on your
-vpn (the exact address doesn't matter), like this:
+TUN-device; The interface is a point-to-point device. To initialize it,
+you currently need to configure it as a point-to-point device, giving it
+an address on your vpn (the exact address doesn't matter), like this:
 
   ifconfig $IFNAME mtu $MTU up
   ifconfig $IFNAME 10.11.12.13 10.55.66.77
   route add -net 10.0.0.0 10.55.66.77 255.0.0.0
   ping -c1 10.55.66.77 # ping once to tell gvpe your gw ip
+
+The ping is required to tell the ARP emulator inside GVPE the local IP
+address.
+
+C<ifname> should be set to the path of a tun device,
+e.g. C</dev/tun0>. The interface will be named accordingly.
 
 =head2 tincd/openbsd
 
@@ -108,9 +119,8 @@ There are two drivers, the one to use is the "tap" driver. It driver must
 be loaded before use, read the docs on how to install it as a startup
 item.
 
-To initialize the interface, use this command:
-
-  ifconfig $IFNAME ether $MAC mtu $MTU up
+C<ifname> should be set to the path of a tap device,
+e.g. C</dev/tap0>. The interface will be named accordingly.
 
 These commands might be helpful examples:
 
@@ -126,6 +136,9 @@ The necessary kernel extension can be found here:
 
   http://chrisp.de/en/projects/tunnel.html
 
+C<ifname> should be set to the path of a tun device,
+e.g. C</dev/tun0>. The interface will be named accordingly.
+
 The driver must be loaded before use:
 
   kmodload tunnel
@@ -140,6 +153,9 @@ Some precompiled tun drivers might be available here:
 
   http://www.monkey.org/~dugsong/fragroute/
 
+The interface MAC and MTU are I<NOT> set up for you. Please try it out and
+send me an C<ifconfig> command invocation that does that.
+
 See C<tincd/netbsd> for more information.
 
 Completely unstested so far.
@@ -148,19 +164,30 @@ Completely unstested so far.
 
 TAP-device; see C<native/cygwin> for more information.
 
+The setup is likely to be similar to C<native/cygwin>.
+
 Completely untested so far.
 
 =head2 tincd/raw_socket
 
 TAP-device; purpose unknown and untested, probably binds itself on an
-existing ethernet device (given by C<ifname>), which should probably not
-be configured in any way, except for setting it I<up>.
+existing ethernet device (given by C<ifname>). It must be down prior to
+running the command, and GVPE will try to set it's MAC address and MTU to
+the "correct" values.
+
+Completely untested so far.
 
 =head2 tincd/uml_socket
 
 TAP-device; purpose unknown and untested, probably creates a unix datagram
 socket (path given by C<ifname>) and reads and writes raw packets, so
 might be useful in other than UML contexts.
+
+No network interface is created, and the MAC and MTU must be set as
+approriate on the other side of the socket.  GVPE will exit if the MAC
+address doesn't match what it expects.
+
+Completely untested so far.
 
 =head2 tincd/cygwin
 

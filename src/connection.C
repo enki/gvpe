@@ -788,7 +788,8 @@ connection::reset_connection ()
             conf->nodename, (const char *)si);
 
       if (::conf.script_node_down)
-        run_script (run_script_cb (this, &connection::script_node_down), false);
+        if (!run_script (run_script_cb (this, &connection::script_node_down), false))
+          slog (L_WARN, _("node-down command execution failed, continuing."));
     }
 
   delete ictx; ictx = 0;
@@ -1019,7 +1020,8 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                                 p->prot_major, p->prot_minor);
 
                           if (::conf.script_node_up)
-                            run_script (run_script_cb (this, &connection::script_node_up), false);
+                            if (!run_script (run_script_cb (this, &connection::script_node_up), false))
+                              slog (L_WARN, _("node-up command execution failed, continuing."));
 
                           break;
                         }
@@ -1169,9 +1171,9 @@ void connection::send_connect_request (int id)
   delete p;
 }
 
-void connection::script_node ()
+void connection::script_init_env ()
 {
-  vpn->script_if_up ();
+  vpn->script_init_env ();
 
   char *env;
   asprintf (&env, "DESTID=%d",   conf->id); putenv (env);
@@ -1182,20 +1184,28 @@ void connection::script_node ()
 
 const char *connection::script_node_up ()
 {
-  script_node ();
+  script_init_env ();
 
   putenv ("STATE=up");
 
-  return ::conf.script_node_up ? ::conf.script_node_up : "node-up";
+  char *filename;
+  asprintf (&filename,
+            "%s/%s",
+            confbase,
+            ::conf.script_node_up ? ::conf.script_node_up : "node-up");
 }
 
 const char *connection::script_node_down ()
 {
-  script_node ();
+  script_init_env ();
 
   putenv ("STATE=down");
 
-  return ::conf.script_node_up ? ::conf.script_node_down : "node-down";
+  char *filename;
+  asprintf (&filename,
+            "%s/%s",
+            confbase,
+            ::conf.script_node_down ? ::conf.script_node_down : "node-down");
 }
 
 connection::connection (struct vpn *vpn, conf_node *conf)

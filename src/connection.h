@@ -173,7 +173,7 @@ struct connection
     void recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi);
     void send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos = 0);
 
-    void script_node ();
+    void script_init_env ();
     const char *script_node_up ();
     const char *script_node_down ();
 
