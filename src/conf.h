@@ -49,6 +49,7 @@ struct conf_node {
 
   enum connectmode { C_ONDEMAND, C_NEVER, C_ALWAYS } connectmode;
   bool compress;
+  bool inherit_tos; // inherit TOS in packets send to this destination
 
   u32 routerprio;
 

@@ -270,6 +270,18 @@ retry:
                         _("illegal value for 'connectmode', use one of 'ondemand', 'never' or 'always', at '%s' line %d"),
                         var, fname, lineno);
             }
+          else if (!strcmp (var, "inherit-tos"))
+            {
+              if (!strcmp (val, "yes"))
+                node->inherit_tos = true;
+              else if (!strcmp (val, "no"))
+                node->inherit_tos = false;
+              else
+                slog (L_WARN,
+                        _("illegal value for 'compress', only 'yes' or 'no' allowed, at '%s' line %d"),
+                        var, fname, lineno);
+            }
+
           else if (!strcmp (var, "compress"))
             {
               if (!strcmp (val, "yes"))

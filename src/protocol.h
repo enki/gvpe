@@ -20,6 +20,7 @@
 #define VPE_PROTOCOL_H__
 
 #include <netinet/in.h>
+#include <netinet/ip.h> // for tos etc.
 
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
@@ -121,7 +122,7 @@ struct vpn
 
     connection *find_router ();
 
-    void send_vpn_packet (vpn_packet *pkt, SOCKADDR *sa);
+    void send_vpn_packet (vpn_packet *pkt, SOCKADDR *sa, int tos = IPTOS_RELIABILITY);
     void reconnect_all ();
     void shutdown_all ();
     void connect_request (int id);

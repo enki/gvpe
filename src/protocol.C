@@ -483,7 +483,7 @@ connection::send_ping (SOCKADDR *dsa, u8 pong)
   ping_packet *pkt = new ping_packet;
 
   pkt->setup (conf->id, pong ? ping_packet::PT_PONG : ping_packet::PT_PING);
-  vpn->send_vpn_packet (pkt, dsa);
+  vpn->send_vpn_packet (pkt, dsa, IPTOS_LOWDELAY);
 
   delete pkt;
 }
@@ -498,7 +498,7 @@ connection::send_reset (SOCKADDR *dsa)
       config_packet *pkt = new config_packet;
 
       pkt->setup (vpn_packet::PT_RESET, conf->id);
-      vpn->send_vpn_packet (pkt, dsa);
+      vpn->send_vpn_packet (pkt, dsa, IPTOS_MINCOST);
 
       delete pkt;
     }
@@ -552,7 +552,7 @@ connection::send_auth (auth_subtype subtype, SOCKADDR *sa, rsachallenge *k)
 
       slog (L_TRACE, ">>%d PT_AUTH(%d) [%s]", conf->id, subtype, (const char *)sockinfo (sa));
 
-      vpn->send_vpn_packet (pkt, sa);
+      vpn->send_vpn_packet (pkt, sa, IPTOS_RELIABILITY);
 
       delete pkt;
     }
@@ -637,9 +637,16 @@ void
 connection::send_data_packet (tap_packet * pkt, bool broadcast)
 {
   vpndata_packet *p = new vpndata_packet;
+  int tos = 0;
+
+  if (conf->inherit_tos
+      && (*pkt)[12] == 0x08 && (*pkt)[13] == 0x00 // IP
+      && ((*pkt)[14] & 0xf0) == 0x40)             // IPv4
+    tos = (*pkt)[15] & IPTOS_TOS_MASK;
+  printf ("%d %02x %02x %02x %02x = %02x\n", (int)conf->inherit_tos, (*pkt)[12],(*pkt)[13],(*pkt)[14],(*pkt)[15], tos);
 
   p->setup (this, broadcast ? 0 : conf->id, &((*pkt)[6 + 6]), pkt->len - 6 - 6, ++oseqno); // skip 2 macs
-  vpn->send_vpn_packet (p, &sa);
+  vpn->send_vpn_packet (p, &sa, tos);
 
   delete p;
 
@@ -1097,8 +1104,9 @@ vpn::setup (void)
 }
 
 void
-vpn::send_vpn_packet (vpn_packet *pkt, SOCKADDR *sa)
+vpn::send_vpn_packet (vpn_packet *pkt, SOCKADDR *sa, int tos)
 {
+  setsockopt (socket_fd, SOL_IP, IP_TOS, &tos, sizeof tos);
   sendto (socket_fd, &((*pkt)[0]), pkt->len, 0, (sockaddr *)sa, sizeof (*sa));
 }
 
