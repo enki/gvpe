@@ -34,7 +34,7 @@ enum {
   PROT_UDPv4  = 0x01, // udp over ipv4
   PROT_IPv4   = 0x02, // generic ip protocol
   PROT_TCPv4  = 0x04, // tcp over ipv4
-  PROT_ICMPv4 = 0x08, // icmp over ipv4 (NYI)
+  PROT_ICMPv4 = 0x08, // icmp over ipv4
 };
 
 // select the "best" protocol of the available ones
