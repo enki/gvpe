@@ -11,6 +11,7 @@
         - many documentation layout fixes.
         - synced iom.[Ch] from rxvt-unicode.
         - revert to locale.h - a usual, clocale is nonfunctioning on macosx.
+        - considerably improved pod2texi.
 
 1.6.1 Wed May 12 14:48:20 CEST 2004
 	- fix -c switch that has been broken due to a last-minute fix

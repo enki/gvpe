@@ -9,7 +9,7 @@ MAINTAINERCLEANFILES = gvpe.texi gvpe.5 gvpe.8 gvpectrl.8 gvpe.conf.5 gvpe.proto
 
 EXTRA_DIST = $(man_MANS) gvpe.texi \
   Makefile.maint GNUmakefile Makefile.summ \
-  gvpe.texi.in gvpe.5.pod gvpe.8.pod gvpectrl.8.pod gvpe.conf.5.pod gvpe.protocol.7.pod gvpe.osdep.5.pod \
+  gvpe.texi.pod gvpe.5.pod gvpe.8.pod gvpectrl.8.pod gvpe.conf.5.pod gvpe.protocol.7.pod gvpe.osdep.5.pod \
   complex-example/README complex-example/if-up complex-example/node-up complex-example/gvpe.conf
 
 

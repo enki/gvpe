@@ -11,110 +11,170 @@ sub escape_texi($) {
 
 sub example {
    my $text = $_[0];
-   print "\n\n\@example\n";
    $text =~ s/\n+$//;
    $text =~ s/([\@\{\}])/\@$1/g;
-   print $text;
-   print "\n\@end example\n\n";
+
+   "\n\n\@example\n"
+   . $text
+   . "\n\@end example\n\n";
 }
 
-while (<>) {
-   if (/^\@c INCLUDE-(\S+) (\S+)/) {
-      my $type = $1;
-      my $name = $2;
-      my $path = $2;
+my @nodes; # nodelist
+my @ctx;   # curstack
 
-      $name =~ s/\.(\d)$/($1)/;
+sub out {
+   $ctx[-1]{out} .= join "", @_;
+}
 
-      print "\@chapter $name\n\n";
+sub parse_pod {
+   my ($data) = @_;
+   local $out;
 
-      if ($type eq "POD") {
-         open my $x, "<$path.pod" or die "$path.pod: $!";
-         my $data = do { local $/; <$x> };
+   my $pod = new Pod::Tree;
+   $pod->load_string($data);
 
-         my $pod = new Pod::Tree;
-         $pod->load_string($data);
-      
-         my $walker; $walker = sub {
-            my $n = $_[0];
-            if ($n->is_code) {
-               # nop
-            } elsif ($n->is_link) {
-               my $target = $n->get_target;
-               my $page    = $target->get_page;
-               my $section = $target->get_section;
-               
-               #print "<b>";
-               $walker->($_) for @{$n->get_children};
-               #print "</b>";
-            } elsif ($n->is_text) {
-               print escape_texi $n->get_text;
-            } elsif ($n->is_verbatim) {
-               example $n->get_text;
-            } elsif ($n->is_sequence) {
-               if ($n->get_letter eq "C") {
-                  print "\@t{";
-                  $walker->($_) for @{$n->get_children};
-                  print "}";
-               } elsif ($n->get_letter eq "B") {
-                  print "\@strong{";
-                  $walker->($_) for @{$n->get_children};
-                  print "}";
-               } elsif ($n->get_letter eq "I" or $n->get_letter eq "F") {
-                  print "\@emph{";
-                  $walker->($_) for @{$n->get_children};
-                  print "}";
-               } else {
-                  # S would mean to use nbsp
-                  $walker->($_) for @{$n->get_children};
-               }
-            } elsif ($n->is_command) {
-               if ($n->is_c_head1) {
-                  print "\n\@section ";
-                  $walker->($_) for @{$n->get_children};
-                  print "\n";
-               } elsif ($n->is_c_head2) {
-                  print "\n\n\@subsection ";
-                  $walker->($_) for @{$n->get_children};
-                  print "\n";
-               } else {
-                  # nop?
-               }
-            } elsif ($n->is_ordinary) {
-               $walker->($_) for @{$n->get_children};
-               print "\@refill\n";
-            } elsif ($n->is_root) {
-               $walker->($_) for @{$n->get_children};
-            } elsif ($n->is_list) {
-               print "\n\n\@itemize\n";
-               $walker->($_) for @{$n->get_children};
-               print "\@end itemize\n\n";
-            } elsif ($n->is_item) {
-               print "\n\n\@item\n";
-                  print "\@b{";
-                  $walker->($_) for @{$n->get_children};
-                  print "}\n\n";
-               $walker->($_) for @{$n->get_siblings};
+   my $walker; $walker = sub {
+      my $n = $_[0];
+      if ($n->is_code) {
+         # nop
+      } elsif ($n->is_link) {
+         my $target = $n->get_target;
+         my $page    = $target->get_page;
+         my $section = $target->get_section;
+         
+         $walker->($_) for @{$n->get_children};
+      } elsif ($n->is_text) {
+         out escape_texi $n->get_text;
+      } elsif ($n->is_verbatim) {
+         out example $n->get_text;
+      } elsif ($n->is_sequence) {
+         if ($n->get_letter eq "C") {
+            out "\@t{";
+            $walker->($_) for @{$n->get_children};
+            out "}";
+         } elsif ($n->get_letter eq "B") {
+            out "\@strong{";
+            $walker->($_) for @{$n->get_children};
+            out "}";
+         } elsif ($n->get_letter eq "I" or $n->get_letter eq "F") {
+            out "\@emph{";
+            $walker->($_) for @{$n->get_children};
+            out "}";
+         } else {
+            # S would mean to use nbsp
+            $walker->($_) for @{$n->get_children};
+         }
+      } elsif ($n->is_command) {
+         if ($n->is_c_head1) {
+            out "\n\@section ";
+            $walker->($_) for @{$n->get_children};
+            out "\n";
+         } elsif ($n->is_c_head2) {
+            out "\n\n\@subsection ";
+            $walker->($_) for @{$n->get_children};
+            out "\n";
+         } else {
+            # nop?
+         }
+      } elsif ($n->is_ordinary) {
+         $walker->($_) for @{$n->get_children};
+         out "\@refill\n";
+      } elsif ($n->is_root) {
+         $walker->($_) for @{$n->get_children};
+      } elsif ($n->is_list) {
+         out "\n\n\@itemize\n";
+         $walker->($_) for @{$n->get_children};
+         out "\@end itemize\n\n";
+      } elsif ($n->is_item) {
+         out "\n\n\@item\n";
+            out "\@b{";
+            $walker->($_) for @{$n->get_children};
+            out "}\n\n";
+         $walker->($_) for @{$n->get_siblings};
+      } elsif ($n->is_for) {
+         my $text = $n->get_text;
+
+         if ($n->get_command eq "begin") {
+            if ($n->{brackets}[0] =~ / header/) {
+               $header = $text;
+            } elsif ($n->{brackets}[0] =~ / footer/) {
+               $footer = $text;
             } else {
-               die "UNKNOWN NODE $_[0]{type}<br/>";
-               $walker->($_) for @{$n->get_children};
+               out $text;
             }
-         };
-      
-         $walker->($pod->get_root);
-      } elsif ($type eq "TEXT") {
-         open my $x, "<$path" or die "$path: $!";
-         my $data = do { local $/; <$x> };
 
-         print $data;
-      } elsif ($type eq "EXAMPLE") {
-         open my $x, "<$path" or die "$path: $!";
-         my $data = do { local $/; <$x> };
+         } elsif ($text =~ /^menu-begin/) {
+            out "\n\@menu\n";
 
-         example $data;
+            push @ctx, {}; # dummy node
+
+         } elsif ($text =~ /^menu-item (.*?)::\s+(.*)/) {
+            my ($name, $desc) = ($1, $2);
+
+            push @{ $ctx[-2]{menu} }, [$name, $desc];
+            $ctx[-2]{width} = length $name if $ctx[-2]{width} < length $name;
+
+            my $ctx = {
+               name => $name,
+               up   => $ctx[-2]{name},
+            };
+            push @nodes, $ctx;
+            $ctx[-1] = $ctx;
+
+         } elsif ($text =~ /^menu-end/) {
+            pop @ctx;
+
+            for (@{ $ctx[-1]{menu} }) {
+               out sprintf "* %-*s %s\n", $ctx[-1]{width} + 2, "$_->[0]::", $_->[1];
+            }
+
+            out "\@end menu\n";
+
+         } elsif ($text =~ /^include (\S+) (.*)/) {
+            my ($type, $path) = ($1, $2);
+
+            open my $x, "<$path" or die "$path: $!";
+            my $data = do { local $/; <$x> };
+
+            if ($type eq "pod") {
+               out parse_pod ($data);
+            } elsif ($type eq "text") {
+               out $data;
+            } elsif ($type eq "example") {
+               out example $data;
+            }
+
+         } else {
+            die "UNKNOWN for command <$text>\n";
+         }
+
+      } else {
+         die "UNKNOWN NODE $_[0]{type}\n";
+         $walker->($_) for @{$n->get_children};
       }
-   } else {
-      print;
-   }
+   };
+
+   $walker->($pod->get_root);
 }
+
+@ctx = @nodes = {
+   up   => "(dir)",
+   name => "Top",
+};
+
+parse_pod do { local $/; <> };
+
+print $header;
+
+for (0 .. $#nodes) {
+   my $node = $nodes[$_];
+   my $prev = $_ > 0 ? $nodes[$_-1] : undef;
+   my $next = $nodes[$_+1];
+
+   print "\@node $node->{name},$next->{name},$prev->{name},$node->{up}\n\n",
+         "\@chapter $node->{name}\n",
+         "$node->{out}\n\n";
+}
+
+print $footer;
 

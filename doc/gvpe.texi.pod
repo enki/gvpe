@@ -140,7 +140,7 @@ ping each other.
 If you have an internal C<10.x.x.x> network (with a tighter netmask then
 C<255.0.0.0>, e.g. C<10.1.0.0> on C<huffy>, C<10.2.0.0> on C<welshy> and
 so on), you can now enable ip-forwarding and proxy-arp (or set the hosts
-as default gateway), and your three hosts should forward traffic from eahc
+as default gateway), and your three hosts should forward traffic from each
 network to each other.
 
 
