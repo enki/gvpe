@@ -67,6 +67,7 @@ void configuration::init ()
 
   rekey     = DEFAULT_REKEY;
   keepalive = DEFAULT_KEEPALIVE;
+  llevel    = L_INFO;
 
   default_node.port        = DEFAULT_PORT;
   default_node.connectmode = conf_node::C_ALWAYS;
@@ -164,7 +165,7 @@ retry:
               loglevel l = string_to_loglevel (val);
 
               if (l != L_NONE)
-                set_loglevel (l);
+                llevel = l;
               else
                 slog (L_WARN, "'%s': %s, at '%s' line %d", val, UNKNOWN_LOGLEVEL, fname, line);
             }

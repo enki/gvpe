@@ -31,6 +31,7 @@
 
 #include <vector>
 
+#include "slog.h"
 #include "global.h"
 
 #define DEFAULT_REKEY		3600
@@ -79,6 +80,7 @@ struct configuration {
   char *ifname;  // the interface name (tap0 ...)
   bool ifpersist; // should the interface be persistent
   char *prikeyfile;
+  loglevel llevel;
   RSA *rsa_key;  // our private rsa key
 
   char *script_if_up;

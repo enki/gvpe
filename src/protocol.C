@@ -891,17 +891,35 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
 
           if (c->ictx && c->octx)
             {
-              sockinfo si(sa);
-              
-              slog (L_TRACE, ">>%d PT_CONNECT_INFO(%d,%s)\n",
-                             c->conf->id, p->id, (const char *)si);
+              // send connect_info packets to both sides, in case one is
+              // behind a nat firewall (or both ;)
+              {
+                sockinfo si(sa);
+                
+                slog (L_TRACE, ">>%d PT_CONNECT_INFO(%d,%s)\n",
+                               c->conf->id, conf->id, (const char *)si);
 
-              connect_info_packet *r = new connect_info_packet (c->conf->id, conf->id, si);
+                connect_info_packet *r = new connect_info_packet (c->conf->id, conf->id, si);
 
-              r->hmac_set (c->octx);
-              vpn->send_vpn_packet (r, &c->sa);
+                r->hmac_set (c->octx);
+                vpn->send_vpn_packet (r, &c->sa);
 
-              delete r;
+                delete r;
+              }
+
+              {
+                sockinfo si(c->sa);
+                
+                slog (L_TRACE, ">>%d PT_CONNECT_INFO(%d,%s)\n",
+                               conf->id, c->conf->id, (const char *)si);
+
+                connect_info_packet *r = new connect_info_packet (conf->id, c->conf->id, si);
+
+                r->hmac_set (octx);
+                vpn->send_vpn_packet (r, &sa);
+
+                delete r;
+              }
             }
         }
 

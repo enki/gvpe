@@ -47,6 +47,8 @@
 
 vpn network;
 
+static loglevel llevel = L_NONE;
+
 /* If nonzero, display usage information and exit. */
 static int show_help;
 
@@ -128,11 +130,9 @@ parse_options (int argc, char **argv, char **envp)
 
         case 'l':		/* inc debug level */
           {
-            loglevel l = string_to_loglevel (optarg);
+            llevel = string_to_loglevel (optarg);
 
-            if (l != L_NONE)
-              set_loglevel (l);
-            else
+            if (llevel == L_NONE)
               slog (L_WARN, "'%s': %s", optarg, UNKNOWN_LOGLEVEL);
           }
           break;
@@ -246,11 +246,11 @@ main (int argc, char **argv, char **envp)
   make_names ();
   conf.read_config (true);
 
+  set_loglevel (llevel != L_NONE ? llevel : conf.llevel);
+
   RAND_load_file ("/dev/urandom", 1024);
 
-  //OpenSSL_add_all_algorithms ();
-
-  if (!THISNODE)
+  if (!thisnode)
     {
       slog (L_ERR, _("current node not set, or node '%s' not found in configfile, use the -n switch when starting vped."),
             thisnode ? thisnode : "<unset>");
