@@ -49,7 +49,7 @@
 #define MAX_POLL_INTERVAL 5.  // how often to poll minimally when the server has no data
 #define ACTIVITY_INTERVAL 5.
 
-#define TIMEOUT_FACTOR 4.
+#define TIMEOUT_FACTOR 8.
 
 #define INITIAL_TIMEOUT     0.1 // retry timeouts
 #define INITIAL_SYN_TIMEOUT 10. // retry timeout for initial syn
@@ -62,9 +62,9 @@
 #define MAX_WINDOW      1000 // max. for MAX_OUTSTANDING, and backlog
 #define MAX_BACKLOG     (32*1024) // size of gvpe protocol backlog (bytes), must be > MAXSIZE
 
-#define MAX_DOMAIN_SIZE 240 // 255 is legal limit, but bind doesn't compress well
+#define MAX_DOMAIN_SIZE 220 // 255 is legal limit, but bind doesn't compress well
 // 240 leaves about 4 bytes of server reply data
-// every two request bytes less give room for one reply byte
+// every request byte less give room for two reply bytes
 
 #define SEQNO_MASK 0x3fff
 #define SEQNO_EQ(a,b) ( 0 == ( ((a) ^ (b)) & SEQNO_MASK) )
@@ -795,7 +795,7 @@ void dns_connection::receive_rep (dns_rcv *r)
         while (vpn_packet *pkt = rcvdq.get ())
           {
             sockinfo si;
-            si.host = 0x01010101; si.port = htons (c->conf->id); si.prot = PROT_DNSv4;
+            si.host = htonl (c->conf->id); si.port = 0; si.prot = PROT_DNSv4;
 
             vpn->recv_vpn_packet (pkt, si);
 
@@ -1182,7 +1182,7 @@ vpn::dnsv4_ev (io_watcher &w, short revents)
 bool
 vpn::send_dnsv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
-  int client = ntohs (si.port);
+  int client = ntohl (si.host);
 
   assert (0 < client && client <= conns.size ());
 
@@ -1231,6 +1231,7 @@ dns_connection::time_cb (time_watcher &w)
 
               r->retry++;
               r->timeout = NOW + (r->retry * min_latency * TIMEOUT_FACTOR);
+              printf ("TO %d %f\n", r->retry, r->timeout - NOW);//D
 
               // the following code changes the query section a bit, forcing
               // the forwarder to generate a new request
@@ -1288,7 +1289,6 @@ dns_connection::time_cb (time_watcher &w)
   if (send)
     {
       last_sent = NOW;
-      if (rand () & 15 != 0)//D
       sendto (vpn->dnsv4_fd,
               send->pkt->at (0), send->pkt->len, 0,
               vpn->dns_forwarder.sav4 (), vpn->dns_forwarder.salenv4 ());
