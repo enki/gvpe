@@ -1,11 +1,17 @@
-
+1.8 Fri Mar 18 00:58:55 CET 2005
 	- enable-udp = yes is now default only when no other protocols
           are enabled. otherwise it is disabled unless explicitly enabled.
         - implemented dns tunneling (experimental now and in the future).
         - remove support for pre-release version protocol.
+        - updated tincd drivers (rev 1433), added uml_socket driver, documented
+          tincd drivers a bit better.
         - document icmp configuration values.
         - document transport protocols in gvpe.protocol(7).
         - remove unused ChangeLog file.
+        - created a mailinglist at gvpe@lists.schmorp.de.
+        - added an exemption to allow distribution of binaries linked against
+          OpenSSL, as suggested by Guus Sliepen (author of tinc). No
+          GNUTLS conversion in sight.
 
 1.7 Tue Feb 22 23:58:59 CET 2005
 	- protocol version 0.1, compatible with older releases.

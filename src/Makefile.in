@@ -161,8 +161,9 @@ bin_PROGRAMS = gvpectrl
 EXTRA_DIST = device-linux.C device-cygwin.C device-tincd.C callback.pl	\
    tincd/apply tincd/fixit	\
    tincd/cygwin/device.c tincd/darwin/device.c tincd/freebsd/device.c	\
-   tincd/linux/device.c tincd/mingw/device.c tincd/netbsd/device.c	\
+   tincd/linux/device.c tincd/mingw/common.h tincd/mingw/device.c tincd/netbsd/device.c	\
    tincd/openbsd/device.c tincd/raw_socket/device.c tincd/solaris/device.c \
+   tincd/uml_socket/device.c \
    ether_emu.C lzf/lzf_c.c lzf/lzf_d.c
 
 
@@ -403,7 +404,7 @@ top_distdir = ..
 distdir = $(top_distdir)/$(PACKAGE)-$(VERSION)
 
 distdir: $(DISTFILES)
-	$(mkinstalldirs) $(distdir)/lzf $(distdir)/tincd $(distdir)/tincd/cygwin $(distdir)/tincd/darwin $(distdir)/tincd/freebsd $(distdir)/tincd/linux $(distdir)/tincd/mingw $(distdir)/tincd/netbsd $(distdir)/tincd/openbsd $(distdir)/tincd/raw_socket $(distdir)/tincd/solaris
+	$(mkinstalldirs) $(distdir)/lzf $(distdir)/tincd $(distdir)/tincd/cygwin $(distdir)/tincd/darwin $(distdir)/tincd/freebsd $(distdir)/tincd/linux $(distdir)/tincd/mingw $(distdir)/tincd/netbsd $(distdir)/tincd/openbsd $(distdir)/tincd/raw_socket $(distdir)/tincd/solaris $(distdir)/tincd/uml_socket
 	@srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`; \
 	topsrcdirstrip=`echo "$(top_srcdir)" | sed 's|.|.|g'`; \
 	list='$(DISTFILES)'; for file in $$list; do \

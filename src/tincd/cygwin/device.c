@@ -1,7 +1,7 @@
 /*
     device.c -- Interaction with Windows tap driver in a Cygwin environment
-    Copyright (C) 2002-2003 Ivo Timmermans <ivo@o2w.nl>,
-                  2002-2003 Guus Sliepen <guus@sliepen.eu.org>
+    Copyright (C) 2002-2004 Ivo Timmermans <ivo@tinc-vpn.org>,
+                  2002-2004 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -17,25 +17,13 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-    $Id: device.c,v 1.1 2003-10-14 03:22:09 pcg Exp $
+    $Id: device.c,v 1.2 2005-03-17 23:59:37 pcg Exp $
 */
-
 
 #include <w32api/windows.h>
 #include <w32api/winioctl.h>
 
-
-#define REG_CONTROL_NET "SYSTEM\\CurrentControlSet\\Control\\Network\\{4D36E972-E325-11CE-BFC1-08002BE10318}"
-
-#define USERMODEDEVICEDIR "\\\\.\\"
-#define USERDEVICEDIR "\\??\\"
-#define TAPSUFFIX ".tap"
-
-#define TAP_CONTROL_CODE(request,method) CTL_CODE(FILE_DEVICE_PHYSICAL_NETCARD | 8000, request, method, FILE_ANY_ACCESS)
-
-#define TAP_IOCTL_GET_LASTMAC    TAP_CONTROL_CODE(0, METHOD_BUFFERED)
-#define TAP_IOCTL_GET_MAC        TAP_CONTROL_CODE(1, METHOD_BUFFERED)
-#define TAP_IOCTL_SET_STATISTICS TAP_CONTROL_CODE(2, METHOD_BUFFERED)
+#include "mingw/common.h"
 
 int device_fd = -1;
 static HANDLE device_handle = INVALID_HANDLE_VALUE;
@@ -43,16 +31,16 @@ char *device = NULL;
 char *iface = NULL;
 char *device_info = NULL;
 
-int device_total_in = 0;
-int device_total_out = 0;
+static int device_total_in = 0;
+static int device_total_out = 0;
 
-pid_t reader_pid;
-int sp[2];
+static pid_t reader_pid;
+static int sp[2];
 
 bool setup_device(void)
 {
 	HKEY key, key2;
-	int i;
+	int i, err;
 
 	char regpath[1024];
 	char adapterid[1024];
@@ -70,7 +58,7 @@ bool setup_device(void)
 
 	/* Open registry and look for network adapters */
 
-	if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, REG_CONTROL_NET, 0, KEY_READ, &key)) {
+	if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, NETWORK_CONNECTIONS_KEY, 0, KEY_READ, &key)) {
 		logger(LOG_ERR, _("Unable to read registry: %s"), winerror(GetLastError()));
 		return false;
 	}
@@ -82,7 +70,7 @@ bool setup_device(void)
 
 		/* Find out more about this adapter */
 
-		snprintf(regpath, sizeof(regpath), "%s\\%s\\Connection", REG_CONTROL_NET, adapterid);
+		snprintf(regpath, sizeof(regpath), "%s\\%s\\Connection", NETWORK_CONNECTIONS_KEY, adapterid);
 
                 if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, regpath, 0, KEY_READ, &key2))
 			continue;

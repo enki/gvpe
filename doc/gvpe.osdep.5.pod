@@ -104,22 +104,47 @@ operations is available here:
 
   http://www-user.rhrk.uni-kl.de/~nissler/tuntap/
 
-But GVPE has not been used with it, and has not been ported to it's TAP
-interface. Patches are welcome.
+But GVPE has not been ported to it's TAP interface. Patches are welcome.
+
+The driver must be loaded before use:
+
+  kmodload tunnel
 
 =head2 tincd/solaris
 
-TUN-device; already part of the kernel. see C<tincd/netbsd> for more
-information. Completely untested so far.
+TUN-device; already part of the kernel, or available here:
+
+  http://vtun.sourceforge.net/tun/
+
+Some precompiled tun drivers might be available here:
+
+  http://www.monkey.org/~dugsong/fragroute/
+
+See C<tincd/netbsd> for more information.
+
+Completely unstested so far.
 
 =head2 tincd/mingw
 
-TAP-device; see C<native/cygwin> for more information. Completey untested so far.
+TAP-device; see C<native/cygwin> for more information.
+
+Completely untested so far.
+
+=head2 tincd/raw_socket
+
+TAP-device; purpose unknown and untested, probably binds itself on an
+existing ethernet device (given by C<ifname>), which should probably not
+be configured in any way, except for setting it I<up>.
+
+=head2 tincd/uml_socket
+
+TAP-device; purpose unknown and untested, probably creates a unix datagram
+socket (path given by C<ifname>) and reads and writes raw packets, so
+might be useful in other than UML contexts.
 
 =head2 tincd/cygwin
 
-Known to be broken.
-
+Known to be broken, use C<native/cygwin> instead.
 
 =head1 SEE ALSO
 

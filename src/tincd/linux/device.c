@@ -1,7 +1,7 @@
 /*
     device.c -- Interaction with Linux ethertap and tun/tap device
-    Copyright (C) 2001-2003 Ivo Timmermans <ivo@o2w.nl>,
-                  2001-2003 Guus Sliepen <guus@sliepen.eu.org>
+    Copyright (C) 2001-2004 Ivo Timmermans <ivo@tinc-vpn.org>,
+                  2001-2004 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -17,9 +17,8 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-    $Id: device.c,v 1.1 2003-10-14 03:22:09 pcg Exp $
+    $Id: device.c,v 1.2 2005-03-17 23:59:38 pcg Exp $
 */
-
 
 #ifdef HAVE_TUNTAP
 #ifdef LINUX_IF_TUN_H
@@ -32,7 +31,6 @@
 #define DEFAULT_DEVICE "/dev/tap0"
 #endif
 
-
 typedef enum device_type_t {
 	DEVICE_TYPE_ETHERTAP,
 	DEVICE_TYPE_TUN,
@@ -40,14 +38,14 @@ typedef enum device_type_t {
 } device_type_t;
 
 int device_fd = -1;
-device_type_t device_type;
+static device_type_t device_type;
 char *device;
 char *iface;
 char ifrname[IFNAMSIZ];
 char *device_info;
 
-int device_total_in = 0;
-int device_total_out = 0;
+static int device_total_in = 0;
+static int device_total_out = 0;
 
 bool setup_device(void)
 {
@@ -88,10 +86,10 @@ bool setup_device(void)
 	if(iface)
 		strncpy(ifr.ifr_name, iface, IFNAMSIZ);
 
-	if(!ioctl(device_fd, TUNSETIFF, (void *) &ifr)) {
+	if(!ioctl(device_fd, TUNSETIFF, &ifr)) {
 		strncpy(ifrname, ifr.ifr_name, IFNAMSIZ);
 		iface = ifrname;
-	} else if(!ioctl(device_fd, (('T' << 8) | 202), (void *) &ifr)) {
+	} else if(!ioctl(device_fd, (('T' << 8) | 202), &ifr)) {
 		logger(LOG_WARNING, _("Old ioctl() request was needed for %s"), device);
 		strncpy(ifrname, ifr.ifr_name, IFNAMSIZ);
 		iface = ifrname;

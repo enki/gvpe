@@ -8,8 +8,9 @@ bin_PROGRAMS = gvpectrl
 EXTRA_DIST = device-linux.C device-cygwin.C device-tincd.C callback.pl	\
    tincd/apply tincd/fixit	\
    tincd/cygwin/device.c tincd/darwin/device.c tincd/freebsd/device.c	\
-   tincd/linux/device.c tincd/mingw/device.c tincd/netbsd/device.c	\
+   tincd/linux/device.c tincd/mingw/common.h tincd/mingw/device.c tincd/netbsd/device.c	\
    tincd/openbsd/device.c tincd/raw_socket/device.c tincd/solaris/device.c \
+   tincd/uml_socket/device.c \
    ether_emu.C lzf/lzf_c.c lzf/lzf_d.c
 
 INCLUDES = @INCLUDES@ -I$(top_builddir) -I$(top_srcdir)/lib

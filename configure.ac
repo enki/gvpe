@@ -83,7 +83,9 @@ AC_ARG_ENABLE(iftype,
      Untested combinations are:
         "tincd/netbsd"
         "tincd/solaris"
-        "tincd/mingw";
+        "tincd/mingw"
+        "tincd/raw_socket"
+        "tincd/uml_socket";
      Broken combinations are:
         "tincd/cygwin";
      The default is to autodetect.

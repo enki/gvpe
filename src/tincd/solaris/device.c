@@ -1,7 +1,7 @@
 /*
     device.c -- Interaction with Solaris tun device
-    Copyright (C) 2001-2003 Ivo Timmermans <ivo@o2w.nl>,
-                  2001-2003 Guus Sliepen <guus@sliepen.eu.org>
+    Copyright (C) 2001-2004 Ivo Timmermans <ivo@tinc-vpn.org>,
+                  2001-2004 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -17,26 +17,25 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-    $Id: device.c,v 1.1 2003-10-14 03:22:09 pcg Exp $
+    $Id: device.c,v 1.2 2005-03-17 23:59:38 pcg Exp $
 */
 
 
+#include "system.h"
 
 #include <sys/stropts.h>
 #include <sys/sockio.h>
 #include <net/if_tun.h>
-
 
 #define DEFAULT_DEVICE "/dev/tun"
 
 int device_fd = -1;
 char *device = NULL;
 char *iface = NULL;
-char ifrname[IFNAMSIZ];
 char *device_info = NULL;
 
-int device_total_in = 0;
-int device_total_out = 0;
+static int device_total_in = 0;
+static int device_total_out = 0;
 
 bool setup_device(void)
 {
@@ -123,8 +122,21 @@ bool read_packet(vpn_packet_t *packet)
 		return false;
 	}
 
-	packet->data[12] = 0x08;
-	packet->data[13] = 0x00;
+	switch(packet->data[14] >> 4) {
+		case 4:
+			packet->data[12] = 0x08;
+			packet->data[13] = 0x00;
+			break;
+		case 6:
+			packet->data[12] = 0x86;
+			packet->data[13] = 0xDD;
+			break;
+		default:
+			ifdebug(TRAFFIC) logger(LOG_ERR,
+					   _ ("Unknown IP version %d while reading packet from %s %s"),
+					   packet->data[14] >> 4, device_info, device);
+			return false;
+	}
 
 	packet->len = lenin + 14;
 

@@ -123,6 +123,9 @@ get_config_string(const char *key, char **res)
 # define IF_istun 1
 # include "tincd/raw_socket/device.c"
 
+#elif IF_uml_socket
+# include "tincd/uml_socket/device.c"
+
 #else
 # error No interface implementation for your IFTYPE/IFSUBTYPE combination.
 #endif
@@ -141,7 +144,12 @@ tap_device::tap_device ()
 {
   device = "(null)";
 
-  if (setup_device ())
+  bool ok = setup_device ();
+
+  if (device_info)
+    device = device_info;
+
+  if (ok)
     {
       slog (L_DEBUG, _("interface %s on %s initialized"), info (), device);
       fd = device_fd;
@@ -167,7 +175,7 @@ tap_device::recv ()
   if (!read_packet (reinterpret_cast<vpn_packet_t *>(pkt)))
     {
       delete pkt;
-      slog (L_ERR, _("can't read from to %s %s: %s"), info (), DEFAULT_DEVICE,
+      slog (L_ERR, _("can't read from to %s %s: %s"), info (), device,
             strerror (errno));
       return 0;
     }
@@ -195,7 +203,7 @@ tap_device::send (tap_packet *pkt)
       ether_emu.tap_to_tun (pkt) &&
 #endif
       !write_packet (reinterpret_cast<vpn_packet_t *>(pkt)))
-    slog (L_ERR, _("can't write to %s %s: %s"), info (), DEFAULT_DEVICE,
+    slog (L_ERR, _("can't write to %s %s: %s"), info (), device,
           strerror (errno));
 }
     

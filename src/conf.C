@@ -324,12 +324,18 @@ retry:
             free (script_node_down), script_node_down = strdup (val);
           else if (!strcmp (var, "pid-file"))
             free (pidfilename), pidfilename = strdup (val);
-#if ENABLE_DNS
           else if (!strcmp (var, "dns-forw-host"))
-            free (dns_forw_host), dns_forw_host = strdup (val);
-          else if (!strcmp (var, "dns-forw-port"))
-            dns_forw_port = atoi (val);
+            {
+#if ENABLE_DNS
+              free (dns_forw_host), dns_forw_host = strdup (val);
 #endif
+            }
+          else if (!strcmp (var, "dns-forw-port"))
+            {
+#if ENABLE_DNS
+              dns_forw_port = atoi (val);
+#endif
+            }
           else if (!strcmp (var, "http-proxy-host"))
             {
 #if ENABLE_HTTP_PROXY
@@ -358,14 +364,24 @@ retry:
             node->udp_port = atoi (val);
           else if (!strcmp (var, "tcp-port"))
             node->tcp_port = atoi (val);
-#if ENABLE_DNS
           else if (!strcmp (var, "dns-hostname"))
-            free (node->dns_hostname), node->dns_hostname = strdup (val);
-          else if (!strcmp (var, "dns-port"))
-            node->dns_port = atoi (val);
-          else if (!strcmp (var, "dns-domain"))
-            free (node->domain), node->domain = strdup (val);
+            {
+#if ENABLE_DNS
+              free (node->dns_hostname), node->dns_hostname = strdup (val);
 #endif
+            }
+          else if (!strcmp (var, "dns-port"))
+            {
+#if ENABLE_DNS
+              node->dns_port = atoi (val);
+#endif
+            }
+          else if (!strcmp (var, "dns-domain"))
+            {
+#if ENABLE_DNS
+              free (node->domain), node->domain = strdup (val);
+#endif
+            }
           else if (!strcmp (var, "router-priority"))
             node->routerprio = atoi (val);
           else if (!strcmp (var, "max-retry"))

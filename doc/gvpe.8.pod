@@ -121,6 +121,8 @@ If you find any bugs, report them to C<gvpe@plan9.de>.
 
 gvpe(5) for an introduction, gvpe.conf(5), gvpectrl(8).
 
+The GVPE mailing list at http://lists.schmorp.de/
+
 gvpe comes with ABSOLUTELY NO WARRANTY.  This is free software, and you are
 welcome to redistribute it under certain conditions; see the file COPYING
 for details.

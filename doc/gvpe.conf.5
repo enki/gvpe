@@ -493,6 +493,14 @@ protocol is enabled automatically).
 \&\s-1NOTE:\s0 Please specify \f(CW\*(C`enable\-udp = yes\*(C'\fR if you want t use it even though
 it might get switched on automatically, as some future version might
 default to another default protocol.
+.IP "icmp-type = integer" 4
+.IX Item "icmp-type = integer"
+Sets the type value to be used for outgoing (and incoming) packets sent
+via the \s-1ICMP\s0 transport.
+.Sp
+The default is \f(CW0\fR (which is \f(CW\*(C`echo\-reply\*(C'\fR, also known as
+\&\*(L"ping\-replies\*(R"). Other useful values include \f(CW8\fR (\f(CW\*(C`echo\-request\*(C'\fR, a.k.a.
+\&\*(L"ping\*(R") and \f(CW11\fR (\f(CW\*(C`time\-exceeded\*(C'\fR), but any 8\-bit value can be used.
 .IP "inherit-tos = yes|true|on | no|false|off" 4
 .IX Item "inherit-tos = yes|true|on | no|false|off"
 Wether to inherit the \s-1TOS\s0 settings of packets sent to the tunnel when
