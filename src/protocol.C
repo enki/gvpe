@@ -726,10 +726,6 @@ connection::establish_connection_cb (tstamp &ts)
       if (retry_int < 3600 * 8)
         retry_cnt++;
 
-      if (connectmode == conf_node::C_ONDEMAND
-          && retry_int > ::conf.keepalive)
-        retry_int = ::conf.keepalive;
-
       ts = NOW + retry_int;
 
       if (conf->hostname)

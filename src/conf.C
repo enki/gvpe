@@ -253,7 +253,9 @@ retry:
             }
 
           /* node-specific, defaultable */
-          else if (!strcmp (var, "port"))
+          else if (!strcmp (var, "udp-port"))
+            node->port = atoi (val);
+          else if (!strcmp (var, "port")) //deprecated
             node->port = atoi (val);
           else if (!strcmp (var, "router-priority"))
             node->routerprio = atoi (val);
@@ -265,9 +267,11 @@ retry:
                 node->connectmode = conf_node::C_NEVER;
               else if (!strcmp (val, "always"))
                 node->connectmode = conf_node::C_ALWAYS;
+              else if (!strcmp (val, "disabled"))
+                node->connectmode = conf_node::C_DISABLED;
               else
                 slog (L_WARN,
-                        _("illegal value for 'connectmode', use one of 'ondemand', 'never' or 'always', at '%s' line %d"),
+                        _("illegal value for 'connectmode', use one of 'ondemand', 'never', 'always' or 'disabled', at '%s' line %d"),
                         var, fname, lineno);
             }
           else if (!strcmp (var, "inherit-tos"))
