@@ -382,7 +382,6 @@ AC_SUBST(INCLUDES)
 
 AC_CONFIG_FILES([Makefile po/Makefile.in
 src/Makefile
-src/rohc/Makefile
 doc/Makefile
 lib/Makefile
 m4/Makefile
