@@ -9381,13 +9381,6 @@ if $CXX -v --help 2>&1 | grep -q fexceptions; then
    CXXFLAGS="$CXXFLAGS -fno-exceptions"
 fi
 
-if $CXX -v --help 2>&1 | grep -q ffunction-sections; then
-   CXXFLAGS="$CXXFLAGS -ffunction-sections"
-fi
-
-if $LD -v --help 2>&1 | grep -q gc-sections; then
-   LDFLAGS="$LDFLAGS -Wl,--gc-sections"
-fi
 
 
 
