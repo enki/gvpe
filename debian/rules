@@ -1,0 +1,86 @@
+#!/usr/bin/make -f
+# Sample debian/rules that uses debhelper.
+# GNU copyright 1997 to 1999 by Joey Hess.
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+# This is the debhelper compatability version to use.
+export DH_COMPAT=3
+
+ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
+	CFLAGS += -g3 -O0 -fno-inline
+	LDFLAGS += -g3
+else
+	CFLAGS += -g -O2
+	LDFLAGS += -g
+endif
+
+ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
+	STRIP = yes
+endif
+
+
+build: build-stamp
+build-stamp:
+	dh_testdir
+
+#	# If the Makefile.in.in file in po/ already contains DESTDIR support, skip the patching.
+	cd `pwd`/po ; ( \
+	  if ! grep DESTDIR Makefile.in.in > /dev/null ; then \
+	    patch -Ns -p0 < `pwd`/../debian/po-Makefile.in.in.diff || true ;\
+	  fi ;\
+	)
+	CC=gcc-2.95 CPP=cpp-2.95 ./configure --prefix=/usr --mandir=\$${prefix}/share/man \
+		--infodir=\$${prefix}/share/info --sysconfdir=/etc \
+		--localstatedir=/var --enable-hmac-length=4 --enable-trust \
+		--enable-rand-length=0 --enable-cipher=bf --enable-digest=md4
+	$(MAKE)
+#	cd doc && texi2html -split=chapter tinc.texi
+
+	touch build-stamp
+
+clean:
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp
+
+	-$(MAKE) distclean
+
+	dh_clean
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_clean -k
+	dh_installdirs
+
+	$(MAKE) install DESTDIR=`pwd`/debian/tmp
+
+# Build architecture-independent files here.
+binary-indep: build install
+# We have nothing to do by default.
+
+# Build architecture-dependent files here.
+binary-arch: build install
+	dh_testdir
+	dh_testroot
+	#dh_movefiles
+	#install -o root -g root -m 755 debian/init.d debian/tinc/etc/init.d/tinc
+	dh_installmanpages
+	dh_installinfo
+	dh_installchangelogs ChangeLog
+	dh_link
+	@ if [ "$(STRIP)" = "yes" ] ; then \
+		dh_strip ;\
+	fi
+	dh_compress
+	dh_fixperms
+	dh_installdeb
+	dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install
