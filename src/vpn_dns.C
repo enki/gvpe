@@ -1240,7 +1240,6 @@ dns_connection::time_cb (time_watcher &w)
                 {
                   send = new dns_snd (this);
 
-                  printf ("new conn %p %d\n", this, c->conf->id);//D
                   cfg.reset (THISNODE->id);
                   send->gen_syn_req ();
                 }
