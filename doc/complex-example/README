@@ -1,0 +1,12 @@
+This directory contains the configuration files for "our" internal
+network.
+
+It is highly non-trivial, so don't use this configuration as the basis of
+your network unless you know what you are doing.
+
+It features: around 15 hosts, many of them have additional networks behind
+them. The vpn is fully routed, no arp is used at all.
+
+And last not least: the if-up script can generate information to be used
+in firewall rules (IP-net/MAC-address pairs) so ensure packet integrity so
+you can use your iptables etc. firewall to filter by IP address only.

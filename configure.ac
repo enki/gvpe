@@ -183,6 +183,26 @@ tinc_TUNTAP
 tinc_OPENSSL
 dnl tinc_ZLIB
 
+AC_ARG_ENABLE(rohc,
+  [AC_HELP_STRING(--enable-rohc, [enable robust header compression (rfc3095).])],
+  [
+  echo
+  echo "**********************************************************************"
+  echo "**********************************************************************"
+  echo "**** --enable-rohc not yet implemented *******************************"
+  echo "**********************************************************************"
+  echo "**** uuh sorry, I am such an ass, but I didn't find any rfc3095 (ROHC)"
+  echo "**** implementation to be used in GPL code on the web."
+  echo "**** so this option is just a fake. Please implement one and send it"
+  echo "**** to me ;)"
+  echo "**********************************************************************"
+  echo "**********************************************************************"
+  echo "**********************************************************************"
+  echo "**********************************************************************"
+  echo
+  ]
+)
+
 AC_ARG_ENABLE(icmp,
   [AC_HELP_STRING(--enable-icmp, [enable icmp protocol support.])],
   AC_DEFINE_UNQUOTED(ENABLE_ICMP, 1, [ICMP protocol support.])

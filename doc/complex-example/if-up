@@ -1,0 +1,122 @@
+#!/bin/bash
+
+# Some environment variables will be set:
+#
+# CONFBASE=/etc/vpe	# the configuration directory prefix
+# IFNAME=vpn0		# the network interface (ifname)
+# MAC=fe:fd:80:00:00:01	# the mac-address to use for the interface
+# NODENAME=cerebro	# the selected nodename (-n switch)
+# NODEID=1		# the numerical node id
+# MTU=1436		# the tunnel packet overhead (set mtu to 1500-$OVERHEAD)
+
+# this if-up script is rather full-featured, and is used to
+# generate a fully-routed (no arp traffic) vpn. the main portion
+# consists of "ipn" calls (see below).
+
+# some hosts require additional specific configuration, this is handled
+# using if statements near the end of the script.
+
+# with the --fw switch, outputs mac/net pairs for your firewall use:
+# if-up --fw | while read mac net; do
+#   iptables -t filter -A INPUT -i vpn0 -p all -m mac --mac-source \! $mac -s $net -j DROP
+# done
+
+ipn() {
+   local id="$1"; shift
+   local mac=fe:fd:80:00:00:$(printf "%02x" $id)
+   if [ -n "$FW" ]; then
+      for net in "$@"; do
+         echo "$mac $net"
+      done
+   else
+      local ip="$1"; shift
+      if [ "$id" == $NODEID ]; then
+         [ -n "$ADDR_ONLY" ] && ip addr add $ip broadcast 10.255.255.255 dev $IFNAME
+      elif [ -z "$ADDR_ONLY" ]; then
+         ip neighbour add $ip lladdr $mac nud permanent dev $IFNAME
+         for route in "$@"; do
+            ip route add $route via $ip dev vpn0
+         done
+      fi
+   fi
+}
+
+ipns() {
+   # this contains the generic routing information for the vpn
+   # each call to ipn has the following parameters:
+   # ipn <node-id> <gateway-ip> [<route> ...]
+   # the second line (ipn 2) means:
+   # the second node (doom in the config file) has the ip address 10.0.0.5,
+   # which is the gateway for the 10.0/28 network and three additional ip
+   # addresses
+   
+   ipn  1 10.0.0.20
+   ipn  2 10.0.0.5  10.0.0.0/28 200.100.162.92 200.100.162.93 100.99.218.222
+   ipn  3 10.0.0.17
+   ipn  4 10.0.0.18
+   ipn  5 10.0.0.19
+   ipn  6 10.0.0.21 10.0.2.0/26 200.100.162.17
+   ipn  7 10.0.0.22 10.1.2.0/24
+   ipn  8 10.0.0.23
+   ipn  9 10.0.0.24 10.13.0.0/16
+   ipn 10 10.0.0.25
+   ipn 11 10.0.0.26
+   ipn 12 10.0.0.27 10.0.2.64/26
+   ipn 13 10.0.0.28 10.0.3.0/24
+   ipn 14 10.0.0.29 10.1.1.0/24
+   # mind the gateway ip gap
+   ipn 15 10.9.0.30 10.0.4.0/24
+   ipn 16 10.9.0.31
+}
+
+if [ "$1" == "--fw" ]; then
+   FW=1
+
+   ipns
+else
+   exec >/var/log/vpe.if-up 2>&1
+   set -x
+
+   [ $NODENAME = "ruth"    ] && ip link set $IFNAME down # hack
+
+   # first set the link up and initialize the interface ip
+   # address.
+   ip link set $IFNAME address $MAC mtu $MTU up
+   ADDR_ONLY=1 ipns # set addr only
+
+   # now initialize the main vpn routes (10.0/8)
+   # the second route is a hack to to reach some funnily-connected
+   # machines.
+   ip route add 10.0.0.0/8 dev $IFNAME
+   ip route add 10.0.0.0/27 dev $IFNAME
+
+   ipns # set the interface routes
+
+   # now for something completely different, ehr, something not
+   # easily doable with ipn, namely some extra specific highly complicated
+   # and non-regular setups for some machines.
+   if [ $NODENAME = doom ]; then
+      ip addr add 200.100.162.92 dev $IFNAME
+      ip route add 200.100.0.0/16 via 10.0.0.17 dev $IFNAME
+      ip route flush table 101
+      ip route add table 101 default src 200.100.162.92 via 10.0.0.17 dev $IFNAME
+
+      ip addr add 100.99.218.222 dev $IFNAME
+      ip route add 100.99.218.192/27 via 10.0.0.19 dev $IFNAME
+      ip route flush table 103
+      ip route add table 103 default src 100.99.218.222 via 10.0.0.19
+
+   elif [ $NODENAME = marco ]; then
+      ip addr add 200.100.162.17 dev $IFNAME
+      ip route add 200.100.162.79 dev ppp0
+      ip route add 200.100.162.95 dev ppp0
+      ip route add 200.100.76.0/23 dev ppp0
+      ip route add src 200.100.162.17 200.100.0.0/16 via 10.0.0.17 dev $IFNAME
+
+   fi
+
+   # and this is the second part of the 10.0/27 hack. don't ask.
+   [ $NODENAME != fwkw ] && ip route add 10.0.0.0/24 via 10.0.0.29 dev $IFNAME
+fi
+
+
