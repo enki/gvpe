@@ -49,7 +49,7 @@
 #define MAX_POLL_INTERVAL 5.  // how often to poll minimally when the server has no data
 #define ACTIVITY_INTERVAL 5.
 
-#define TIMEOUT_FACTOR 2.
+#define TIMEOUT_FACTOR 4.
 
 #define INITIAL_TIMEOUT     0.1 // retry timeouts
 #define INITIAL_SYN_TIMEOUT 10. // retry timeout for initial syn
@@ -66,7 +66,7 @@
 // 240 leaves about 4 bytes of server reply data
 // every two request bytes less give room for one reply byte
 
-#define SEQNO_MASK 0x0fff
+#define SEQNO_MASK 0x3fff
 #define SEQNO_EQ(a,b) ( 0 == ( ((a) ^ (b)) & SEQNO_MASK) )
 
 #define MAX_LBL_SIZE 63

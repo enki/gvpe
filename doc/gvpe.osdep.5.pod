@@ -32,7 +32,7 @@ network to tell gvpe the local interface address.
 
 =head2 native/linux
 
-TAP-device is already part of the kernel (only 2.4 supported, but see
+TAP-device; already part of the kernel (only 2.4+ supported, but see
 tincd/linux). This is the configuration tested best, as gvpe is being
 developed on this platform.
 
@@ -54,30 +54,31 @@ To hardwire ARP addresses, use iproute2 (ifconfig can do it, too):
 
 =head2 tincd/linux
 
-TAP-device is already part of the kernel (2.2 and 2.4 supported, only 2.4
-tested). See C<native/linux> for more info.
+TAP-device; already part of the kernel (2.2+ supported). See
+C<native/linux> for more info.
 
 =head2 native/cygwin
 
-TAP-device. The MAC need not be set (and in fact I<cannot> be set). The
+TAP-device; The TAP device to be used must either be the CIPE driver
+(C<http://cipe-win32.sourceforge.net/>), or (highly recommended) the newer
+TAP-Win32 driver bundled with openvpn (http://openvpn.sf.net/). Just
+download and run the openvpn installer. The only option you need to select
+is the TAP driver.
+
+The MAC need not be set (and in fact I<cannot> be set). The
 MAC address is dynamically being patched into packets and ARP-requests, so
 only IPv4 works with ARP on this platform.
 
-The TAP device to be used must either be the CIPE driver
-(C<http://cipe-win32.sourceforge.net/>), or the newer TAP-Win32 driver
-bundled with openvpn (http://openvpn.sf.net/). Just download and run the
-openvpn installer. The only option you need to select is the TAP driver.
-
 =head2 tincd/freebsd
 
-TAP-device is part of kernel (since 4.x, maybe earlier). To initialize the
-interface, use this command:
+TAP-device; part of the kernel (since 4.x, maybe earlier). To initialize
+the interface, use this command:
 
   ifconfig $IFNAME ether $MAC mtu $MTU up
 
 =head2 tincd/netbsd
 
-TUN-device. The interface is a point to point-device. To initialize it,
+TUN-device; The interface is a point to point-device. To initialize it,
 you currently need to configure it as such, giving it an address on your
 vpn (the exact address doesn't matter), like this:
 
@@ -88,23 +89,32 @@ vpn (the exact address doesn't matter), like this:
 
 =head2 tincd/openbsd
 
-TUN-device is already part of the kernel. See C<tincd/netbsd> for more information.
+TUN-device; already part of the kernel. See C<tincd/netbsd> for more information.
 
 =head2 tincd/darwin
 
-TUN-device. See C<tincd/netbsd> for more information.
+TUN-device; See C<tincd/netbsd> for more information.
 
 The necessary kernel extension can be found here:
 
   http://chrisp.de/en/projects/tunnel.html
 
+A newer (and reportedly much more stable) driver that also supports TAP
+operations is available here:
+
+  http://www-user.rhrk.uni-kl.de/~nissler/tuntap/
+
+But GVPE has not been used with it, and has not been ported to it's TAP
+interface. Patches are welcome.
+
 =head2 tincd/solaris
 
-TUN-device is already part of the kernel. see C<tincd/netbsd> for more information. Completey untested so far.
+TUN-device; already part of the kernel. see C<tincd/netbsd> for more
+information. Completely untested so far.
 
 =head2 tincd/mingw
 
-TAP-device, see C<native/cygwin> for more information. Completey untested so far.
+TAP-device; see C<native/cygwin> for more information. Completey untested so far.
 
 =head2 tincd/cygwin
 
