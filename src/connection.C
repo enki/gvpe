@@ -677,13 +677,8 @@ connection::send_auth_request (const sockinfo &si, bool initiate)
   auth_req_packet *pkt = new auth_req_packet (conf->id, initiate, THISNODE->protocols);
 
   rsachallenge chg;
-
   rsa_cache.gen (pkt->id, chg);
-
-  if (0 > RSA_public_encrypt (sizeof chg,
-                              (unsigned char *)&chg, (unsigned char *)&pkt->encr,
-                              conf->rsa_key, RSA_PKCS1_OAEP_PADDING))
-    fatal ("RSA_public_encrypt error");
+  rsa_encrypt (conf->rsa_key, chg, pkt->encr);
 
   slog (L_TRACE, ">>%d PT_AUTH_REQ [%s]", conf->id, (const char *)si);
 
@@ -910,9 +905,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 
                 rsachallenge k;
 
-                if (0 > RSA_private_decrypt (sizeof (p->encr),
-                                             (unsigned char *)&p->encr, (unsigned char *)&k,
-                                             ::conf.rsa_key, RSA_PKCS1_OAEP_PADDING))
+                if (!rsa_decrypt (::conf.rsa_key, p->encr, k))
                   {
                     slog (L_ERR, _("%s(%s): challenge illegal or corrupted (%s). mismatched key or config file?"),
                           conf->nodename, (const char *)rsi, ERR_error_string (ERR_get_error (), 0));

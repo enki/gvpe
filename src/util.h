@@ -22,6 +22,8 @@
 #ifndef UTIL_H__
 #define UTIL_H__
 
+#include <openssl/rsa.h>
+
 #include "gettext.h"
 
 #include "slog.h"
@@ -51,6 +53,8 @@ extern void make_names (void);
  * check wether the given path is an absolute pathname
  */
 #define ABSOLUTE_PATH(c) ((c)[0] == '/')
+
+/*****************************************************************************/
 
 typedef u8 mac[6];
 
@@ -116,6 +120,28 @@ void run_script (const run_script_cb &cb, bool wait);
 #if ENABLE_HTTP_PROXY
 u8 *base64_encode (const u8 *data, unsigned int len);
 #endif
+
+/*****************************************************************************/
+
+typedef u8 rsaclear[RSA_KEYLEN - RSA_OVERHEAD]; // challenge data;
+typedef u8 rsacrypt[RSA_KEYLEN]; // encrypted challenge
+
+static inline void
+rsa_encrypt (RSA *key, const rsaclear &chg, rsacrypt &encr)
+{
+  if (RSA_public_encrypt (sizeof chg,
+                          (unsigned char *)&chg, (unsigned char *)&encr,
+                          key, RSA_PKCS1_OAEP_PADDING) < 0)
+    fatal ("RSA_public_encrypt error");
+}
+
+static inline bool
+rsa_decrypt (RSA *key, const rsacrypt &encr, rsaclear &chg)
+{
+  return RSA_private_decrypt (sizeof encr,
+                              (unsigned char *)&encr, (unsigned char *)&chg,
+                              key, RSA_PKCS1_OAEP_PADDING) > 0;
+}
 
 #endif
 

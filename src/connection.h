@@ -37,8 +37,8 @@ struct rsaid {
   u8 id[RSA_IDLEN]; // the challenge id
 };
 
-typedef u8 rsachallenge[RSA_KEYLEN - RSA_OVERHEAD]; // challenge data;
-typedef u8 rsaencrdata[RSA_KEYLEN]; // encrypted challenge
+typedef rsaclear rsachallenge;      // challenge data;
+typedef rsacrypt rsaencrdata;       // encrypted challenge
 typedef u8 rsaresponse[RSA_RESLEN]; // the encrypted ripemd160 hash
 
 ////////////////////////////////////////////////////////////////////////////////////////
