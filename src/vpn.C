@@ -415,8 +415,7 @@ vpn::ipv4_ev (io_watcher &w, short revents)
         {
           pkt->len = len;
 
-          // raw sockets deliver the ipv4, but don't expect it on sends
-          // this is slow, but...
+          // raw sockets deliver the ipv4 header, but don't expect it on sends
           pkt->skip_hdr (IP_OVERHEAD);
 
           recv_vpn_packet (pkt, si);
@@ -432,8 +431,8 @@ vpn::ipv4_ev (io_watcher &w, short revents)
   else
     {
       slog (L_ERR,
-              _("FATAL: unknown revents %08x in socket, terminating\n"),
-              revents);
+            _("FATAL: unknown revents %08x in socket, terminating\n"),
+            revents);
       exit (EXIT_FAILURE);
     }
 }
@@ -544,7 +543,7 @@ vpn::tap_ev (io_watcher &w, short revents)
 
           if (src != THISNODE->id)
             {
-              slog (L_ERR, _("FATAL: tap packet not originating on current node received, exiting."));
+              slog (L_ERR, _("FATAL: tap packet not originating on current node received (if-up script not working properly?), exiting."));
               exit (EXIT_FAILURE);
             }
 
