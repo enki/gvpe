@@ -42,9 +42,10 @@ make it work.
 =item MAC-BASED SECURITY
 
 Since every host has it's own private key, other hosts cannot spoof
-traffic from this host.  That makes it possible to filter packest by MAC
+traffic from this host. That makes it possible to filter packet by MAC
 address, e.g. to ensure that packets from a specific IP address come, in
-fact, from a specific host.
+fact, from a specific host that is associated with that IP and not from
+another host.
 
 =back
 
