@@ -312,7 +312,9 @@ main (int argc, char **argv, char **envp)
   if (show_help)
     usage (0);
 
-  conf.read_config (false);
+  {
+    configuration_parser (conf, false, 0, 0);
+  }
 
   if (generate_keys)
     {

@@ -160,7 +160,7 @@ void configuration::cleanup()
 }
 
 void
-configuration::clear_config ()
+configuration::clear ()
 {
   for (configuration::node_vector::iterator i = nodes.begin(); i != nodes.end(); ++i)
     delete *i;
@@ -179,17 +179,313 @@ configuration::clear_config ()
   else if (!strcmp (val, "on"))		target = trueval;	\
   else if (!strcmp (val, "off"))	target = falseval;	\
   else								\
-    slog (L_WARN,						\
-            _("illegal value for '%s', only 'yes|true|on' or 'no|false|off' allowed, at '%s' line %d"), \
-            name, var, fname, lineno);				 \
+    return _("illegal boolean value, only 'yes|true|on' or 'no|false|off' allowed. (ignored)"); \
 } while (0)
 
-void configuration::read_config (bool need_keys)
+const char *
+configuration_parser::parse_line (char *line)
+{
+  {
+    char *end = line + strlen (line);
+
+    while (*end < ' ' && end >= line)
+      end--;
+
+    *++end = 0;
+  }
+
+  char *tok = line;
+  const char *var = strtok (tok, "\t =");
+  tok = 0;
+
+  if (!var || !var[0])
+    return 0;		/* no tokens on this line */
+
+  if (var[0] == '#')
+    return 0;		/* comment: ignore */
+
+  char *val = strtok (NULL, "\t\n\r =");
+
+  if (!val || val[0] == '#')
+    return _("no value given for variable. (ignored)");
+
+  if (!strcmp (var, "on"))
+    {
+      if (!::thisnode
+          || (val[0] == '!' && strcmp (val + 1, ::thisnode))
+          || !strcmp (val, ::thisnode))
+        return parse_line (strtok (NULL, "\n\r"));
+      else
+        return 0;
+    }
+
+  // truly global
+  if (!strcmp (var, "loglevel"))
+    {
+      loglevel l = string_to_loglevel (val);
+
+      if (l == L_NONE)
+        return _("unknown loglevel. (skipping)");
+    }
+  else if (!strcmp (var, "ip-proto"))
+    conf.ip_proto = atoi (val);
+  else if (!strcmp (var, "icmp-type"))
+    {
+#if ENABLE_ICMP
+      conf.icmp_type = atoi (val);
+#endif
+    }
+
+  // per config
+  else if (!strcmp (var, "node"))
+    {
+      parse_argv ();
+
+      conf.default_node.id++;
+      node = new conf_node (conf.default_node);
+      conf.nodes.push_back (node);
+      node->nodename = strdup (val);
+
+      {
+        char *fname;
+        FILE *f;
+
+        asprintf (&fname, "%s/pubkey/%s", confbase, node->nodename);
+
+        f = fopen (fname, "r");
+        if (f)
+          {
+            node->rsa_key = RSA_new ();
+
+            if (!PEM_read_RSAPublicKey(f, &node->rsa_key, NULL, NULL))
+              {
+                ERR_load_RSA_strings (); ERR_load_PEM_strings ();
+                slog (L_ERR, _("unable to open public rsa key file '%s': %s"), fname, ERR_error_string (ERR_get_error (), 0));
+                exit (EXIT_FAILURE);
+              }
+
+            require (RSA_blinding_on (node->rsa_key, 0));
+
+            fclose (f);
+          }
+        else
+          {
+            slog (need_keys ? L_ERR : L_NOTICE, _("unable to read public rsa key file '%s': %s"), fname, strerror (errno));
+
+            if (need_keys)
+              exit (EXIT_FAILURE);
+          }
+
+        free (fname);
+      }
+
+      if (::thisnode && !strcmp (node->nodename, ::thisnode))
+        conf.thisnode = node;
+    }
+  else if (!strcmp (var, "private-key"))
+    free (conf.prikeyfile), conf.prikeyfile = strdup (val);
+  else if (!strcmp (var, "ifpersist"))
+    parse_bool (conf.ifpersist, "ifpersist", true, false);
+  else if (!strcmp (var, "ifname"))
+    free (conf.ifname), conf.ifname = strdup (val);
+  else if (!strcmp (var, "rekey"))
+    conf.rekey = atoi (val);
+  else if (!strcmp (var, "keepalive"))
+    conf.keepalive = atoi (val);
+  else if (!strcmp (var, "mtu"))
+    conf.mtu = atoi (val);
+  else if (!strcmp (var, "if-up"))
+    free (conf.script_if_up), conf.script_if_up = strdup (val);
+  else if (!strcmp (var, "node-up"))
+    free (conf.script_node_up), conf.script_node_up = strdup (val);
+  else if (!strcmp (var, "node-down"))
+    free (conf.script_node_down), conf.script_node_down = strdup (val);
+  else if (!strcmp (var, "pid-file"))
+    free (conf.pidfilename), conf.pidfilename = strdup (val);
+  else if (!strcmp (var, "dns-forw-host"))
+    {
+#if ENABLE_DNS
+      free (conf.dns_forw_host), conf.dns_forw_host = strdup (val);
+#endif
+    }
+  else if (!strcmp (var, "dns-forw-port"))
+    {
+#if ENABLE_DNS
+      conf.dns_forw_port = atoi (val);
+#endif
+    }
+  else if (!strcmp (var, "dns-timeout-factor"))
+    {
+#if ENABLE_DNS
+      conf.dns_timeout_factor = atof (val);
+#endif
+    }
+  else if (!strcmp (var, "dns-send-interval"))
+    {
+#if ENABLE_DNS
+      conf.dns_send_interval = atoi (val);
+#endif
+    }
+  else if (!strcmp (var, "dns-overlap-factor"))
+    {
+#if ENABLE_DNS
+      conf.dns_overlap_factor = atof (val);
+#endif
+    }
+  else if (!strcmp (var, "dns-max-outstanding"))
+    {
+#if ENABLE_DNS
+      conf.dns_max_outstanding = atoi (val);
+#endif
+    }
+  else if (!strcmp (var, "http-proxy-host"))
+    {
+#if ENABLE_HTTP_PROXY
+      free (conf.proxy_host), conf.proxy_host = strdup (val);
+#endif
+    }
+  else if (!strcmp (var, "http-proxy-port"))
+    {
+#if ENABLE_HTTP_PROXY
+      conf.proxy_port = atoi (val);
+#endif
+    }
+  else if (!strcmp (var, "http-proxy-auth"))
+    {
+#if ENABLE_HTTP_PROXY
+      conf.proxy_auth = (char *)base64_encode ((const u8 *)val, strlen (val));
+#endif
+    }
+
+  /* node-specific, non-defaultable */
+  else if (node != &conf.default_node && !strcmp (var, "hostname"))
+    free (node->hostname), node->hostname = strdup (val);
+
+  /* node-specific, defaultable */
+  else if (!strcmp (var, "udp-port"))
+    node->udp_port = atoi (val);
+  else if (!strcmp (var, "tcp-port"))
+    node->tcp_port = atoi (val);
+  else if (!strcmp (var, "dns-hostname"))
+    {
+#if ENABLE_DNS
+      free (node->dns_hostname), node->dns_hostname = strdup (val);
+#endif
+    }
+  else if (!strcmp (var, "dns-port"))
+    {
+#if ENABLE_DNS
+      node->dns_port = atoi (val);
+#endif
+    }
+  else if (!strcmp (var, "dns-domain"))
+    {
+#if ENABLE_DNS
+      free (node->domain), node->domain = strdup (val);
+#endif
+    }
+  else if (!strcmp (var, "if-up-data"))
+    free (node->if_up_data), node->if_up_data = strdup (val);
+  else if (!strcmp (var, "router-priority"))
+    node->routerprio = atoi (val);
+  else if (!strcmp (var, "max-retry"))
+    node->max_retry = atoi (val);
+  else if (!strcmp (var, "connect"))
+    {
+      if (!strcmp (val, "ondemand"))
+        node->connectmode = conf_node::C_ONDEMAND;
+      else if (!strcmp (val, "never"))
+        node->connectmode = conf_node::C_NEVER;
+      else if (!strcmp (val, "always"))
+        node->connectmode = conf_node::C_ALWAYS;
+      else if (!strcmp (val, "disabled"))
+        node->connectmode = conf_node::C_DISABLED;
+      else
+        return _("illegal value for 'connectmode', use one of 'ondemand', 'never', 'always' or 'disabled'. (ignored)");
+    }
+  else if (!strcmp (var, "inherit-tos"))
+    parse_bool (node->inherit_tos, "inherit-tos", true, false);
+  else if (!strcmp (var, "compress"))
+    parse_bool (node->compress, "compress", true, false);
+  // all these bool options really really cost a lot of executable size!
+  else if (!strcmp (var, "enable-tcp"))
+    {
+#if ENABLE_TCP
+      u8 v; parse_bool (v, "enable-tcp" , PROT_TCPv4, 0); node->protocols = (node->protocols & ~PROT_TCPv4) | v;
+#endif
+    }
+  else if (!strcmp (var, "enable-icmp"))
+    {
+#if ENABLE_ICMP
+      u8 v; parse_bool (v, "enable-icmp" , PROT_ICMPv4, 0); node->protocols = (node->protocols & ~PROT_ICMPv4) | v;
+#endif
+    }
+  else if (!strcmp (var, "enable-dns"))
+    {
+#if ENABLE_DNS
+      u8 v; parse_bool (v, "enable-dns" , PROT_DNSv4, 0); node->protocols = (node->protocols & ~PROT_DNSv4) | v;
+#endif
+    }
+  else if (!strcmp (var, "enable-udp"))
+    {
+      u8 v; parse_bool (v, "enable-udp" , PROT_UDPv4, 0); node->protocols = (node->protocols & ~PROT_UDPv4) | v;
+    }
+  else if (!strcmp (var, "enable-rawip"))
+    {
+      u8 v; parse_bool (v, "enable-rawip", PROT_IPv4, 0); node->protocols = (node->protocols & ~PROT_IPv4 ) | v;
+    }
+
+  // unknown or misplaced
+  else
+    return _("unknown configuration directive. (ignored)");
+
+  return 0;
+}
+
+void configuration_parser::parse_argv ()
+{
+  for (int i = 0; i < argc; ++i)
+    {
+      char *v = argv [i];
+
+      if (!*v)
+        continue;
+
+      char *enode = v;
+
+      while (*enode != '.' && *enode > ' ' && *enode != '=' && *enode)
+        enode++;
+
+      if (*enode != '.')
+        enode = 0;
+
+      char *wnode = node == &conf.default_node
+                    ? 0
+                    : node->nodename;
+
+      if ((!wnode && !enode)
+          || (wnode && enode && !strncmp (wnode, v, enode - v)))
+        {
+          const char *warn = parse_line (enode ? enode + 1 : v);
+
+          if (warn)
+            slog (L_WARN, _("%s, while parsing command line option '%s'."), warn, v);
+
+          *v = 0;
+        }
+    }
+}
+
+configuration_parser::configuration_parser (configuration &conf,
+                                            bool need_keys,
+                                            int argc,
+                                            char **argv)
+: conf (conf),need_keys (need_keys), argc (argc), argv (argv)
 {
   char *fname;
   FILE *f;
 
-  clear_config ();
+  conf.clear ();
 
   asprintf (&fname, "%s/gvpe.conf", confbase);
   f = fopen (fname, "r");
@@ -198,283 +494,21 @@ void configuration::read_config (bool need_keys)
     {
       char line[16384];
       int lineno = 0;
-      char *var, *val;
-      conf_node *node = &default_node;
+      node = &conf.default_node;
 
       while (fgets (line, sizeof (line), f))
         {
           lineno++;
 
-          {
-            char *end = line + strlen (line);
+          const char *warn = parse_line (line);
 
-            while (*end < ' ' && end >= line)
-              end--;
-
-            *++end = 0;
-          }
-
-          char *tok = line;
-
-retry:
-          var = strtok (tok, "\t =");
-          tok = 0;
-
-          if (!var || !var[0])
-            continue;		/* no tokens on this line */
-
-          if (var[0] == '#')
-            continue;		/* comment: ignore */
-
-          val = strtok (NULL, "\t\n\r =");
-
-          if (!val || val[0] == '#')
-            {
-              slog (L_WARN,
-                      _("no value for variable `%s', at '%s' line %d, skipping."),
-                      var, fname, lineno);
-              continue;
-            }
-
-          if (!strcmp (var, "on"))
-            {
-              if (!::thisnode
-                  || (val[0] == '!' && strcmp (val + 1, ::thisnode))
-                  || !strcmp (val, ::thisnode))
-                goto retry;
-
-              continue;
-            }
-
-          // truly global
-          if (!strcmp (var, "loglevel"))
-            {
-              loglevel l = string_to_loglevel (val);
-
-              if (l != L_NONE)
-                llevel = l;
-              else
-                slog (L_WARN, "'%s': %s, at '%s' line %d", val, UNKNOWN_LOGLEVEL, fname, line);
-            }
-          else if (!strcmp (var, "ip-proto"))
-            ip_proto = atoi (val);
-          else if (!strcmp (var, "icmp-type"))
-            {
-#if ENABLE_ICMP
-              icmp_type = atoi (val);
-#endif
-            }
-
-          // per config
-          else if (!strcmp (var, "node"))
-            {
-              default_node.id++;
-
-              node = new conf_node (default_node);
-
-              nodes.push_back (node);
-
-              node->nodename = strdup (val);
-
-              {
-                char *fname;
-                FILE *f;
-
-                asprintf (&fname, "%s/pubkey/%s", confbase, node->nodename);
-
-                f = fopen (fname, "r");
-                if (f)
-                  {
-                    node->rsa_key = RSA_new ();
-
-                    if (!PEM_read_RSAPublicKey(f, &node->rsa_key, NULL, NULL))
-                      {
-                        ERR_load_RSA_strings (); ERR_load_PEM_strings ();
-                        slog (L_ERR, _("unable to open public rsa key file '%s': %s"), fname, ERR_error_string (ERR_get_error (), 0));
-                        exit (EXIT_FAILURE);
-                      }
-
-                    require (RSA_blinding_on (node->rsa_key, 0));
-
-                    fclose (f);
-                  }
-                else
-                  {
-                    slog (need_keys ? L_ERR : L_NOTICE, _("unable to read public rsa key file '%s': %s"), fname, strerror (errno));
-
-                    if (need_keys)
-                      exit (EXIT_FAILURE);
-                  }
-
-                free (fname);
-              }
-
-              if (::thisnode && !strcmp (node->nodename, ::thisnode))
-                thisnode = node;
-            }
-          else if (!strcmp (var, "private-key"))
-            free (prikeyfile), prikeyfile = strdup (val);
-          else if (!strcmp (var, "ifpersist"))
-            parse_bool (ifpersist, "ifpersist", true, false);
-          else if (!strcmp (var, "ifname"))
-            free (ifname), ifname = strdup (val);
-          else if (!strcmp (var, "rekey"))
-            rekey = atoi (val);
-          else if (!strcmp (var, "keepalive"))
-            keepalive = atoi (val);
-          else if (!strcmp (var, "mtu"))
-            mtu = atoi (val);
-          else if (!strcmp (var, "if-up"))
-            free (script_if_up), script_if_up = strdup (val);
-          else if (!strcmp (var, "node-up"))
-            free (script_node_up), script_node_up = strdup (val);
-          else if (!strcmp (var, "node-down"))
-            free (script_node_down), script_node_down = strdup (val);
-          else if (!strcmp (var, "pid-file"))
-            free (pidfilename), pidfilename = strdup (val);
-          else if (!strcmp (var, "dns-forw-host"))
-            {
-#if ENABLE_DNS
-              free (dns_forw_host), dns_forw_host = strdup (val);
-#endif
-            }
-          else if (!strcmp (var, "dns-forw-port"))
-            {
-#if ENABLE_DNS
-              dns_forw_port = atoi (val);
-#endif
-            }
-          else if (!strcmp (var, "dns-timeout-factor"))
-            {
-#if ENABLE_DNS
-              dns_timeout_factor = atof (val);
-#endif
-            }
-          else if (!strcmp (var, "dns-send-interval"))
-            {
-#if ENABLE_DNS
-              dns_send_interval = atoi (val);
-#endif
-            }
-          else if (!strcmp (var, "dns-overlap-factor"))
-            {
-#if ENABLE_DNS
-              dns_overlap_factor = atof (val);
-#endif
-            }
-          else if (!strcmp (var, "dns-max-outstanding"))
-            {
-#if ENABLE_DNS
-              dns_max_outstanding = atoi (val);
-#endif
-            }
-          else if (!strcmp (var, "http-proxy-host"))
-            {
-#if ENABLE_HTTP_PROXY
-              free (proxy_host), proxy_host = strdup (val);
-#endif
-            }
-          else if (!strcmp (var, "http-proxy-port"))
-            {
-#if ENABLE_HTTP_PROXY
-              proxy_port = atoi (val);
-#endif
-            }
-          else if (!strcmp (var, "http-proxy-auth"))
-            {
-#if ENABLE_HTTP_PROXY
-              proxy_auth = (char *)base64_encode ((const u8 *)val, strlen (val));
-#endif
-            }
-
-          /* node-specific, non-defaultable */
-          else if (node != &default_node && !strcmp (var, "hostname"))
-            free (node->hostname), node->hostname = strdup (val);
-
-          /* node-specific, defaultable */
-          else if (!strcmp (var, "udp-port"))
-            node->udp_port = atoi (val);
-          else if (!strcmp (var, "tcp-port"))
-            node->tcp_port = atoi (val);
-          else if (!strcmp (var, "dns-hostname"))
-            {
-#if ENABLE_DNS
-              free (node->dns_hostname), node->dns_hostname = strdup (val);
-#endif
-            }
-          else if (!strcmp (var, "dns-port"))
-            {
-#if ENABLE_DNS
-              node->dns_port = atoi (val);
-#endif
-            }
-          else if (!strcmp (var, "dns-domain"))
-            {
-#if ENABLE_DNS
-              free (node->domain), node->domain = strdup (val);
-#endif
-            }
-          else if (!strcmp (var, "if-up-data"))
-            free (node->if_up_data), node->if_up_data = strdup (val);
-          else if (!strcmp (var, "router-priority"))
-            node->routerprio = atoi (val);
-          else if (!strcmp (var, "max-retry"))
-            node->max_retry = atoi (val);
-          else if (!strcmp (var, "connect"))
-            {
-              if (!strcmp (val, "ondemand"))
-                node->connectmode = conf_node::C_ONDEMAND;
-              else if (!strcmp (val, "never"))
-                node->connectmode = conf_node::C_NEVER;
-              else if (!strcmp (val, "always"))
-                node->connectmode = conf_node::C_ALWAYS;
-              else if (!strcmp (val, "disabled"))
-                node->connectmode = conf_node::C_DISABLED;
-              else
-                slog (L_WARN,
-                      _("illegal value for 'connectmode', use one of 'ondemand', 'never', 'always' or 'disabled', at '%s' line %d, ignoring."),
-                      var, fname, lineno);
-            }
-          else if (!strcmp (var, "inherit-tos"))
-            parse_bool (node->inherit_tos, "inherit-tos", true, false);
-          else if (!strcmp (var, "compress"))
-            parse_bool (node->compress, "compress", true, false);
-          // all these bool options really really cost a lot of executable size!
-          else if (!strcmp (var, "enable-tcp"))
-            {
-#if ENABLE_TCP
-              u8 v; parse_bool (v, "enable-tcp" , PROT_TCPv4, 0); node->protocols = (node->protocols & ~PROT_TCPv4) | v;
-#endif
-            }
-          else if (!strcmp (var, "enable-icmp"))
-            {
-#if ENABLE_ICMP
-              u8 v; parse_bool (v, "enable-icmp" , PROT_ICMPv4, 0); node->protocols = (node->protocols & ~PROT_ICMPv4) | v;
-#endif
-            }
-          else if (!strcmp (var, "enable-dns"))
-            {
-#if ENABLE_DNS
-              u8 v; parse_bool (v, "enable-dns" , PROT_DNSv4, 0); node->protocols = (node->protocols & ~PROT_DNSv4) | v;
-#endif
-            }
-          else if (!strcmp (var, "enable-udp"))
-            {
-              u8 v; parse_bool (v, "enable-udp" , PROT_UDPv4, 0); node->protocols = (node->protocols & ~PROT_UDPv4) | v;
-            }
-          else if (!strcmp (var, "enable-rawip"))
-            {
-              u8 v; parse_bool (v, "enable-rawip", PROT_IPv4, 0); node->protocols = (node->protocols & ~PROT_IPv4 ) | v;
-            }
-
-          // unknown or misplaced
-          else
-            slog (L_WARN,
-                    _("unknown or misplaced variable `%s', at '%s' line %d, skipping."),
-                    var, fname, lineno);
+          if (warn)
+            slog (L_WARN, _("%s, at '%s', line %d."), warn, fname, lineno);
         }
 
       fclose (f);
+
+      parse_argv ();
     }
   else
     {
@@ -484,21 +518,21 @@ retry:
 
   free (fname);
 
-  fname = config_filename (prikeyfile, "hostkey");
+  fname = conf.config_filename (conf.prikeyfile, "hostkey");
 
   f = fopen (fname, "r");
   if (f)
     {
-      rsa_key = RSA_new ();
+      conf.rsa_key = RSA_new ();
 
-      if (!PEM_read_RSAPrivateKey (f, &rsa_key, NULL, NULL))
+      if (!PEM_read_RSAPrivateKey (f, &conf.rsa_key, NULL, NULL))
         {
           ERR_load_RSA_strings (); ERR_load_PEM_strings ();
           slog (L_ERR, _("unable to read private rsa key file '%s': %s"), fname, ERR_error_string (ERR_get_error (), 0));
           exit (EXIT_FAILURE);
         }
 
-      require (RSA_blinding_on (rsa_key, 0));
+      require (RSA_blinding_on (conf.rsa_key, 0));
 
       fclose (f);
     }
@@ -511,9 +545,9 @@ retry:
     }
 
   if (need_keys && ::thisnode
-      && rsa_key && thisnode && thisnode->rsa_key)
-    if (BN_cmp (rsa_key->n, thisnode->rsa_key->n) != 0
-        || BN_cmp (rsa_key->e, thisnode->rsa_key->e) != 0)
+      && conf.rsa_key && conf.thisnode && conf.thisnode->rsa_key)
+    if (BN_cmp (conf.rsa_key->n, conf.thisnode->rsa_key->n) != 0
+        || BN_cmp (conf.rsa_key->e, conf.thisnode->rsa_key->e) != 0)
       {
         slog (L_NOTICE, _("private hostkey and public node key mismatch: is '%s' the correct node?"), ::thisnode);
         exit (EXIT_FAILURE);

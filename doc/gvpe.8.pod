@@ -6,7 +6,7 @@ C<gvpe> - GNU Virtual Private Ethernet Daemon
 
 C<gvpe> [B<-cDlL>] [B<--config=>I<DIR>] [B<--no-detach>] [B<-l=>I<LEVEL]>]
 [B<--kill>[B<=>I<SIGNAL>]] [B<--mlock>] [B<--help>] [B<--version>]
-I<NODENAME>
+I<NODENAME> [I<option...>]
 
 =head1 DESCRIPTION
 
@@ -21,6 +21,24 @@ further configure the virtual device.  If that succeeds, it will detach
 from the controlling terminal and continue in the background, accepting
 and setting up connections to other gvpe daemons that are part of the
 virtual private ethernet.
+
+The optional arguments after the node name have to be of the form:
+
+   [I<nodename>.]var=value
+
+If the argument has a prefix of C<nodename.>
+(i.e. C<laptop.enable-dns=yes>) then it will be parsed after all the
+config directives for that node, if not, it is parsed befroe the first
+node directive in the config file, and can be used to set global options
+or default variables.
+
+For example, to start C<gvpe> in the foreground, with log-level C<info> on
+the node C<laptop>, with TCP enabled and HTTP-Proxy host and Port set, use
+this:
+
+  gvpe -D -l info laptop \
+       http-proxy-host=10.0.0.18 http-proxy-port=3128 \
+       laptop.enable-tcp=yes
 
 =head1 OPTIONS
 

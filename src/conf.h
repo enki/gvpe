@@ -40,7 +40,8 @@
 #define DEFAULT_DNS_OVERLAP_FACTOR	.5F	// RTT * LATENCY_FACTOR == sending rate
 #define DEFAULT_DNS_MAX_OUTSTANDING	100	// max. number of outstanding requests
 
-enum {
+enum
+{
   PROT_UDPv4  = 0x01, // udp over ipv4
   PROT_IPv4   = 0x02, // generic ip protocol
   PROT_TCPv4  = 0x04, // tcp over ipv4 (server)
@@ -55,7 +56,8 @@ enum {
 u8 best_protocol (u8 protset);
 const char *strprotocol (u8 protocol);
 
-struct conf_node {
+struct conf_node
+{
   int id;         // the id of this node, a 12-bit-number
 
   RSA *rsa_key;   // his public key
@@ -83,7 +85,8 @@ struct conf_node {
   ~conf_node ();
 };
 
-struct configuration {
+struct configuration
+{
   typedef vector<conf_node *> node_vector;
   node_vector nodes;
   conf_node default_node;
@@ -123,8 +126,7 @@ struct configuration {
 
   void init ();
   void cleanup ();
-  void read_config (bool need_keys);
-  void clear_config ();
+  void clear ();
 
   // create a filename from string, replacing %s by the nodename
   // and using relative paths under confbase.
@@ -134,6 +136,22 @@ struct configuration {
 
   configuration ();
   ~configuration ();
+};
+
+struct configuration_parser
+{
+  configuration &conf;
+
+  bool need_keys;
+  conf_node *node;
+
+  int argc;
+  char **argv;
+
+  configuration_parser (configuration &conf, bool need_keys, int argc, char **argv);
+
+  const char *parse_line (char *line);
+  void parse_argv ();
 };
 
 extern struct configuration conf;

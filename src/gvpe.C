@@ -104,15 +104,11 @@ parse_options (int argc, char **argv, char **envp)
   int r;
   int option_index = 0;
 
-  while ((r = getopt_long (argc, argv, "-c:DLl:", long_options, &option_index)) != EOF)
+  while ((r = getopt_long (argc, argv, "c:DLl:", long_options, &option_index)) != EOF)
     {
       switch (r)
         {
         case 0:		/* long option */
-          break;
-
-        case 1:		/* this node name */
-          thisnode = strdup (optarg);
           break;
 
         case 'c':		/* config file */
@@ -221,6 +217,9 @@ main (int argc, char **argv, char **envp)
 
   parse_options (argc, argv, envp);
 
+  argc -= optind;
+  argv += optind;
+
   if (show_version)
     {
       printf (_("%s version %s (built %s %s, protocol %d.%d)\n"), get_identity (),
@@ -249,7 +248,15 @@ main (int argc, char **argv, char **envp)
       slog (L_ERR, _("system call `%s' failed: %s"), "mlockall", strerror (errno));
 #endif
 
-  conf.read_config (true);
+  if (argc >= 1)
+    {
+      thisnode = *argv++;
+      argc--;
+    }
+
+  {
+    configuration_parser (conf, true, argc, argv);
+  }
 
   set_loglevel (llevel != L_NONE ? llevel : conf.llevel);
 
