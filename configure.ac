@@ -121,7 +121,7 @@ if test "x$IFTYPE" = "x"; then
        AC_DEFINE(HAVE_NETBSD, 1, [NetBSD])
      ;;
      *cygwin*)
-       IFTYPE=tincd
+       IFTYPE=native
        IFSUBTYPE=cygwin
        AC_DEFINE(HAVE_CYGWIN, 1, [Cygwin])
      ;;
@@ -223,8 +223,11 @@ AC_CACHE_SAVE
 
 dnl These are defined in files in m4/
 tinc_TUNTAP
+
 tinc_OPENSSL
-CXXFLAGS="$CXXFLAGS -I$openssl_include"
+if test "x$openssl_include" != x; then
+   CXXFLAGS="$CXXFLAGS -I$openssl_include"
+fi
 dnl tinc_ZLIB
 
 AC_ARG_ENABLE(rohc,

@@ -6285,7 +6285,7 @@ _ACEOF
 
      ;;
      *cygwin*)
-       IFTYPE=tincd
+       IFTYPE=native
        IFSUBTYPE=cygwin
 
 cat >>confdefs.h <<\_ACEOF
@@ -8749,6 +8749,7 @@ fi
 
 
 
+
   tinc_ac_save_CPPFLAGS="$CPPFLAGS"
 
 
@@ -9219,7 +9220,9 @@ fi
 fi
 
 
-CXXFLAGS="$CXXFLAGS -I$openssl_include"
+if test "x$openssl_include" != x; then
+   CXXFLAGS="$CXXFLAGS -I$openssl_include"
+fi
 
 # Check whether --enable-rohc or --disable-rohc was given.
 if test "${enable_rohc+set}" = set; then
