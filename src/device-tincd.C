@@ -93,22 +93,21 @@ get_config_string(const char *key, char **res)
 
 #if IF_linux
 # include "tincd/linux/device.c"
-const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME hw ether $MAC mtu $MTU up"; }
+const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME hw ether $MAC mtu $MTU"; }
 
 #elif IF_freebsd
 # include "tincd/freebsd/device.c"
-// 5.2.1' ifconfig _first_ sets the if up then changes mtu, which can be deadly due to ipv6 kicking in
-const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME ether $MAC mtu $MTU && /sbin/ifconfig $IFNAME up"; }
+const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME ether $MAC mtu $MTU"; }
 
 #elif IF_netbsd
 # define IF_istun 1
 # include "tincd/netbsd/device.c"
-const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME mtu $MTU up"; }
+const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME mtu $MTU"; }
 
 #elif IF_openbsd
 # define IF_istun 1
 # include "tincd/openbsd/device.c"
-const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME mtu $MTU up"; }
+const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME mtu $MTU"; }
 
 #elif IF_solaris
 # define IF_istun 1
@@ -126,11 +125,11 @@ const char * tap_device::if_up () { return ""; }
 #elif IF_darwin
 # define IF_istun 1
 # include "tincd/darwin/device.c"
-const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME ether $MAC mtu $MTU up"; }
+const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME ether $MAC mtu $MTU"; }
 
 #elif IF_raw_socket
 # include "tincd/raw_socket/device.c"
-const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME ether $MAC mtu $MTU up"; }
+const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME ether $MAC mtu $MTU"; }
 
 #elif IF_uml_socket
 # include "tincd/uml_socket/device.c"

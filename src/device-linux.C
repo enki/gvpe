@@ -60,7 +60,7 @@ tap_device::info ()
 const char *
 tap_device::if_up ()
 {
-  return "/sbin/ifconfig $IFNAME hw ether $MAC mtu $MTU up";
+  return "/sbin/ifconfig $IFNAME hw ether $MAC mtu $MTU";
 }
 
 tap_device::tap_device ()

@@ -7,7 +7,7 @@ gvpe.osdep - os dependent information
 This file tries to capture OS-dependent configuration or build issues,
 quirks and platform limitations, as known.
 
-=head2 TUN vs. TAP interface
+=head1 TUN vs. TAP interface
 
 Most operating systems nowadays support something called a
 I<tunnel>-device, which makes it possible to divert IPv4 (and often other
@@ -30,12 +30,14 @@ for TUN-style hosts on all networks (and avoid ARP altogether, which is
 possible), or you need to send a packet from these hosts into the vpn
 network to tell gvpe the local interface address.
 
-=head2 Interface Initialisation
+=head1 Interface Initialisation
 
-Unless otherwise notes, the network interface will be set "UP" with the
-correct MAC address and correct MTU value. With most interface drivers,
+Unless otherwise notes, the network interface will be initialized with the
+expected MAC address and correct MTU value. With most interface drivers,
 this is done by running C</sbin/ifconfig>, so make sure that this command
 exists.
+
+=head1 Interface Types
 
 =head2 native/linux
 
