@@ -162,5 +162,56 @@ struct net_rate_limiter : u32_rate_limiter
     net_rate_limiter (time_t every) : u32_rate_limiter (every) {}
   };
 
+struct sliding_window {
+  u32 v[(WINDOWSIZE + 31) / 32];
+  u32 seq;
+
+  void reset (u32 seqno)
+    {
+      memset (v, -1, sizeof v);
+      seq = seqno;
+    }
+
+  bool recv_ok (u32 seqno)
+    {
+      if (seqno <= seq - WINDOWSIZE)
+        slog (L_ERR, _("received duplicate or outdated packet (received %08lx, expected %08lx)\n"
+                       "possible replay attack, or just massive packet reordering"), seqno, seq + 1);//D
+      else if (seqno > seq + WINDOWSIZE)
+        slog (L_ERR, _("received duplicate or out-of-sync packet (received %08lx, expected %08lx)\n"
+                       "possible replay attack, or just massive packet loss"), seqno, seq + 1);//D
+      else
+        {
+          while (seqno > seq)
+            {
+              seq++;
+
+              u32 s = seq % WINDOWSIZE;
+              u32 *cell = v + (s >> 5);
+              u32 mask = 1 << (s & 31);
+
+              *cell &= ~mask;
+            }
+
+          u32 s = seqno % WINDOWSIZE;
+          u32 *cell = v + (s >> 5);
+          u32 mask = 1 << (s & 31);
+
+          //printf ("received seqno %08lx, seq %08lx, mask %08lx is %08lx\n", seqno, seq, mask, ismask);
+          if (*cell & mask)
+            {
+              slog (L_ERR, _("received duplicate packet (received %08lx, expected %08lx)\n"
+                             "possible replay attack, or just packet duplication"), seqno, seq + 1);//D
+              return false;
+            }
+          else
+            {
+              *cell |= mask;
+              return true;
+            }
+        }
+    }
+};
+
 #endif
 

@@ -59,8 +59,7 @@ struct connection
     time_t last_activity;	// time of last packet received
 
     u32 oseqno;
-    u32 iseqno;
-    u32 ismask; // bitmask with set bits for each received seqno (input seen mask)
+    sliding_window iseqno;
 
     pkt_queue queue;
 

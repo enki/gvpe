@@ -774,9 +774,8 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
                   {
                     delete ictx;
 
-                    ictx   = new crypto_ctx (k, 0);
-                    iseqno = *(u32 *)&k[CHG_SEQNO] & 0x7fffffff;	// at least 2**31 sequence numbers are valid
-                    ismask = 0xffffffff;				// initially, all lower sequence numbers are invalid
+                    ictx = new crypto_ctx (k, 0);
+                    iseqno.reset (*(u32 *)&k[CHG_SEQNO] & 0x7fffffff);	// at least 2**31 sequence numbers are valid
 
                     sa = *ssa;
 
@@ -836,45 +835,22 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
                   u32 seqno;
                   tap_packet *d = p->unpack (this, seqno);
 
-                  if (seqno <= iseqno - 32)
-                    slog (L_ERR, _("received duplicate or outdated packet (received %08lx, expected %08lx)\n"
-                                   "possible replay attack, or just massive packet reordering"), seqno, iseqno + 1);//D
-                  else if (seqno > iseqno + 32)
-                    slog (L_ERR, _("received duplicate or out-of-sync packet (received %08lx, expected %08lx)\n"
-                                   "possible replay attack, or just massive packet loss"), seqno, iseqno + 1);//D
-                  else
+                  if (iseqno.recv_ok (seqno))
                     {
-                      if (seqno > iseqno)
-                        {
-                          ismask <<= seqno - iseqno;
-                          iseqno = seqno;
-                        }
+                      vpn->tap->send (d);
 
-                      u32 mask = 1 << (iseqno - seqno);
+                      if (p->dst () == 0) // re-broadcast
+                        for (vpn::conns_vector::iterator i = vpn->conns.begin (); i != vpn->conns.end (); ++i)
+                          {
+                            connection *c = *i;
 
-                      //printf ("received seqno %08lx, iseqno %08lx, mask %08lx is %08lx\n", seqno, iseqno, mask, ismask);
-                      if (ismask & mask)
-                        slog (L_ERR, _("received duplicate packet (received %08lx, expected %08lx)\n"
-                                       "possible replay attack, or just packet duplication"), seqno, iseqno + 1);//D
-                      else
-                        {
-                          ismask |= mask;
+                            if (c->conf != THISNODE && c->conf != conf)
+                              c->inject_data_packet (d);
+                          }
 
-                          vpn->tap->send (d);
+                      delete d;
 
-                          if (p->dst () == 0) // re-broadcast
-                            for (vpn::conns_vector::iterator i = vpn->conns.begin (); i != vpn->conns.end (); ++i)
-                              {
-                                connection *c = *i;
-
-                                if (c->conf != THISNODE && c->conf != conf)
-                                  c->inject_data_packet (d);
-                              }
-
-                          delete d;
-
-                          break;
-                        }
+                      break;
                     }
                 }
             }

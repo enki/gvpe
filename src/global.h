@@ -53,7 +53,7 @@
 
 #define QUEUEDEPTH 16			// the number of packets that will be queued (should be low)
 
-#define WINDOWSIZE 256			// sliding window size
+#define WINDOWSIZE 1024			// sliding window size
 
 extern char *confbase;		// directory in which all config files are
 extern char *thisnode;		// config for current node (TODO: remove)
