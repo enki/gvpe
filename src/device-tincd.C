@@ -96,14 +96,15 @@ get_config_string(const char *key, char **res)
 # include "tincd/freebsd/device.c"
 
 #elif IF_netbsd
-#define IF_istun 1
+# define IF_istun 1
 # include "tincd/netbsd/device.c"
 
 #elif IF_openbsd
-#define IF_istun 1
+# define IF_istun 1
 # include "tincd/openbsd/device.c"
 
 #elif IF_solaris
+# define IF_istun 1
 # include "tincd/solaris/device.c"
 
 #elif IF_cygwin
@@ -113,11 +114,11 @@ get_config_string(const char *key, char **res)
 # include "tincd/mingw/device.c"
 
 #elif IF_darwin
-#define IF_istun 1
+# define IF_istun 1
 # include "tincd/darwin/device.c"
 
 #elif IF_raw_socket
-#define IF_istun 1
+# define IF_istun 1
 # include "tincd/raw_socket/device.c"
 
 #else
