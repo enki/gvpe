@@ -1,5 +1,5 @@
 /*
-    iom.h -- generic I/O multiplexor
+    iom.h -- generic I/O multiplexer
     Copyright (C) 2003, 2004 Marc Lehmann <pcg@goof.com>
  
     This program is free software; you can redistribute it and/or modify
