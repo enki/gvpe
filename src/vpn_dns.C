@@ -49,6 +49,8 @@
 #define MAX_POLL_INTERVAL 5.  // how often to poll minimally when the server has no data
 #define ACTIVITY_INTERVAL 5.
 
+#define TIMEOUT_FACTOR 2.
+
 #define INITIAL_TIMEOUT     0.1 // retry timeouts
 #define INITIAL_SYN_TIMEOUT 10. // retry timeout for initial syn
 
@@ -56,15 +58,15 @@
 #define MAX_SEND_INTERVAL 2. // optimistic?
 
 #define LATENCY_FACTOR   0.5 // RTT * LATENCY_FACTOR == sending rate
-#define MAX_OUTSTANDING    2 // max. outstanding requests
+#define MAX_OUTSTANDING  100 // max. outstanding requests
 #define MAX_WINDOW      1000 // max. for MAX_OUTSTANDING, and backlog
-#define MAX_BACKLOG     (100*1024) // size of gvpe protocol backlog (bytes), must be > MAXSIZE
+#define MAX_BACKLOG     (32*1024) // size of gvpe protocol backlog (bytes), must be > MAXSIZE
 
 #define MAX_DOMAIN_SIZE 240 // 255 is legal limit, but bind doesn't compress well
 // 240 leaves about 4 bytes of server reply data
 // every two request bytes less give room for one reply byte
 
-#define SEQNO_MASK 0x3fff
+#define SEQNO_MASK 0x0fff
 #define SEQNO_EQ(a,b) ( 0 == ( ((a) ^ (b)) & SEQNO_MASK) )
 
 #define MAX_LBL_SIZE 63
@@ -555,7 +557,7 @@ struct dns_connection
 
   vector<dns_rcv *> rcvpq;
 
-  byte_stream rcvdq; int rcvseq;
+  byte_stream rcvdq; int rcvseq; int repseq;
   byte_stream snddq; int sndseq;
 
   void time_cb (time_watcher &w); time_watcher tw;
@@ -722,14 +724,14 @@ dns_rcv::~dns_rcv ()
 dns_connection::dns_connection (connection *c)
 : c (c)
 , rcvdq (MAX_BACKLOG * 2)
-, snddq (MAX_BACKLOG * 2)
+, snddq (MAX_BACKLOG)
 , tw (this, &dns_connection::time_cb)
 {
   vpn = c->vpn;
 
   established = false;
 
-  rcvseq = sndseq = 0;
+  rcvseq = repseq = sndseq = 0;
 
   last_sent = last_received = 0;
   poll_interval = 0.5; // starting here
@@ -857,7 +859,6 @@ vpn::dnsv4_server (dns_packet &pkt)
                   connection *c = conns [client - 1];
                   dns_connection *dns = c->dns;
                   dns_rcv *rcv;
-                  bool in_seq;
 
                   if (dns)
                     {
@@ -877,8 +878,6 @@ vpn::dnsv4_server (dns_packet &pkt)
 
                             goto duplicate_request;
                           }
-
-                      in_seq = dns->rcvseq == seqno;
 
                       // new packet, queue
                       rcv = new dns_rcv (seqno, data, datalen);
@@ -906,22 +905,28 @@ vpn::dnsv4_server (dns_packet &pkt)
                         // only put data into in-order sequence packets, if
                         // we receive out-of-order packets we generate empty
                         // replies
-                        while (dlen > 1 && !dns->snddq.empty () && in_seq)
+                        //printf ("%d - %d & %x (=%d) < %d\n", seqno, dns->repseq, SEQNO_MASK, (seqno - dns->repseq) & SEQNO_MASK, MAX_WINDOW);//D
+                        if (((seqno - dns->repseq) & SEQNO_MASK) <= MAX_WINDOW)
                           {
-                            int txtlen = dlen <= 255 ? dlen - 1 : 255;
+                            dns->repseq = seqno;
 
-                            if (txtlen > dns->snddq.size ())
-                              txtlen = dns->snddq.size ();
+                            while (dlen > 1 && !dns->snddq.empty ())
+                              {
+                                int txtlen = dlen <= 255 ? dlen - 1 : 255;
 
-                            pkt[offs++] = txtlen;
-                            memcpy (pkt.at (offs), dns->snddq.begin (), txtlen);
-                            offs += txtlen;
-                            dns->snddq.remove (txtlen);
+                                if (txtlen > dns->snddq.size ())
+                                  txtlen = dns->snddq.size ();
 
-                            dlen -= txtlen + 1;
+                                pkt[offs++] = txtlen;
+                                memcpy (pkt.at (offs), dns->snddq.begin (), txtlen);
+                                offs += txtlen;
+                                dns->snddq.remove (txtlen);
+
+                                dlen -= txtlen + 1;
+                              }
                           }
 
-                        // avoid empty TXT rdata
+                        // avoid completely empty TXT rdata
                         if (offs == rdlen_offs)
                           pkt[offs++] = 0;
 
@@ -1186,11 +1191,10 @@ vpn::send_dnsv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
   if (!c->dns)
     c->dns = new dns_connection (c);
   
-  if (!c->dns->snddq.put (pkt))
-    return false;
+  if (c->dns->snddq.put (pkt))
+    c->dns->tw.trigger ();
 
-  c->dns->tw.trigger ();
-
+  // always return true even if the buffer overflows
   return true;
 }
 
@@ -1226,7 +1230,7 @@ dns_connection::time_cb (time_watcher &w)
               send = r;
 
               r->retry++;
-              r->timeout = NOW + (r->retry * min_latency * 8.);
+              r->timeout = NOW + (r->retry * min_latency * TIMEOUT_FACTOR);
 
               // the following code changes the query section a bit, forcing
               // the forwarder to generate a new request
@@ -1269,7 +1273,7 @@ dns_connection::time_cb (time_watcher &w)
 
               send = new dns_snd (this);
               send->gen_stream_req (sndseq, snddq);
-              send->timeout = NOW + min_latency * 8.;
+              send->timeout = NOW + min_latency * TIMEOUT_FACTOR;
 
               sndseq = (sndseq + 1) & SEQNO_MASK;
             }
@@ -1284,6 +1288,7 @@ dns_connection::time_cb (time_watcher &w)
   if (send)
     {
       last_sent = NOW;
+      if (rand () & 15 != 0)//D
       sendto (vpn->dnsv4_fd,
               send->pkt->at (0), send->pkt->len, 0,
               vpn->dns_forwarder.sav4 (), vpn->dns_forwarder.salenv4 ());
