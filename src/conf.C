@@ -219,9 +219,9 @@ retry:
           if (!val || val[0] == '#')
             {
               slog (L_WARN,
-                      _("no value for variable `%s', at '%s' line %d"),
+                      _("no value for variable `%s', at '%s' line %d, skipping."),
                       var, fname, lineno);
-              break;
+              continue;
             }
 
           if (!strcmp (var, "on"))
@@ -303,9 +303,7 @@ retry:
           else if (!strcmp (var, "private-key"))
             free (prikeyfile), prikeyfile = strdup (val);
           else if (!strcmp (var, "ifpersist"))
-            {
-              parse_bool (ifpersist, "ifpersist", true, false);
-            }
+            parse_bool (ifpersist, "ifpersist", true, false);
           else if (!strcmp (var, "ifname"))
             free (ifname), ifname = strdup (val);
           else if (!strcmp (var, "rekey"))
@@ -396,17 +394,13 @@ retry:
                 node->connectmode = conf_node::C_DISABLED;
               else
                 slog (L_WARN,
-                      _("illegal value for 'connectmode', use one of 'ondemand', 'never', 'always' or 'disabled', at '%s' line %d"),
+                      _("illegal value for 'connectmode', use one of 'ondemand', 'never', 'always' or 'disabled', at '%s' line %d, ignoring."),
                       var, fname, lineno);
             }
           else if (!strcmp (var, "inherit-tos"))
-            {
-              parse_bool (node->inherit_tos, "inherit-tos", true, false);
-            }
+            parse_bool (node->inherit_tos, "inherit-tos", true, false);
           else if (!strcmp (var, "compress"))
-            {
-              parse_bool (node->compress, "compress", true, false);
-            }
+            parse_bool (node->compress, "compress", true, false);
           // all these bool options really really cost a lot of executable size!
           else if (!strcmp (var, "enable-tcp"))
             {
@@ -438,7 +432,7 @@ retry:
           // unknown or misplaced
           else
             slog (L_WARN,
-                    _("unknown or misplaced variable `%s', at '%s' line %d"),
+                    _("unknown or misplaced variable `%s', at '%s' line %d, skipping."),
                     var, fname, lineno);
         }
 

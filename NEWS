@@ -1,3 +1,5 @@
+	- skip unparsable config lines instead of stopping parsing.
+
 1.8 Fri Mar 18 00:58:55 CET 2005
 	- enable-udp = yes is now default only when no other protocols
           are enabled. otherwise it is disabled unless explicitly enabled.
