@@ -220,7 +220,7 @@ void io_manager::loop ()
       if (!to && !fds) //TODO: also check idle_watchers and check_watchers
         break; // no events
 
-      fds = select (fds, &rfd, &wfd, &efd, to);
+      fds = select (fds, &rfd, &wfd, NULL, to);
 # if IOM_TIME
       set_now ();
 # endif
