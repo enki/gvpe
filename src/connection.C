@@ -204,10 +204,10 @@ struct net_rateinfo {
 // but low on resources.
 struct net_rate_limiter : list<net_rateinfo>
 {
-  static const double ALPHA  = 1. - 1. / 600.; // allow bursts
-  static const double CUTOFF = 10.;            // one event every CUTOFF seconds
-  static const double EXPIRE = CUTOFF * 30.;   // expire entries after this time
-  static const double MAXDIF = CUTOFF * (1. / (1. - ALPHA)); // maximum diff /count value
+# define NRL_ALPHA  1. - 1. / 600.     // allow bursts
+# define NRL_CUTOFF 10.                // one event every CUTOFF seconds
+# define NRL_EXPIRE NRL_CUTOFF * 30.   // expire entries after this time
+# define NRL_MAXDIF NRL_CUTOFF * (1. / (1. - NRL_ALPHA)) // maximum diff /count value
 
   bool can (const sockinfo &si) { return can((u32)si.host); }
   bool can (u32 host);
@@ -222,7 +222,7 @@ bool net_rate_limiter::can (u32 host)
   for (i = begin (); i != end (); )
     if (i->host == host)
       break;
-    else if (i->last < NOW - EXPIRE)
+    else if (i->last < NOW - NRL_EXPIRE)
       i = erase (i);
     else
       i++;
@@ -233,7 +233,7 @@ bool net_rate_limiter::can (u32 host)
 
       ri.host = host;
       ri.pcnt = 1.;
-      ri.diff = MAXDIF;
+      ri.diff = NRL_MAXDIF;
       ri.last = NOW;
 
       push_front (ri);
@@ -245,19 +245,19 @@ bool net_rate_limiter::can (u32 host)
       net_rateinfo ri (*i);
       erase (i);
 
-      ri.pcnt = ri.pcnt * ALPHA;
-      ri.diff = ri.diff * ALPHA + (NOW - ri.last);
+      ri.pcnt = ri.pcnt * NRL_ALPHA;
+      ri.diff = ri.diff * NRL_ALPHA + (NOW - ri.last);
 
       ri.last = NOW;
 
       double dif = ri.diff / ri.pcnt;
 
-      bool send = dif > CUTOFF;
+      bool send = dif > NRL_CUTOFF;
 
-      if (dif > MAXDIF)
+      if (dif > NRL_MAXDIF)
         {
           ri.pcnt = 1.;
-          ri.diff = MAXDIF;
+          ri.diff = NRL_MAXDIF;
         }
       else if (send)
         ri.pcnt++;

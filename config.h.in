@@ -27,6 +27,9 @@
 /* Select the digest algorithm to use. */
 #undef ENABLE_DIGEST
 
+/* DNS tunnel protocol support. */
+#undef ENABLE_DNS
+
 /* http proxy connect support. */
 #undef ENABLE_HTTP_PROXY
 

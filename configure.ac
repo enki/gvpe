@@ -3,7 +3,7 @@ dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.57)
 AC_INIT(src/vped.C)
 AC_CANONICAL_TARGET
-AM_INIT_AUTOMAKE(vpe, 1.5)
+AM_INIT_AUTOMAKE(vpe, 1.6)
 AM_CONFIG_HEADER(config.h)
 AM_MAINTAINER_MODE
 
@@ -262,12 +262,17 @@ AC_ARG_ENABLE(tcp,
   AC_DEFINE_UNQUOTED(ENABLE_TCP, 1, [TCP protocol support.])
 )
 
+AC_ARG_ENABLE(dns,
+  [AC_HELP_STRING(--enable-dns, [enable dns tunnel protocol support (DOES NOT WORK).])],
+  AC_DEFINE_UNQUOTED(ENABLE_DNS, 1, [DNS tunnel protocol support.])
+)
+
 AC_ARG_ENABLE(http-proxy,
   [AC_HELP_STRING(--enable-http-proxy, [enable http proxy connect support (default disabled).])],
   AC_DEFINE_UNQUOTED(ENABLE_HTTP_PROXY, 1, [http proxy connect support.])
 )
 
-HMAC=8    dnl see also the AC_HELP_STRING
+HMAC=12    dnl see also the AC_HELP_STRING
 AC_ARG_ENABLE(hmac-length,
   [AC_HELP_STRING(--enable-hmac-length=BYTES, [use a hmac of length BYTES bytes (default 12). Allowed values are 4, 8, 12, 16.])],
   HMAC=$enableval
@@ -358,12 +363,12 @@ fi
 
 if test "$HMAC" -lt 12; then
 echo "***"
-echo "*** WARNING: The hmac length you have chosen ($HMAC) might be insecure"
+echo "*** WARNING: The hmac length you have chosen ($HMAC) is probably insecure"
 fi
 
 if test "$RAND" -lt 8; then
 echo "***"
-echo "*** WARNING: The random prefix you have chosen ($RAND) might be insecure"
+echo "*** WARNING: The random prefix you have chosen ($RAND) is probably insecure"
 fi
 
 echo "***"

@@ -879,6 +879,7 @@ Optional Features:
   --enable-rohc           enable robust header compression (rfc3095).
   --enable-icmp           enable icmp protocol support (default disabled).
   --enable-tcp            enable tcp protocol support (default disabled).
+  --enable-dns            enable dns tunnel protocol support (DOES NOT WORK).
   --enable-http-proxy     enable http proxy connect support (default
                           disabled).
   --enable-hmac-length=BYTES
@@ -9731,6 +9732,17 @@ _ACEOF
 
 fi;
 
+# Check whether --enable-dns or --disable-dns was given.
+if test "${enable_dns+set}" = set; then
+  enableval="$enable_dns"
+
+cat >>confdefs.h <<_ACEOF
+#define ENABLE_DNS 1
+_ACEOF
+
+
+fi;
+
 # Check whether --enable-http-proxy or --disable-http-proxy was given.
 if test "${enable_http_proxy+set}" = set; then
   enableval="$enable_http_proxy"
@@ -9742,7 +9754,7 @@ _ACEOF
 
 fi;
 
-HMAC=8    # Check whether --enable-hmac-length or --disable-hmac-length was given.
+HMAC=12    # Check whether --enable-hmac-length or --disable-hmac-length was given.
 if test "${enable_hmac_length+set}" = set; then
   enableval="$enable_hmac_length"
   HMAC=$enableval
@@ -11419,12 +11431,12 @@ fi
 
 if test "$HMAC" -lt 12; then
 echo "***"
-echo "*** WARNING: The hmac length you have chosen ($HMAC) might be insecure"
+echo "*** WARNING: The hmac length you have chosen ($HMAC) is probably insecure"
 fi
 
 if test "$RAND" -lt 8; then
 echo "***"
-echo "*** WARNING: The random prefix you have chosen ($RAND) might be insecure"
+echo "*** WARNING: The random prefix you have chosen ($RAND) is probably insecure"
 fi
 
 echo "***"

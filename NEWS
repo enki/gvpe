@@ -1,5 +1,9 @@
+1.6 Mon May 10 20:55:10 CEST 2004
    - protocol version 0.1, compatible with older releases.
-   - do not RESET on sequence number problems.
+   - do not RESET on out-of-sequence packets (good for wireless).
+   - various non-security-related bugfixes.
+   - c++ify (at least make it compile with g++-3.4, which should make
+     it a little bit more standard c++).
 
 1.5 Fri Jan 30 00:50:04 CET 2004
    - protocol version 0.1, compatible with older releases.

@@ -4,6 +4,7 @@ vped.conf - vpe daemon configuration file
 
 =head1 SYNOPSIS
 
+   enable-udp = yes
    udp-port = 407
    mtu = 1492
    ifname = vpn0
@@ -281,6 +282,10 @@ The optional login and password used to authenticate to the proxy server,
 seperated by a literal colon (C<:>). Only basic authentication is
 currently supported.
 
+=item pid-file = path
+
+The path to the pid file to check and create (Default:
+
 =back
 
 =head2 NODE SPECIFIC SETTINGS
@@ -309,9 +314,12 @@ is only 38 bytes, as opposed to UDP's 58 (or TCP's 60+).
 
 =item enable-udp = yes|true|on | no|false|off
 
-Enable the UDPv4 transport using the C<udp-port> port
-(default: C<yes>). This is a good general choice since UDP tunnels well
-through many firewalls.
+Enable the UDPv4 transport using the C<udp-port> port (default: C<yes>,
+but this will change!). This is a good general choice since UDP tunnels
+well through many firewalls.
+
+NOTE: Please specify C<enable-udp = yes> even though it is the default, as
+some future version will have all protocols disabled by default.
 
 =item enable-tcp = yes|true|on | no|false|off
 
