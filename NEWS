@@ -1,4 +1,10 @@
+
+TODO send sha1hash of public key
+TODO check own keypair for correctness
+   - better retry behaviour on key mismatch.
+
 1.2 Fri Oct 17 03:44:44 CEST 2003
+   - protocol version 0.1
    - tincd kernel interface code imported, more supported platforms
      (native/linux (2.4), tincd/linux (2.2 and 2.4), tincd/freebsd,
      native/cygwin).
@@ -13,6 +19,7 @@
    - added doc/complex-example to the distribution.
 
 1.0
+   - protocol version 0.1
    - tweaked various timeouts to help very slow (486) class
      machines or nets with many hosts.
    - tweaked rate-limiting to be more forgiving for hosts

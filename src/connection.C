@@ -481,21 +481,21 @@ void config_packet::setup (ptype type, int dst)
 bool config_packet::chk_config () const
 {
   if (prot_major != PROTOCOL_MAJOR)
-    slog (L_WARN, _("major version mismatch (%d <=> %d)"), prot_major, PROTOCOL_MAJOR);
+    slog (L_WARN, _("major version mismatch (remote %d <=> local %d)"), prot_major, PROTOCOL_MAJOR);
   else if (randsize != RAND_SIZE)
-    slog (L_WARN, _("rand size mismatch (%d <=> %d)"), randsize, RAND_SIZE);
+    slog (L_WARN, _("rand size mismatch (remote %d <=> local %d)"), randsize, RAND_SIZE);
   else if (hmaclen != HMACLENGTH)
-    slog (L_WARN, _("hmac length mismatch (%d <=> %d)"), hmaclen, HMACLENGTH);
+    slog (L_WARN, _("hmac length mismatch (remote %d <=> local %d)"), hmaclen, HMACLENGTH);
   else if (flags != curflags ())
-    slog (L_WARN, _("flag mismatch (%x <=> %x)"), flags, curflags ());
+    slog (L_WARN, _("flag mismatch (remote %x <=> local %x)"), flags, curflags ());
   else if (challengelen != sizeof (rsachallenge))
-    slog (L_WARN, _("challenge length mismatch (%d <=> %d)"), challengelen, sizeof (rsachallenge));
+    slog (L_WARN, _("challenge length mismatch (remote %d <=> local %d)"), challengelen, sizeof (rsachallenge));
   else if (cipher_nid != htonl (EVP_CIPHER_nid (CIPHER)))
-    slog (L_WARN, _("cipher mismatch (%x <=> %x)"), ntohl (cipher_nid), EVP_CIPHER_nid (CIPHER));
+    slog (L_WARN, _("cipher mismatch (remote %x <=> local %x)"), ntohl (cipher_nid), EVP_CIPHER_nid (CIPHER));
   else if (digest_nid != htonl (EVP_MD_type (RSA_HASH)))
-    slog (L_WARN, _("digest mismatch (%x <=> %x)"), ntohl (digest_nid), EVP_MD_type (RSA_HASH));
+    slog (L_WARN, _("digest mismatch (remote %x <=> local %x)"), ntohl (digest_nid), EVP_MD_type (RSA_HASH));
   else if (hmac_nid != htonl (EVP_MD_type (DIGEST)))
-    slog (L_WARN, _("hmac mismatch (%x <=> %x)"), ntohl (hmac_nid), EVP_MD_type (DIGEST));
+    slog (L_WARN, _("hmac mismatch (remote %x <=> local %x)"), ntohl (hmac_nid), EVP_MD_type (DIGEST));
   else
     return true;
 
@@ -913,8 +913,11 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                 if (0 > RSA_private_decrypt (sizeof (p->encr),
                                              (unsigned char *)&p->encr, (unsigned char *)&k,
                                              ::conf.rsa_key, RSA_PKCS1_OAEP_PADDING))
-                  slog (L_ERR, _("%s(%s): challenge illegal or corrupted (%s). mismatched key or config file?"),
-                        conf->nodename, (const char *)rsi, ERR_error_string (ERR_get_error (), 0));
+                  {
+                    slog (L_ERR, _("%s(%s): challenge illegal or corrupted (%s). mismatched key or config file?"),
+                          conf->nodename, (const char *)rsi, ERR_error_string (ERR_get_error (), 0));
+                    break;
+                  }
                 else
                   {
                     delete octx;
