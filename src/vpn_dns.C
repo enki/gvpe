@@ -57,11 +57,11 @@
 #define MAX_SEND_INTERVAL 2. // optimistic?
 
 #define LATENCY_FACTOR   0.5 // RTT * LATENCY_FACTOR == sending rate
-#define MAX_OUTSTANDING   40 // max. outstanding requests
+#define MAX_OUTSTANDING  100 // max. outstanding requests
 #define MAX_WINDOW      1000 // max. for MAX_OUTSTANDING, and backlog
 #define MAX_BACKLOG     (100*1024) // size of gvpe protocol backlog (bytes), must be > MAXSIZE
 
-#define MAX_DOMAIN_SIZE 200 // 255 is legal limit, but bind doesn't compress well
+#define MAX_DOMAIN_SIZE 240 // 255 is legal limit, but bind doesn't compress well
 // 240 leaves about 4 bytes of server reply data
 // every two request bytes less give room for one reply byte
 
@@ -1240,9 +1240,9 @@ dns_connection::time_cb (time_watcher &w)
         NEXT (r->timeout);
     }
 
-  if (send || (last_sent + send_interval <= NOW))
+  if (!send)
     {
-      if (!send)
+      if (last_sent + send_interval <= NOW)
         {
           // generate a new packet, if wise
 
@@ -1273,20 +1273,20 @@ dns_connection::time_cb (time_watcher &w)
               sndseq = (sndseq + 1) & SEQNO_MASK;
             }
 
-          if (send && !send->retry)
+          if (send)
             vpn->dns_sndpq.push_back (send);
         }
-
-      if (send)
-        {
-          last_sent = NOW;
-          sendto (vpn->dnsv4_fd,
-                  send->pkt->at (0), send->pkt->len, 0,
-                  vpn->dns_forwarder.sav4 (), vpn->dns_forwarder.salenv4 ());
-        }
+      else
+        NEXT (last_sent + send_interval);
     }
-  else
-    NEXT (last_sent + send_interval);
+
+  if (send)
+    {
+      last_sent = NOW;
+      sendto (vpn->dnsv4_fd,
+              send->pkt->at (0), send->pkt->len, 0,
+              vpn->dns_forwarder.sav4 (), vpn->dns_forwarder.salenv4 ());
+    }
 
   slog (L_NOISE, "DNS: pi %f si %f N %f (%d:%d %d)",
         poll_interval, send_interval, next - NOW,
