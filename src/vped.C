@@ -241,7 +241,7 @@ main (int argc, char **argv, char **envp)
 
   /* Lock all pages into memory if requested */
 
-#if HAVE_MLOCKALL && HAVE_SYS_MMAN_H
+#if HAVE_MLOCKALL && HAVE_SYS_MMAN_H && _POSIX_MEMLOCK
   if (do_mlock)
     if (mlockall (MCL_CURRENT | MCL_FUTURE))
       slog (L_ERR, _("system call `%s' failed: %s"), "mlockall", strerror (errno));

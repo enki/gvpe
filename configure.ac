@@ -220,6 +220,7 @@ AC_CACHE_SAVE
 dnl These are defined in files in m4/
 tinc_TUNTAP
 tinc_OPENSSL
+CXXFLAGS="-I$openssl_include"
 dnl tinc_ZLIB
 
 AC_ARG_ENABLE(rohc,
