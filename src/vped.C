@@ -35,6 +35,7 @@
 
 #include <sys/mman.h>
 
+#include <openssl/err.h>
 #include <openssl/rand.h>
 
 #include "gettext.h"
@@ -211,6 +212,8 @@ setup_signals (void)
 int
 main (int argc, char **argv, char **envp)
 {
+  ERR_load_crypto_strings (); // we have the RAM
+
   set_loglevel (L_INFO);
   set_identity (argv[0]);
   log_to (LOGTO_SYSLOG | LOGTO_STDERR);

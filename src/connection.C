@@ -912,8 +912,8 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                 if (0 > RSA_private_decrypt (sizeof (p->encr),
                                              (unsigned char *)&p->encr, (unsigned char *)&k,
                                              ::conf.rsa_key, RSA_PKCS1_OAEP_PADDING))
-                  slog (L_ERR, _("%s(%s): challenge illegal or corrupted"),
-                        conf->nodename, (const char *)rsi);
+                  slog (L_ERR, _("%s(%s): challenge illegal or corrupted (%s). mismatched key or config file?"),
+                        conf->nodename, (const char *)rsi, ERR_error_string (ERR_get_error (), 0));
                 else
                   {
                     delete octx;
