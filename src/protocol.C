@@ -643,7 +643,6 @@ connection::send_data_packet (tap_packet * pkt, bool broadcast)
       && (*pkt)[12] == 0x08 && (*pkt)[13] == 0x00 // IP
       && ((*pkt)[14] & 0xf0) == 0x40)             // IPv4
     tos = (*pkt)[15] & IPTOS_TOS_MASK;
-  printf ("%d %02x %02x %02x %02x = %02x\n", (int)conf->inherit_tos, (*pkt)[12],(*pkt)[13],(*pkt)[14],(*pkt)[15], tos);
 
   p->setup (this, broadcast ? 0 : conf->id, &((*pkt)[6 + 6]), pkt->len - 6 - 6, ++oseqno); // skip 2 macs
   vpn->send_vpn_packet (p, &sa, tos);
