@@ -96,12 +96,17 @@ static struct tw0 : time_watcher
 tstamp NOW;
 
 #if IOM_TIME
-inline void set_now (void)
+tstamp io_manager::now ()
 {
   struct timeval tv;
 
   gettimeofday (&tv, 0);
-  NOW = (tstamp)tv.tv_sec + (tstamp)tv.tv_usec / 1000000.;
+  return (tstamp)tv.tv_sec + (tstamp)tv.tv_usec / 1000000.;
+}
+
+void io_manager::set_now ()
+{
+  NOW = now ();
 }
 #endif
 
@@ -120,14 +125,14 @@ static struct init {
         abort ();
       }
 
-    fcntl (sigpipe[0], F_SETFL, O_NONBLOCK);
-    fcntl (sigpipe[1], F_SETFL, O_NONBLOCK);
+    fcntl (sigpipe[0], F_SETFL, O_NONBLOCK); fcntl (sigpipe[0], F_SETFD, FD_CLOEXEC);
+    fcntl (sigpipe[1], F_SETFL, O_NONBLOCK); fcntl (sigpipe[1], F_SETFD, FD_CLOEXEC);
 #endif
 
     iom_valid = true;
 
 #if IOM_TIME
-    set_now ();
+    io_manager::set_now ();
 
     tw0.start (TSTAMP_MAX);
 #endif
