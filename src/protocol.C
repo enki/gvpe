@@ -447,25 +447,22 @@ vpndata_packet::setup (connection *conn, int dst, u8 *d, u32 l, u32 seqno)
 
   EVP_EncryptInit_ex (cctx, 0, 0, 0, 0);
 
-#if RAND_SIZE
   struct {
+#if RAND_SIZE
     u8 rnd[RAND_SIZE];
+#endif
     u32 seqno;
   } datahdr;
 
   datahdr.seqno = ntohl (seqno);
+#if RAND_SIZE
   RAND_pseudo_bytes ((unsigned char *) datahdr.rnd, RAND_SIZE);
+#endif
 
   EVP_EncryptUpdate (cctx,
                      (unsigned char *) data + outl, &outl2,
                      (unsigned char *) &datahdr, DATAHDR);
   outl += outl2;
-#else
-  EVP_EncryptUpdate (cctx,
-                     (unsigned char *) data + outl, &outl2,
-                     (unsigned char *) &seqno, DATAHDR);
-  outl += outl2;
-#endif
 
   EVP_EncryptUpdate (cctx,
                      (unsigned char *) data + outl, &outl2,
@@ -913,7 +910,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
                 delete octx;
 
                 octx   = new crypto_ctx (*k, 1);
-                oseqno = ntohl (*(u32 *)&k[CHG_SEQNO] & 0x7fffffff);
+                oseqno = ntohl (*(u32 *)&k[CHG_SEQNO]) & 0x7fffffff;
 
                 send_auth (AUTH_REPLY, ssa, k);
                 break;
@@ -925,7 +922,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
                     delete ictx;
 
                     ictx = new crypto_ctx (*k, 0);
-                    iseqno.reset (ntohl (*(u32 *)&k[CHG_SEQNO] & 0x7fffffff));	// at least 2**31 sequence numbers are valid
+                    iseqno.reset (ntohl (*(u32 *)&k[CHG_SEQNO]) & 0x7fffffff);	// at least 2**31 sequence numbers are valid
 
                     sa = *ssa;
 
