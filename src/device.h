@@ -19,11 +19,6 @@
 #ifndef VPE_DEVICE_H__
 #define VPE_DEVICE_H__
 
-#include "config.h"
-
-#include <cstdlib>
-#include <cstring>
-
 #include <net/if.h>
 
 #include "gettext.h"

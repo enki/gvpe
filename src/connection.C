@@ -24,12 +24,17 @@ extern "C" {
 
 #include <list>
 
+#include <openssl/rand.h>
+#include <openssl/evp.h>
+#include <openssl/rsa.h>
+#include <openssl/err.h>
+
 #include "gettext.h"
 
 #include "conf.h"
 #include "slog.h"
 #include "device.h"
-#include "protocol.h"
+#include "vpn.h"
 #include "connection.h"
 
 #if !HAVE_RAND_PSEUDO_BYTES
@@ -580,20 +585,29 @@ connection::send_auth_request (const sockinfo &si, bool initiate)
 
   protocol = best_protocol (THISNODE->protocols & conf->protocols);
 
-  rsachallenge chg;
+  // mask out protocols we cannot establish
+  if (!conf->udp_port) protocol &= ~PROT_UDPv4;
+  if (!conf->tcp_port) protocol &= ~PROT_TCPv4;
 
-  rsa_cache.gen (pkt->id, chg);
+  if (protocol)
+    {
+      rsachallenge chg;
 
-  if (0 > RSA_public_encrypt (sizeof chg,
-                              (unsigned char *)&chg, (unsigned char *)&pkt->encr,
-                              conf->rsa_key, RSA_PKCS1_OAEP_PADDING))
-    fatal ("RSA_public_encrypt error");
+      rsa_cache.gen (pkt->id, chg);
 
-  slog (L_TRACE, ">>%d PT_AUTH_REQ [%s]", conf->id, (const char *)si);
+      if (0 > RSA_public_encrypt (sizeof chg,
+                                  (unsigned char *)&chg, (unsigned char *)&pkt->encr,
+                                  conf->rsa_key, RSA_PKCS1_OAEP_PADDING))
+        fatal ("RSA_public_encrypt error");
 
-  send_vpn_packet (pkt, si, IPTOS_RELIABILITY); // rsa is very very costly
+      slog (L_TRACE, ">>%d PT_AUTH_REQ [%s]", conf->id, (const char *)si);
 
-  delete pkt;
+      send_vpn_packet (pkt, si, IPTOS_RELIABILITY); // rsa is very very costly
+
+      delete pkt;
+    }
+  else
+    ; // silently fail
 }
 
 void

@@ -21,11 +21,7 @@
 
 #include <netinet/ip.h> // for tos etc.
 
-#include <openssl/rand.h>
 #include <openssl/hmac.h>
-#include <openssl/evp.h>
-#include <openssl/rsa.h>
-#include <openssl/err.h>
 
 #include "global.h"
 #include "conf.h"

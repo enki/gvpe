@@ -1,5 +1,5 @@
 /*
-    protocol.C -- handle the protocol, encryption, handshaking etc.
+    vpn.C -- handle the protocol, encryption, handshaking etc.
  
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -38,7 +38,7 @@
 
 #include "connection.h"
 #include "util.h"
-#include "protocol.h"
+#include "vpn.h"
 
 /////////////////////////////////////////////////////////////////////////////
 

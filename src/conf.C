@@ -89,6 +89,7 @@ void configuration::init ()
   ip_proto  = IPPROTO_GRE;
 
   default_node.udp_port    = DEFAULT_UDPPORT;
+  default_node.tcp_port    = DEFAULT_UDPPORT;
   default_node.connectmode = conf_node::C_ALWAYS;
   default_node.compress    = true;
   default_node.protocols   = PROT_UDPv4;
@@ -282,6 +283,8 @@ retry:
           /* node-specific, defaultable */
           else if (!strcmp (var, "udp-port"))
             node->udp_port = atoi (val);
+          else if (!strcmp (var, "tcp-port"))
+            node->tcp_port = atoi (val);
           else if (!strcmp (var, "router-priority"))
             node->routerprio = atoi (val);
           else if (!strcmp (var, "connect"))
@@ -308,6 +311,10 @@ retry:
               parse_bool (node->compress, "compress", true, false);
             }
           // all these bool options really really cost a lot of executable size!
+          else if (!strcmp (var, "enable-tcp"))
+            {
+              u8 v; parse_bool (v, "enable-tcp" , PROT_TCPv4, 0); node->protocols = (node->protocols & ~PROT_TCPv4) | v;
+            }
           else if (!strcmp (var, "enable-udp"))
             {
               u8 v; parse_bool (v, "enable-udp" , PROT_UDPv4, 0); node->protocols = (node->protocols & ~PROT_UDPv4) | v;

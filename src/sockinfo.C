@@ -18,7 +18,8 @@
 
 #include "config.h"
 
-#include "arpa/inet.h"
+#include <arpa/inet.h>
+#include <netdb.h>
 
 #include "gettext.h"
 

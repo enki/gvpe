@@ -19,15 +19,7 @@
 #ifndef VPE_CONF_H__
 #define VPE_CONF_H__
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
-
-#ifdef HAVE_OPENSSL_RSA_H
-# include <openssl/rsa.h>
-#else
-# include <rsa.h>
-#endif
+#include <openssl/rsa.h>
 
 #include <vector>
 
@@ -57,7 +49,7 @@ struct conf_node {
   char *hostname; // hostname, if known, or NULL.
 
   u8 protocols;   // protocols this host can send & receive
-  u16 udp_port;   // the port to bind to
+  u16 udp_port, tcp_port;   // the port to bind to
 
   enum connectmode { C_ONDEMAND, C_NEVER, C_ALWAYS, C_DISABLED } connectmode;
   bool compress;

@@ -1,5 +1,5 @@
 /*
-    protocol.h -- header for protocol.C
+    vpn.h -- header for vpn.C
  
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -16,18 +16,10 @@
     Foundation, Inc. 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef VPE_PROTOCOL_H__
-#define VPE_PROTOCOL_H__
-
-#include <netinet/in.h>
-
-#include <openssl/evp.h>
-#include <openssl/rsa.h>
+#ifndef VPE_VPN_H__
+#define VPE_VPN_H__
 
 #include "conf.h"
-#include "iom.h"
-#include "util.h"
-#include "sockinfo.h"
 #include "device.h"
 #include "connection.h"
 

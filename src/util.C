@@ -42,8 +42,8 @@
 
 #include "global.h"
 #include "conf.h"
+#include "util.h"
 #include "slog.h"
-#include "protocol.h"
 
 int
 write_pidfile (void)

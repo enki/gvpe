@@ -43,7 +43,7 @@
 #include "conf.h"
 #include "slog.h"
 #include "util.h"
-#include "protocol.h"
+#include "vpn.h"
 #include "iom.h"
 
 vpn network;

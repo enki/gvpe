@@ -1,8 +1,7 @@
 /*
     sockinfo.h -- socket address management
-    Copyright (C) 1998-2002 Ivo Timmermans <ivo@o2w.nl>
-                  2000-2002 Guus Sliepen <guus@sliepen.eu.org>
-                  2003      Marc Lehmannn <pcg@goof.com>
+
+    Copyright (C) 2003 Marc Lehmann <pcg@goof.com>
  
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,8 +18,8 @@
     Foundation, Inc. 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef SOCKINFO_H__
-#define SOCKINFO_H__
+#ifndef VPE_SOCKINFO_H__
+#define VPE_SOCKINFO_H__
 
 #include <sys/socket.h>
 #include <netinet/in.h>
