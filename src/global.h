@@ -55,8 +55,11 @@
 //                   hdr seq len              hmac        MAC MAC
 #define VPE_OVERHEAD (4 + 4 + 4 + RAND_SIZE + HMACLENGTH - 6 - 6)
 #define IP_OVERHEAD  20			// size of a (normal) ip header
+#define GRE_OVERHEAD (IP_OVERHEAD +  4)
+#define ICMP_OVERHEAD (IP_OVERHEAD + 4)
 #define UDP_OVERHEAD (IP_OVERHEAD + 20)	// size of a (normal) ip + udp header
-#define MAX_OVERHEAD UDP_OVERHEAD	// the max. overhead of any protocol
+#define TCP_OVERHEAD (IP_OVERHEAD + 22)	// size of a (normal) ip + tcp header + pakcetlength
+#define MAX_OVERHEAD UDP_OVERHEAD	// the max. overhead of any protocol (ok, tcp doesn't count)
 #define ETH_OVERHEAD 14			// the size of an ethernet header
 #define MAXSIZE (MAX_MTU + VPE_OVERHEAD)// slightly too large, but who cares
 

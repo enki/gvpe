@@ -30,9 +30,16 @@ struct net_packet {
 
   u8 &operator[] (u16 offset) const;
 
+  void unshift_hdr (u16 hdrsize)
+    {
+      memmove ((void *)&(*this)[hdrsize], (void *)&(*this)[0], len);
+      len += hdrsize;
+    }
+
   void skip_hdr (u16 hdrsize)
     {
-      memmove ((void *)&(*this)[0], (void *)&(*this)[hdrsize], len -= hdrsize);
+      len -= hdrsize;
+      memmove ((void *)&(*this)[0], (void *)&(*this)[hdrsize], len);
     }
 
   void set (const net_packet &pkt)

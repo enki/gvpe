@@ -28,11 +28,12 @@
 #include <sys/socket.h>
 #include <sys/poll.h>
 #include <sys/wait.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <errno.h>
 #include <time.h>
 #include <unistd.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/icmp.h>
 
 #include "pidfile.h"
 
@@ -82,14 +83,6 @@ vpn::setup ()
       if (ipv4_fd < 0)
         return -1;
 
-      sockinfo si (THISNODE, PROT_IPv4);
-
-      if (bind (ipv4_fd, si.sav4 (), si.salenv4 ()))
-        {
-          slog (L_ERR, _("can't bind ipv4 socket on %s: %s"), (const char *)si, strerror (errno));
-          exit (1);
-        }
-
 #ifdef IP_MTU_DISCOVER
       // this I really consider a linux bug. I am neither connected
       // nor do I fragment myself. Linux still sets DF and doesn't
@@ -99,6 +92,14 @@ vpn::setup ()
         setsockopt (ipv4_fd, SOL_IP, IP_MTU_DISCOVER, &oval, sizeof oval);
       }
 #endif
+
+      sockinfo si (THISNODE, PROT_IPv4);
+
+      if (bind (ipv4_fd, si.sav4 (), si.salenv4 ()))
+        {
+          slog (L_ERR, _("can't bind ipv4 socket on %s: %s"), (const char *)si, strerror (errno));
+          exit (1);
+        }
 
       ipv4_ev_watcher.start (ipv4_fd, POLLIN);
     }
@@ -118,6 +119,16 @@ vpn::setup ()
         setsockopt (udpv4_fd, SOL_SOCKET, SO_REUSEADDR, &oval, sizeof oval);
       }
 
+#ifdef IP_MTU_DISCOVER
+      // this I really consider a linux bug. I am neither connected
+      // nor do I fragment myself. Linux still sets DF and doesn't
+      // fragment for me sometimes.
+      {
+        int oval = IP_PMTUDISC_DONT;
+        setsockopt (udpv4_fd, SOL_IP, IP_MTU_DISCOVER, &oval, sizeof oval);
+      }
+#endif
+
       sockinfo si (THISNODE, PROT_UDPv4);
 
       if (bind (udpv4_fd, si.sav4 (), si.salenv4 ()))
@@ -125,6 +136,30 @@ vpn::setup ()
           slog (L_ERR, _("can't bind udpv4 on %s: %s"), (const char *)si, strerror (errno));
           exit (1);
         }
+
+      udpv4_ev_watcher.start (udpv4_fd, POLLIN);
+    }
+
+  icmpv4_fd = -1;
+
+#if ENABLE_ICMP
+  if (THISNODE->protocols & PROT_ICMPv4)
+    {
+      icmpv4_fd = socket (PF_INET, SOCK_RAW, IPPROTO_ICMP);
+
+      if (icmpv4_fd < 0)
+        return -1;
+
+#ifdef ICMP_FILTER
+      {
+        icmp_filter oval;
+        oval.data = 0xffffffff;
+        if (::conf.icmp_type < 32)
+          oval.data &= ~(1 << ::conf.icmp_type);
+
+        setsockopt (icmpv4_fd, SOL_RAW, ICMP_FILTER, &oval, sizeof oval);
+      }
+#endif
 
 #ifdef IP_MTU_DISCOVER
       // this I really consider a linux bug. I am neither connected
@@ -136,8 +171,17 @@ vpn::setup ()
       }
 #endif
 
-      udpv4_ev_watcher.start (udpv4_fd, POLLIN);
+      sockinfo si (THISNODE, PROT_ICMPv4);
+
+      if (bind (icmpv4_fd, si.sav4 (), si.salenv4 ()))
+        {
+          slog (L_ERR, _("can't bind icmpv4 on %s: %s"), (const char *)si, strerror (errno));
+          exit (1);
+        }
+
+      icmpv4_ev_watcher.start (icmpv4_fd, POLLIN);
     }
+#endif
 
   tcpv4_fd = -1;
 
@@ -206,6 +250,11 @@ vpn::send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos)
         return send_tcpv4_packet (pkt, si, tos);
 #endif
 
+#if ENABLE_ICMP
+      case PROT_ICMPv4:
+        return send_icmpv4_packet (pkt, si, tos);
+#endif
+
       default:
         slog (L_CRIT, _("%s: FATAL: trying to send packet with unsupported protocol"), (const char *)si);
         return false;
@@ -217,6 +266,47 @@ vpn::send_ipv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
   setsockopt (ipv4_fd, SOL_IP, IP_TOS, &tos, sizeof tos);
   sendto (ipv4_fd, &((*pkt)[0]), pkt->len, 0, si.sav4 (), si.salenv4 ());
+
+  return true;
+}
+
+static u16
+ipv4_checksum (u16 *data, unsigned int len)
+{
+  // use 32 bit accumulator and fold back carry bits at the end
+  u32 sum = 0;
+
+  while (len > 1)
+    {
+      sum += *data++;
+      len -= 2;
+    }
+
+  // odd byte left?
+  if (len)
+    sum += *(u8 *)data;
+
+  // add back carry bits
+  sum = (sum >> 16) + (sum & 0xffff);	// lo += hi
+  sum += (sum >> 16);			// carry
+
+  return ~sum;
+}
+
+bool
+vpn::send_icmpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
+{
+  setsockopt (icmpv4_fd, SOL_IP, IP_TOS, &tos, sizeof tos);
+
+  pkt->unshift_hdr (4);
+
+  icmphdr *hdr = (icmphdr *)&((*pkt)[0]);
+  hdr->type = ::conf.icmp_type;
+  hdr->code = 255;
+  hdr->checksum = 0;
+  hdr->checksum = ipv4_checksum ((u16 *)hdr, pkt->len);
+
+  sendto (icmpv4_fd, &((*pkt)[0]), pkt->len, 0, si.sav4 (), si.salenv4 ());
 
   return true;
 }
@@ -271,49 +361,6 @@ vpn::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 }
 
 void
-vpn::udpv4_ev (io_watcher &w, short revents)
-{
-  if (revents & (POLLIN | POLLERR))
-    {
-      vpn_packet *pkt = new vpn_packet;
-      struct sockaddr_in sa;
-      socklen_t sa_len = sizeof (sa);
-      int len;
-
-      len = recvfrom (w.fd, &((*pkt)[0]), MAXSIZE, 0, (sockaddr *)&sa, &sa_len);
-
-      sockinfo si(sa, PROT_UDPv4);
-
-      if (len > 0)
-        {
-          pkt->len = len;
-
-          recv_vpn_packet (pkt, si);
-        }
-      else
-        {
-          // probably ECONNRESET or somesuch
-          slog (L_DEBUG, _("%s: fd %d, %s"), (const char *)si, w.fd, strerror (errno));
-        }
-
-      delete pkt;
-    }
-  else if (revents & POLLHUP)
-    {
-      // this cannot ;) happen on udp sockets
-      slog (L_ERR, _("FATAL: POLLHUP on udp v4 fd, terminating."));
-      exit (1);
-    }
-  else
-    {
-      slog (L_ERR,
-              _("FATAL: unknown revents %08x in socket, terminating\n"),
-              revents);
-      exit (1);
-    }
-}
-
-void
 vpn::ipv4_ev (io_watcher &w, short revents)
 {
   if (revents & (POLLIN | POLLERR))
@@ -349,6 +396,102 @@ vpn::ipv4_ev (io_watcher &w, short revents)
     {
       // this cannot ;) happen on udp sockets
       slog (L_ERR, _("FATAL: POLLHUP on ipv4 fd, terminating."));
+      exit (1);
+    }
+  else
+    {
+      slog (L_ERR,
+              _("FATAL: unknown revents %08x in socket, terminating\n"),
+              revents);
+      exit (1);
+    }
+}
+
+void
+vpn::icmpv4_ev (io_watcher &w, short revents)
+{
+  if (revents & (POLLIN | POLLERR))
+    {
+      vpn_packet *pkt = new vpn_packet;
+      struct sockaddr_in sa;
+      socklen_t sa_len = sizeof (sa);
+      int len;
+
+      len = recvfrom (w.fd, &((*pkt)[0]), MAXSIZE, 0, (sockaddr *)&sa, &sa_len);
+
+      sockinfo si(sa, PROT_ICMPv4);
+
+      if (len > 0)
+        {
+          pkt->len = len;
+
+          icmphdr *hdr = (icmphdr *)&((*pkt)[IP_OVERHEAD]);
+
+          if (hdr->type == ::conf.icmp_type
+              && hdr->code == 255)
+            {
+              // raw sockets deliver the ipv4, but don't expect it on sends
+              // this is slow, but...
+              pkt->skip_hdr (ICMP_OVERHEAD);
+
+              recv_vpn_packet (pkt, si);
+            }
+        }
+      else
+        {
+          // probably ECONNRESET or somesuch
+          slog (L_DEBUG, _("%s: %s"), (const char *)si, strerror (errno));
+        }
+
+      delete pkt;
+    }
+  else if (revents & POLLHUP)
+    {
+      // this cannot ;) happen on udp sockets
+      slog (L_ERR, _("FATAL: POLLHUP on icmpv4 fd, terminating."));
+      exit (1);
+    }
+  else
+    {
+      slog (L_ERR,
+              _("FATAL: unknown revents %08x in socket, terminating\n"),
+              revents);
+      exit (1);
+    }
+}
+
+void
+vpn::udpv4_ev (io_watcher &w, short revents)
+{
+  if (revents & (POLLIN | POLLERR))
+    {
+      vpn_packet *pkt = new vpn_packet;
+      struct sockaddr_in sa;
+      socklen_t sa_len = sizeof (sa);
+      int len;
+
+      len = recvfrom (w.fd, &((*pkt)[0]), MAXSIZE, 0, (sockaddr *)&sa, &sa_len);
+
+      sockinfo si(sa, PROT_UDPv4);
+
+      if (len > 0)
+        {
+          pkt->len = len;
+
+          recv_vpn_packet (pkt, si);
+        }
+      else
+        {
+          // probably ECONNRESET or somesuch
+          slog (L_DEBUG, _("%s: fd %d, %s"), (const char *)si, w.fd, strerror (errno));
+        }
+
+      delete pkt;
+    }
+  else if (revents & POLLHUP)
+    {
+      // this cannot ;) happen on udp sockets
+      slog (L_ERR, _("FATAL: POLLHUP on udp v4 fd, terminating."));
       exit (1);
     }
   else
@@ -539,13 +682,16 @@ vpn::dump_status ()
 }
 
 vpn::vpn (void)
-: event(this, &vpn::event_cb)
-, udpv4_ev_watcher(this, &vpn::udpv4_ev)
-, ipv4_ev_watcher (this, &vpn::ipv4_ev)
-, tap_ev_watcher  (this, &vpn::tap_ev)
+: event            (this, &vpn::event_cb)
+, udpv4_ev_watcher (this, &vpn::udpv4_ev)
+, ipv4_ev_watcher  (this, &vpn::ipv4_ev)
 #if ENABLE_TCP
-, tcpv4_ev_watcher(this, &vpn::tcpv4_ev)
+, tcpv4_ev_watcher (this, &vpn::tcpv4_ev)
 #endif
+#if ENABLE_ICMP
+, icmpv4_ev_watcher(this, &vpn::icmpv4_ev)
+#endif
+, tap_ev_watcher   (this, &vpn::tap_ev)
 {
 }
 

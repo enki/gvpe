@@ -28,7 +28,7 @@
 
 struct vpn
   {
-    int udpv4_fd, tcpv4_fd, ipv4_fd;
+    int udpv4_fd, tcpv4_fd, ipv4_fd, icmpv4_fd;
 
     int events;
 
@@ -59,6 +59,11 @@ struct vpn
 #if ENABLE_TCP
     void tcpv4_ev (io_watcher &w, short revents); io_watcher tcpv4_ev_watcher;
     bool send_tcpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
+#endif
+
+#if ENABLE_ICMP
+    void icmpv4_ev (io_watcher &w, short revents); io_watcher icmpv4_ev_watcher;
+    bool send_icmpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
 #endif
 
     void udpv4_ev (io_watcher &w, short revents); io_watcher udpv4_ev_watcher;

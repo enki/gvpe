@@ -34,6 +34,7 @@
 #include <unistd.h>
 
 #include <netinet/in.h>
+#include <netinet/icmp.h>
 
 #include <openssl/err.h>
 #include <openssl/pem.h>
@@ -55,18 +56,20 @@ struct configuration conf;
 
 u8 best_protocol (u8 protset)
 {
-  if (protset & PROT_IPv4 ) return PROT_IPv4;
-  if (protset & PROT_UDPv4) return PROT_UDPv4;
-  if (protset & PROT_TCPv4) return PROT_TCPv4;
+  if (protset & PROT_IPv4  ) return PROT_IPv4;
+  if (protset & PROT_ICMPv4) return PROT_ICMPv4;
+  if (protset & PROT_UDPv4 ) return PROT_UDPv4;
+  if (protset & PROT_TCPv4 ) return PROT_TCPv4;
 
   return 0;
 }
 
 const char *strprotocol (u8 protocol)
 {
-  if (protocol & PROT_IPv4 ) return "rawip";
-  if (protocol & PROT_UDPv4) return "udp";
-  if (protocol & PROT_TCPv4) return "tcp";
+  if (protocol & PROT_IPv4  ) return "rawip";
+  if (protocol & PROT_ICMPv4) return "icmp";
+  if (protocol & PROT_UDPv4 ) return "udp";
+  if (protocol & PROT_TCPv4 ) return "tcp";
 
   return "<unknown>";
 }
@@ -105,6 +108,7 @@ void configuration::init ()
   keepalive = DEFAULT_KEEPALIVE;
   llevel    = L_INFO;
   ip_proto  = IPPROTO_GRE;
+  icmp_type = ICMP_ECHOREPLY;
 
   default_node.udp_port    = DEFAULT_UDPPORT;
   default_node.tcp_port    = DEFAULT_UDPPORT;
@@ -225,6 +229,8 @@ retry:
             }
           else if (!strcmp (var, "ip-proto"))
             ip_proto = atoi (val);
+          else if (!strcmp (var, "icmp-type"))
+            icmp_type = atoi (val);
 
           // per config
           else if (!strcmp (var, "node"))
@@ -344,6 +350,12 @@ retry:
             {
 #if ENABLE_TCP
               u8 v; parse_bool (v, "enable-tcp" , PROT_TCPv4, 0); node->protocols = (node->protocols & ~PROT_TCPv4) | v;
+#endif
+            }
+          else if (!strcmp (var, "enable-icmp"))
+            {
+#if ENABLE_ICMP
+              u8 v; parse_bool (v, "enable-icmp" , PROT_ICMPv4, 0); node->protocols = (node->protocols & ~PROT_ICMPv4) | v;
 #endif
             }
           else if (!strcmp (var, "enable-udp"))

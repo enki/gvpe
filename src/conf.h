@@ -31,9 +31,10 @@
 #define DEFAULT_UDPPORT		655	// same as tinc, conflicts would be rare
 
 enum {
-  PROT_UDPv4 = 1, // udp over ipv4
-  PROT_IPv4  = 2, // generic ip protocol
-  PROT_TCPv4 = 4, // tcp over ipv4 (NYI)
+  PROT_UDPv4  = 0x01, // udp over ipv4
+  PROT_IPv4   = 0x02, // generic ip protocol
+  PROT_TCPv4  = 0x04, // tcp over ipv4
+  PROT_ICMPv4 = 0x08, // icmp over ipv4 (NYI)
 };
 
 // select the "best" protocol of the available ones
@@ -75,7 +76,8 @@ struct configuration {
   char *prikeyfile;
   RSA *rsa_key;     // our private rsa key
   loglevel llevel;
-  u8 ip_proto;    // the ip protocol to use
+  u8 ip_proto;      // the ip protocol to use
+  u8 icmp_type;     // the icmp type for the icmp-protocol
 
   char *script_if_up;
   char *script_node_up;

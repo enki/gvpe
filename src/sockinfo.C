@@ -26,10 +26,13 @@
 #include "sockinfo.h"
 #include "slog.h"
 
+// all ipv4-based protocols
+#define PROTv4 (PROT_UDPv4 | PROT_TCPv4 | PROT_ICMPv4 | PROT_IPv4)
+
 void sockinfo::set (const sockaddr_in *sa, u8 prot_)
 {
   host = sa->sin_addr.s_addr;
-  port = prot_ == PROT_IPv4 ? 0 : sa->sin_port;
+  port = prot_ & (PROT_IPv4 | PROT_ICMPv4) ? 0 : sa->sin_port;
   prot = prot_;
 }
 
@@ -39,7 +42,7 @@ void sockinfo::set (const char *hostname, u16 port_, u8 prot_)
   host = 0;
   port = htons (port_);
 
-  if (prot & (PROT_UDPv4 | PROT_TCPv4 | PROT_IPv4)
+  if (prot & PROTv4
       && hostname)
     {
       struct hostent *he = gethostbyname (hostname);
@@ -104,16 +107,16 @@ sockinfo::supported_protocols (conf_node *conf)
   u8 protocols = prot;
 
   if (prot & (PROT_UDPv4 | PROT_TCPv4))
-    protocols |= PROT_IPv4;
+    protocols |= PROT_IPv4 | PROT_ICMPv4;
 
   if (conf
-      && prot & (PROT_IPv4 | PROT_UDPv4 | PROT_TCPv4)
+      && prot & PROTv4
       && conf->protocols & PROT_UDPv4
       && conf->udp_port)
     protocols |= PROT_UDPv4;
 
   if (conf
-      && prot & (PROT_IPv4 | PROT_UDPv4 | PROT_TCPv4)
+      && prot & PROTv4
       && conf->protocols & PROT_TCPv4
       && conf->tcp_port)
     protocols |= PROT_TCPv4;
@@ -127,10 +130,10 @@ sockinfo::upgrade_protocol (u8 prot_, conf_node *conf)
   if (prot_ == prot)
     return true;
 
-  if (prot & (PROT_IPv4 | PROT_UDPv4 | PROT_TCPv4)
-      && prot_ & (PROT_IPv4 | PROT_UDPv4 | PROT_TCPv4))
+  if (prot & PROTv4
+      && prot_ & PROTv4)
     {
-      if (prot_ & PROT_IPv4)
+      if (prot_ & (PROT_IPv4 | PROT_ICMPv4))
         {
           prot = prot_;
           port = 0;
