@@ -48,7 +48,23 @@ struct net_packet {
       memcpy (&((*this)[0]), &(pkt[0]), len);
     }
 
-  bool is_arp ()
+  bool is_ipv4 () const
+    {
+      return (*this)[12] == 0x08 && (*this)[13] == 0x00 // IP
+          && ((*this)[14] & 0xf0) == 0x40;              // IPv4
+    }
+
+  u32 &ipv4_src () const
+    {
+      return *(u32 *)&(*this)[26];
+    }
+  
+  u32 &ipv4_dst () const
+    {
+      return *(u32 *)&(*this)[30];
+    }
+  
+  bool is_arp () const
     {
       return (*this)[12] == 0x08 && (*this)[13] == 0x06		// 0806 protocol
           && (*this)[14] == 0x00 && (*this)[15] == 0x01		// 0001 hw_format

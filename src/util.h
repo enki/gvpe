@@ -50,20 +50,9 @@ extern void make_names (void);
  */
 #define ABSOLUTE_PATH(c) ((c)[0] == '/')
 
-static inline void
-id2mac (unsigned int id, void *m)
-{
-  mac &p = *(mac *)m;
+extern void id2mac (unsigned int id, void *m);
 
-  p[0] = 0xfe;
-  p[1] = 0xfd;
-  p[2] = 0x80;
-  p[3] = 0x00;
-  p[4] = id >> 8;
-  p[5] = id;
-}
-
-#define mac2id(p) (p[0] & 0x01 ? 0 : (p[4] << 8) | p[5])
+#define mac2id(p) ((p)[0] & 0x01 ? 0 : ((p)[4] << 8) | (p)[5])
 
 struct sliding_window {
   u32 v[(WINDOWSIZE + 31) / 32];

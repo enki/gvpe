@@ -43,6 +43,10 @@
 
 #include "conf.h"
 
+#if TEST_ETHEREMU
+# include "ether_emu.C"
+#endif
+
 const char *
 tap_device::info ()
 {
@@ -64,7 +68,11 @@ tap_device::tap_device ()
     }
 
   memset (&ifr, 0, sizeof (ifr));
+#if TEST_ETHEREMU
+  ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
+#else
   ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
+#endif
 
   if (conf.ifname)
     strncpy (ifr.ifr_name, conf.ifname, IFNAMSIZ);
@@ -98,7 +106,11 @@ tap_device::recv ()
 {
   tap_packet *pkt = new tap_packet;
 
+#if TEST_ETHEREMU
+  pkt->len = read (fd, &((*pkt)[14]), MAX_MTU - 14);
+#else
   pkt->len = read (fd, &((*pkt)[0]), MAX_MTU);
+#endif
 
   if (pkt->len <= 0)
     {
@@ -108,13 +120,32 @@ tap_device::recv ()
       return 0;
     }
 
+#if TEST_ETHEREMU
+  pkt->len += 14;
+
+  // assume ipv4
+  (*pkt)[12] = 0x08;
+  (*pkt)[13] = 0x00;
+
+  if (!ether_emu.tun_to_tap (pkt))
+    {
+      delete pkt;
+      return 0;
+    }
+#endif
+
   return pkt;
 }
 
 void
 tap_device::send (tap_packet *pkt)
 {
+#if TEST_ETHEREMU
+  if (ether_emu.tap_to_tun (pkt) &&
+      write (fd, &((*pkt)[14]), pkt->len - 14) < 0)
+#else
   if (write (fd, &((*pkt)[0]), pkt->len) < 0)
+#endif
     slog (L_ERR, _("can't write to %s %s: %s"), info (), DEFAULT_DEVICE,
           strerror (errno));
 }

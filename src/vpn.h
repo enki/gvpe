@@ -49,6 +49,7 @@ struct vpn
     void shutdown_all ();
 
     void tap_ev (io_watcher &w, short revents); io_watcher tap_ev_watcher;
+    void inject_data_packet (tap_packet *pkt, int dst);
 
     void send_connect_request (int id);
 
@@ -80,6 +81,8 @@ struct vpn
 
     const char *script_if_up ();
   };
+
+extern struct vpn network;
 
 #endif
 

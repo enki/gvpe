@@ -204,3 +204,28 @@ base64_encode (const u8 *data, unsigned int len)
 }
 #endif
 
+void
+id2mac (unsigned int id, void *m)
+{
+  mac &p = *(mac *)m;
+
+  if (id)
+    {
+      p[0] = 0xfe;
+      p[1] = 0xfd;
+      p[2] = 0x80;
+      p[3] = 0x00;
+      p[4] = id >> 8;
+      p[5] = id;
+    }
+  else
+    {
+      p[0] = 0xff;
+      p[1] = 0xff;
+      p[2] = 0xff;
+      p[3] = 0xff;
+      p[4] = 0xff;
+      p[5] = 0xff;
+    }
+}
+

@@ -337,6 +337,25 @@ vpn::send_udpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 }
 
 void
+vpn::inject_data_packet (tap_packet *pkt, int dst)
+{
+  if (dst)
+    {
+      // unicast
+      if (dst != THISNODE->id)
+        conns[dst - 1]->inject_data_packet (pkt);
+    }
+  else
+    {
+      // broadcast, this is ugly, but due to the security policy
+      // we have to connect to all hosts...
+      for (conns_vector::iterator c = conns.begin (); c != conns.end (); ++c)
+        if ((*c)->conf != THISNODE)
+          (*c)->inject_data_packet (pkt, true);
+  }
+}
+
+void
 vpn::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 {
   unsigned int src = pkt->src ();
@@ -360,7 +379,7 @@ vpn::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
       if (dst == 0)
         slog (L_WARN, _("%s(%s): received broadcast (protocol violation)"),
               c->conf->nodename, (const char *)rsi);
-      else if (dst != 0 && dst != THISNODE->id)
+      else if (dst != THISNODE->id)
         {
           if (THISNODE->routerprio)
             // the tos setting gets lost here. who cares.
@@ -554,22 +573,7 @@ vpn::tap_ev (io_watcher &w, short revents)
           if (dst > conns.size ())
             slog (L_ERR, _("tap packet for unknown node %d received, ignoring."), dst);
           else
-            {
-              if (dst)
-                {
-                  // unicast
-                  if (dst != THISNODE->id)
-                    conns[dst - 1]->inject_data_packet (pkt);
-                }
-              else
-                {
-                  // broadcast, this is ugly, but due to the security policy
-                  // we have to connect to all hosts...
-                  for (conns_vector::iterator c = conns.begin (); c != conns.end (); ++c)
-                    if ((*c)->conf != THISNODE)
-                      (*c)->inject_data_packet (pkt);
-                }
-            }
+            inject_data_packet (pkt, dst);
         }
 
       delete pkt;

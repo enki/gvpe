@@ -802,18 +802,16 @@ connection::rekey_cb (time_watcher &w)
 }
 
 void
-connection::send_data_packet (tap_packet *pkt, bool broadcast)
+connection::send_data_packet (tap_packet *pkt)
 {
   vpndata_packet *p = new vpndata_packet;
   int tos = 0;
 
   // I am not hilarious about peeking into packets, but so be it.
-  if (conf->inherit_tos
-      && (*pkt)[12] == 0x08 && (*pkt)[13] == 0x00 // IP
-      && ((*pkt)[14] & 0xf0) == 0x40)             // IPv4
+  if (conf->inherit_tos && pkt->is_ipv4 ())
     tos = (*pkt)[15] & IPTOS_TOS_MASK;
 
-  p->setup (this, broadcast ? 0 : conf->id, &((*pkt)[6 + 6]), pkt->len - 6 - 6, ++oseqno); // skip 2 macs
+  p->setup (this, conf->id, &((*pkt)[6 + 6]), pkt->len - 6 - 6, ++oseqno); // skip 2 macs
   send_vpn_packet (p, si, tos);
 
   delete p;
@@ -823,10 +821,10 @@ connection::send_data_packet (tap_packet *pkt, bool broadcast)
 }
 
 void
-connection::inject_data_packet (tap_packet *pkt, bool broadcast)
+connection::inject_data_packet (tap_packet *pkt, bool broadcast/*TODO DDD*/)
 {
   if (ictx && octx)
-    send_data_packet (pkt, broadcast);
+    send_data_packet (pkt);
   else
     {
       if (!broadcast)//DDDD
@@ -1038,15 +1036,6 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                 if (iseqno.recv_ok (seqno))
                   {
                     vpn->tap->send (d);
-
-                    if (p->dst () == 0) // re-broadcast
-                      for (vpn::conns_vector::iterator i = vpn->conns.begin (); i != vpn->conns.end (); ++i)
-                        {
-                          connection *c = *i;
-
-                          if (c->conf != THISNODE && c->conf != conf)
-                            c->inject_data_packet (d);
-                        }
 
                     if (si != rsi)
                       {

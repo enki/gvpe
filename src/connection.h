@@ -149,7 +149,7 @@ struct connection
     void send_connect_info (int rid, const sockinfo &rsi, u8 rprotocols);
     void send_reset (const sockinfo &dsi);
     void send_ping (const sockinfo &dsi, u8 pong = 0);
-    void send_data_packet (tap_packet *pkt, bool broadcast = false);
+    void send_data_packet (tap_packet *pkt);
 
     void inject_data_packet (tap_packet *pkt, bool broadcast = false);
     void inject_vpn_packet (vpn_packet *pkt, int tos = 0); // for forwarding
