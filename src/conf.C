@@ -90,14 +90,19 @@ conf_node::print ()
 
 conf_node::~conf_node ()
 {
+#if 0
+  // does not work, because string pointers etc. are shared
+  // is not called, however
   if (rsa_key)
     RSA_free (rsa_key);
 
   free (nodename);
   free (hostname);
+  free (if_up_data);
 #if ENABLE_DNS
   free (domain);
   free (dns_hostname);
+#endif
 #endif
 }
 
@@ -120,6 +125,7 @@ void configuration::init ()
   default_node.compress    = true;
   default_node.protocols   = 0;
   default_node.max_retry   = DEFAULT_MAX_RETRY;
+  default_node.if_up_data  = strdup ("");
 
 #if ENABLE_DNS
   default_node.dns_port    = 0; // default is 0 == client
@@ -408,6 +414,8 @@ retry:
               free (node->domain), node->domain = strdup (val);
 #endif
             }
+          else if (!strcmp (var, "if-up-data"))
+            free (node->if_up_data), node->if_up_data = strdup (val);
           else if (!strcmp (var, "router-priority"))
             node->routerprio = atoi (val);
           else if (!strcmp (var, "max-retry"))

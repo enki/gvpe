@@ -60,17 +60,21 @@ vpn::script_init_env ()
 
   char *env;
   asprintf (&env, "CONFBASE=%s", confbase); putenv (env);
-  asprintf (&env, "NODENAME=%s", THISNODE->nodename); putenv (env);
-  asprintf (&env, "NODEID=%d", THISNODE->id); putenv (env);
   asprintf (&env, "IFNAME=%s", tap->interface ()); putenv (env);
   asprintf (&env, "IFTYPE=%s", IFTYPE); putenv (env);
   asprintf (&env, "IFSUBTYPE=%s", IFSUBTYPE); putenv (env);
   asprintf (&env, "MTU=%d", mtu); putenv (env);
-  asprintf (&env, "MAC=%02x:%02x:%02x:%02x:%02x:%02x",
-            0xfe, 0xfd, 0x80, 0x00, THISNODE->id >> 8,
-            THISNODE->id & 0xff); putenv (env);
+  asprintf (&env, "NODES=%d", conns.size ()); putenv (env);
+  asprintf (&env, "NODEID=%d", THISNODE->id); putenv (env);
 
-  // TODO: info for other nodes, maybe?
+  conns [THISNODE->id - 1]->script_init_env ("");
+
+  for (conns_vector::iterator c = conns.begin (); c != conns.end (); ++c)
+    {
+      char ext[16];
+      snprintf (ext, 16, "_%d", (*c)->conf->id);
+      (*c)->script_init_env (ext);
+    }
 }
 
 const char *vpn::script_if_init ()
@@ -287,6 +291,12 @@ vpn::setup ()
     }
 #endif
 
+  /////////////////////////////////////////////////////////////////////////////
+
+  reconnect_all ();
+
+  /////////////////////////////////////////////////////////////////////////////
+
   tap = new tap_device ();
   if (!tap) //D this, of course, never catches
     {
@@ -309,8 +319,6 @@ vpn::setup ()
     }
 
   tap_ev_watcher.start (tap->fd, EVENT_READ);
-
-  reconnect_all ();
 
   return 0;
 }

@@ -1171,7 +1171,17 @@ void connection::send_connect_request (int id)
   delete p;
 }
 
-void connection::script_init_env ()
+void connection::script_init_env (const char *ext)
+{
+  char *env;
+  asprintf (&env, "IFUPDATA%s=%s", ext, conf->if_up_data); putenv (env);
+  asprintf (&env, "NODENAME%s=%s", ext, conf->nodename); putenv (env);
+  asprintf (&env, "MAC%s=%02x:%02x:%02x:%02x:%02x:%02x", ext,
+            0xfe, 0xfd, 0x80, 0x00, conf->id >> 8,
+            conf->id & 0xff); putenv (env);
+}
+
+void connection::script_init_connect_env ()
 {
   vpn->script_init_env ();
 
@@ -1184,7 +1194,7 @@ void connection::script_init_env ()
 
 const char *connection::script_node_up ()
 {
-  script_init_env ();
+  script_init_connect_env ();
 
   putenv ("STATE=up");
 
@@ -1197,7 +1207,7 @@ const char *connection::script_node_up ()
 
 const char *connection::script_node_down ()
 {
-  script_init_env ();
+  script_init_connect_env ();
 
   putenv ("STATE=down");
 

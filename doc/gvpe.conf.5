@@ -129,7 +129,7 @@
 .\" ========================================================================
 .\"
 .IX Title "GVPE.CONF 5"
-.TH GVPE.CONF 5 "2005-03-23" "1.9" "GNU Virtual Private Ethernet"
+.TH GVPE.CONF 5 "2005-03-26" "1.9" "GNU Virtual Private Ethernet"
 .SH "NAME"
 gvpe.conf \- configuration file for the GNU VPE daemon
 .SH "SYNOPSIS"
@@ -160,8 +160,8 @@ gvpe.conf \- configuration file for the GNU VPE daemon
 The gvpe config file consists of a series of lines that contain \f(CW\*(C`variable
 = value\*(C'\fR pairs. Empty lines are ignored. Comments start with a \f(CW\*(C`#\*(C'\fR and
 extend to the end of the line. They can be used on their own lines, or
-after any directives. Spaces are allowed before or after the \f(CW\*(C`=\*(C'\fR sign or
-after values, but not within the variable names or values themselves.
+after any directives. Whitespace is allowed around the \f(CW\*(C`=\*(C'\fR sign or after
+values, but not within the variable names or values themselves.
 .PP
 The only exception to the above is the \*(L"on\*(R" directive that can prefix any
 \&\f(CW\*(C`name = value\*(C'\fR setting and will only \*(L"execute\*(R" it on the named node, or
@@ -256,53 +256,67 @@ The default should be working ok for most links.
 .IX Item "if-up = relative-or-absolute-path"
 Sets the path of a script that should be called immediately after the
 network interface is initialized (but not neccessarily up). The following
-environment variables are passed to it (the values are just examples):
+environment variables are passed to it (the values are just examples).
+.Sp
+Variables that have the same value on all nodes:
 .RS 4
 .IP "CONFBASE=/etc/gvpe" 4
 .IX Item "CONFBASE=/etc/gvpe"
 The configuration base directory.
 .IP "IFNAME=vpn0" 4
 .IX Item "IFNAME=vpn0"
-The interface to initialize.
-.IP "MTU=1436" 4
-.IX Item "MTU=1436"
-The \s-1MTU\s0 to set the interface to. You can use lower values (if done
-consistently on all hosts), but this is usually ineffective.
-.IP "MAC=fe:fd:80:00:00:01" 4
-.IX Item "MAC=fe:fd:80:00:00:01"
-The \s-1MAC\s0 address to set the interface to. The script *must* set the
-interface \s-1MAC\s0 to this value. You will most likely use one of these:
-.Sp
-.Vb 2
-\&   ip link set $IFNAME address $MAC mtu $MTU up # GNU/Linux
-\&   ifconfig $IFNAME ether $MAC mtu $MTU up      # FreeBSD
-.Ve
-.Sp
-Please see the \f(CW\*(C`gvpe.osdep(5)\*(C'\fR manpage for platform-specific information.
+The network interface to initialize.
 .IP "IFTYPE=native # or tincd" 4
 .IX Item "IFTYPE=native # or tincd"
 .PD 0
 .IP "IFSUBTYPE=linux # or freebsd, darwin etc.." 4
 .IX Item "IFSUBTYPE=linux # or freebsd, darwin etc.."
 .PD
-The interface type (\f(CW\*(C`native\*(C'\fR or \f(CW\*(C`tincd\*(C'\fR) and the subtype (usually the os
-name in lowercase) that this gvpe was configured for. Can be used to select
-the correct syntax to use for network-related commands.
-.IP "NODENAME=branch1" 4
-.IX Item "NODENAME=branch1"
-The nickname of the current node, as passed to the gvpe daemon.
-.IP "NODEID=1" 4
-.IX Item "NODEID=1"
-The numerical node id of the current node. The first node mentioned in the
-config file gets \s-1ID\s0 1, the second \s-1ID\s0 2 and so on.
+The interface type (\f(CW\*(C`native\*(C'\fR or \f(CW\*(C`tincd\*(C'\fR) and the subtype (usually the
+\&\s-1OS\s0 name in lowercase) that this \s-1GVPE\s0 was configured for. Can be used to
+select the correct syntax to use for network-related commands.
+.IP "MTU=1436" 4
+.IX Item "MTU=1436"
+The \s-1MTU\s0 to set the interface to. You can use lower values (if done
+consistently on all hosts), but this is usually ineffective.
+.IP "NODES=5" 4
+.IX Item "NODES=5"
+The number of nodes in this \s-1GVPE\s0 network.
 .RE
 .RS 4
+.Sp
+Variables that are node-specific and with values pertaining to the node
+running this \s-1GVPE:\s0
+.IP "IFUPDATA=string" 4
+.IX Item "IFUPDATA=string"
+The value of the configuration directive \f(CW\*(C`if\-up\-data\*(C'\fR.
+.IP "MAC=fe:fd:80:00:00:01" 4
+.IX Item "MAC=fe:fd:80:00:00:01"
+The \s-1MAC\s0 address the network interface has to use.
+.Sp
+Might be used to initialize interfaces on platforms where \s-1GVPE\s0 does not
+do this automatically.  Please see the \f(CW\*(C`gvpe.osdep(5)\*(C'\fR manpage for
+platform-specific information.
+.IP "NODENAME=branch1" 4
+.IX Item "NODENAME=branch1"
+The nickname of the node.
+.IP "NODEID=1" 4
+.IX Item "NODEID=1"
+The numerical node \s-1ID\s0 of the node running this instance of \s-1GVPE\s0. The first
+node mentioned in the config file gets \s-1ID\s0 1, the second \s-1ID\s0 2 and so on.
+.RE
+.RS 4
+.Sp
+In addition, all node-specific variables (except \f(CW\*(C`NODEID\*(C'\fR) will be
+available with a postfix of \f(CW\*(C`_nodeid\*(C'\fR, which contains the value for that
+node, e.g. the \f(CW\*(C`MAC_1\*(C'\fR variable contains the \s-1MAC\s0 address of node #1, while
+the \f(CW\*(C`NODENAME_22\*(C'\fR variable contains the name of node #22.
 .Sp
 Here is a simple if-up script:
 .Sp
 .Vb 5
 \&   #!/bin/sh
-\&   ip link set $IFNAME address $MAC mtu $MTU up
+\&   ip link set $IFNAME up
 \&   [ $NODENAME = branch1 ] && ip addr add 10.0.0.1 dev $IFNAME
 \&   [ $NODENAME = branch2 ] && ip addr add 10.1.0.1 dev $IFNAME
 \&   ip route add 10.0.0.0/8 dev $IFNAME
@@ -400,8 +414,8 @@ argument to the gvpe daemon.
 .IP "node-up = relative-or-absolute-path" 4
 .IX Item "node-up = relative-or-absolute-path"
 Sets a command (default: no script) that should be called whenever a
-connection is established (even on rekeying operations). In addition
-to the variables passed to \f(CW\*(C`if\-up\*(C'\fR scripts, the following environment
+connection is established (even on rekeying operations). In addition to
+all the variables passed to \f(CW\*(C`if\-up\*(C'\fR scripts, the following environment
 variables will be set:
 .RS 4
 .IP "DESTNODE=branch2" 4
@@ -549,6 +563,10 @@ via the \s-1ICMP\s0 transport.
 The default is \f(CW0\fR (which is \f(CW\*(C`echo\-reply\*(C'\fR, also known as
 \&\*(L"ping\-replies\*(R"). Other useful values include \f(CW8\fR (\f(CW\*(C`echo\-request\*(C'\fR, a.k.a.
 \&\*(L"ping\*(R") and \f(CW11\fR (\f(CW\*(C`time\-exceeded\*(C'\fR), but any 8\-bit value can be used.
+.IP "if-up-data = value" 4
+.IX Item "if-up-data = value"
+The value specified using this directive will be passed to the \f(CW\*(C`if\-up\*(C'\fR
+script in the environment variable \f(CW\*(C`IFUPDATA\*(C'\fR.
 .IP "inherit-tos = yes|true|on | no|false|off" 4
 .IX Item "inherit-tos = yes|true|on | no|false|off"
 Wether to inherit the \s-1TOS\s0 settings of packets sent to the tunnel when

@@ -14,6 +14,9 @@
         - fixed a bug in relying on the order of global construction
           when tcp transport was enabled. The fix makes it use no
           cpu time unless it is in use, too.
+        - information about other nodes is now available to if-up etc. scripts.
+        - the value of the config variable if-up-data is passed to the if-up
+          etc. scripts.
 	- skip unparsable config lines with a warning instead of stopping
           parsing and continuing with a certainly unusable config.
 

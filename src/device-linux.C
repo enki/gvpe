@@ -96,9 +96,19 @@ tap_device::tap_device ()
     }
   else
     {
-      slog (L_CRIT, _("unable to configure tun/tap interface: %s"), strerror (errno));
+      slog (L_CRIT, _("unable to configure tun/tap interface, exiting: %s"), strerror (errno));
       exit (EXIT_FAILURE);
     }
+
+#if 0
+  doesn't work
+  id2mac (THISNODE->id, &ifr.ifr_hwaddr.sa_data);
+  if (ioctl (fd, SIOCSIFHWADDR, &ifr))
+    {
+      slog (L_ERR, _("cannot set MAC address for device %s, exiting: %s"), ifrname, strerror (errno));
+      exit (EXIT_FAILURE);
+    }
+#endif
 
   if (ioctl (fd, TUNSETPERSIST, conf.ifpersist ? 1 : 0))
     slog (L_WARN, _("cannot set persistency mode for device %s: %s"), ifrname, strerror (errno));

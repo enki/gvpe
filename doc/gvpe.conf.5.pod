@@ -23,8 +23,8 @@ gvpe.conf - configuration file for the GNU VPE daemon
 The gvpe config file consists of a series of lines that contain C<variable
 = value> pairs. Empty lines are ignored. Comments start with a C<#> and
 extend to the end of the line. They can be used on their own lines, or
-after any directives. Spaces are allowed before or after the C<=> sign or
-after values, but not within the variable names or values themselves.
+after any directives. Whitespace is allowed around the C<=> sign or after
+values, but not within the variable names or values themselves.
 
 The only exception to the above is the "on" directive that can prefix any
 C<name = value> setting and will only "execute" it on the named node, or
@@ -128,7 +128,9 @@ The default should be working ok for most links.
 
 Sets the path of a script that should be called immediately after the
 network interface is initialized (but not neccessarily up). The following
-environment variables are passed to it (the values are just examples):
+environment variables are passed to it (the values are just examples).
+
+Variables that have the same value on all nodes:
 
 =over 4
 
@@ -138,46 +140,64 @@ The configuration base directory.
 
 =item IFNAME=vpn0
 
-The interface to initialize.
+The network interface to initialize.
+
+=item IFTYPE=native # or tincd
+
+=item IFSUBTYPE=linux # or freebsd, darwin etc..
+
+The interface type (C<native> or C<tincd>) and the subtype (usually the
+OS name in lowercase) that this GVPE was configured for. Can be used to
+select the correct syntax to use for network-related commands.
 
 =item MTU=1436
 
 The MTU to set the interface to. You can use lower values (if done
 consistently on all hosts), but this is usually ineffective.
 
+=item NODES=5
+
+The number of nodes in this GVPE network.
+
+=back
+
+Variables that are node-specific and with values pertaining to the node
+running this GVPE:
+
+=over 4
+
+=item IFUPDATA=string
+
+The value of the configuration directive C<if-up-data>.
+
 =item MAC=fe:fd:80:00:00:01
 
-The MAC address to set the interface to. The script *must* set the
-interface MAC to this value. You will most likely use one of these:
+The MAC address the network interface has to use.
 
-   ip link set $IFNAME address $MAC mtu $MTU up # GNU/Linux
-   ifconfig $IFNAME ether $MAC mtu $MTU up      # FreeBSD
-
-Please see the C<gvpe.osdep(5)> manpage for platform-specific information.
-
-=item IFTYPE=native # or tincd
-
-=item IFSUBTYPE=linux # or freebsd, darwin etc..
-
-The interface type (C<native> or C<tincd>) and the subtype (usually the os
-name in lowercase) that this gvpe was configured for. Can be used to select
-the correct syntax to use for network-related commands.
+Might be used to initialize interfaces on platforms where GVPE does not
+do this automatically.  Please see the C<gvpe.osdep(5)> manpage for
+platform-specific information.
 
 =item NODENAME=branch1
 
-The nickname of the current node, as passed to the gvpe daemon.
+The nickname of the node.
 
 =item NODEID=1
 
-The numerical node id of the current node. The first node mentioned in the
-config file gets ID 1, the second ID 2 and so on.
+The numerical node ID of the node running this instance of GVPE. The first
+node mentioned in the config file gets ID 1, the second ID 2 and so on.
 
 =back
+
+In addition, all node-specific variables (except C<NODEID>) will be
+available with a postfix of C<_nodeid>, which contains the value for that
+node, e.g. the C<MAC_1> variable contains the MAC address of node #1, while
+the C<NODENAME_22> variable contains the name of node #22.
 
 Here is a simple if-up script:
 
    #!/bin/sh
-   ip link set $IFNAME address $MAC mtu $MTU up
+   ip link set $IFNAME up
    [ $NODENAME = branch1 ] && ip addr add 10.0.0.1 dev $IFNAME
    [ $NODENAME = branch2 ] && ip addr add 10.1.0.1 dev $IFNAME
    ip route add 10.0.0.0/8 dev $IFNAME
@@ -282,8 +302,8 @@ argument to the gvpe daemon.
 =item node-up = relative-or-absolute-path
 
 Sets a command (default: no script) that should be called whenever a
-connection is established (even on rekeying operations). In addition
-to the variables passed to C<if-up> scripts, the following environment
+connection is established (even on rekeying operations). In addition to
+all the variables passed to C<if-up> scripts, the following environment
 variables will be set:
 
 =over 4
@@ -450,6 +470,11 @@ via the ICMP transport.
 The default is C<0> (which is C<echo-reply>, also known as
 "ping-replies"). Other useful values include C<8> (C<echo-request>, a.k.a.
 "ping") and C<11> (C<time-exceeded>), but any 8-bit value can be used.
+
+=item if-up-data = value
+
+The value specified using this directive will be passed to the C<if-up>
+script in the environment variable C<IFUPDATA>.
 
 =item inherit-tos = yes|true|on | no|false|off
 

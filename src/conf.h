@@ -61,6 +61,7 @@ struct conf_node {
   RSA *rsa_key;   // his public key
   char *nodename; // nodename, an internal nickname.
   char *hostname; // hostname, if known, or NULL.
+  char *if_up_data;
 #if ENABLE_DNS
   char *domain;   // dns tunnel domain
 #endif
