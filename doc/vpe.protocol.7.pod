@@ -10,9 +10,9 @@ protocols, be it rawip or tcp.
  | HMAC | TYPE | SRCDST | DATA |
  +------+------+--------+------+
 
-The HMAC field is present in all packets, even if not used (e.g. in
-authentification packets), in which case it is set to all zeroes. The
-checksum itself is over the TYPE, SRCDST and DATA fields in all cases.
+The HMAC field is present in all packets, even if not used (e.g. in auth
+request packets), in which case it is set to all zeroes. The checksum
+itself is over the TYPE, SRCDST and DATA fields in all cases.
 
 The TYPE field is a single byte and determines the purpose of the packet
 (e.g. RESET, COMPRESSED/UNCOMPRESSED DATA, PING, AUTH REQUEST/RESPONSE,
@@ -25,18 +25,20 @@ are rare or tolerable and most connections are on demand, larger networks
 are possible.
 
 The DATA portion differs between each packet type, naturally, and is the
-only part that can be encrypted encrypted. Data packets contain more
-fields, as shown:
+only part that can be encrypted. Data packets contain more fields, as
+shown:
 
  +------+------+--------+------+-------+------+
  | HMAC | TYPE | SRCDST | RAND | SEQNO | DATA |
  +------+------+--------+------+-------+------+
 
-RAND is a sequence of fully random bytes, used to increase the entropy of the data
-for encryption purposes.
+RAND is a sequence of fully random bytes, used to increase the entropy of
+the data for encryption purposes.
 
 SEQNO is a 32-bit sequence number. It is negotiated at every connection
-initialization and starts at some random value.
+initialization and starts at some random 31 bit value. VPE currently uses
+a sliding window of 512 packets to detect reordering, duplication and
+reply attacks.
 
 =head2 The authentification protocol
 
@@ -44,19 +46,27 @@ Before hosts can exchange packets, they need to establish authenticity of
 the other side and a key. Every host has a private RSA key and the public
 RSA keys of all other hosts.
 
-A host establishes a simplex connection by sending the other host a RSA
-challenge containing the random digest and encryption keys (different)
-to use when sending packets, plus more randomness plus some PKCS1_OAEP
-padding plus a random 16 byte id. The destination host will respond by
-replying with an (unencrypted) RIPEMD160 hash of the decrypted data, which
+A host establishes a simplex connection by sending the other host a
+RSA encrypted challenge containing a random challenge (consisting of
+the encryption key to use when sending packets, more random data and
+PKCS1_OAEP padding) and a random 16 byte "challenge-id" (used to detect
+duplicate auth packets). The destination host will respond by replying
+with an (unencrypted) RIPEMD160 hash of the decrypted challenge, which
 will authentify that host. The destination host will also set the outgoing
 encryption parameters as given in the packet.
 
 When the source host receives a correct auth reply (by verifying the
-hash and the id, which will expire after 20 seconds). it will start to
-accept data packets from the destination host. The protocol is completely
-symmetric, so to be able to send packets the destination host must send a
-challenge in the exact same way as already described.
+hash and the id, which will expire after 120 seconds), it will start to
+accept data packets from the destination host.
+
+This means that a host can only initate a simplex connection, telling the
+other side the key it has to use when it sends packets. The challenge
+reply is only used to set the current IP address and protocol parameters.
+
+The protocol here is completely symmetric, so to be able to send packets
+the destination host must send a challenge in the exact same way as
+already described (so, in essence, two simplex connections are created per
+host pair).
 
 =head2 Retrying
 
