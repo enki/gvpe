@@ -1,5 +1,10 @@
+#if defined(HAVE_SYS_POLL_H) && defined(HAVE_POLL)
+# include <sys/poll.h>
+#else
+
+
 /*---------------------------------------------------------------------------*\
-  $Id: poll.h,v 1.1 2003-10-14 17:24:19 pcg Exp $
+  $Id: poll.h,v 1.2 2003-10-14 19:14:28 pcg Exp $
 
   NAME
 
@@ -68,10 +73,6 @@
 
 #ifndef _POLL_EMUL_H_
 #define _POLL_EMUL_H_
-
-#if defined(HAVE_SYS_POLL_H) && defined(HAVE_POLL)
-# include <sys/poll.h>
-#else
 
 #define POLLIN		0x01
 #define POLLPRI		0x02

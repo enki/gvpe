@@ -1,5 +1,9 @@
+#if defined(HAVE_SYS_POLL_H) && defined(HAVE_POLL)
+/* nothing to do, all is well, gore is president. */
+#else
+
 /*---------------------------------------------------------------------------*\
-  $Id: poll.c,v 1.1 2003-10-14 17:24:19 pcg Exp $
+  $Id: poll.c,v 1.2 2003-10-14 19:14:27 pcg Exp $
 
   NAME
 
@@ -70,8 +74,6 @@
 /*---------------------------------------------------------------------------*\
 				 Includes
 \*---------------------------------------------------------------------------*/
-
-#if defined(HAVE_SYS_POLL_H) && defined(HAVE_POLL)
 
 #include <unistd.h>			     /* standard Unix definitions */
 #include <sys/types.h>                       /* system types */
