@@ -43,9 +43,6 @@
 #ifndef IOM_SIG
 # define IOM_SIG 0
 #endif
-#ifndef IOM_ACCURACY
-# define IOM_ACCURACY 0.001 // start timers at most this much earlier (can be 0)
-#endif
 
 typedef double tstamp;
 extern tstamp NOW;

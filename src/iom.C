@@ -285,7 +285,7 @@ void io_manager::loop ()
             for (int i = tw.size (); i--; )
               if (!tw[i])
                 tw.erase_unordered (i);
-              else if (tw[i]->at <= NOW + IOM_ACCURACY)
+              else if (tw[i]->at <= NOW)
                 {
                   time_watcher &w = *tw[i];
                   
