@@ -23,7 +23,7 @@
 
 #include <cassert>
 
-#include <sys/poll.h>
+#include "poll.h"
 
 #include "callback.h"
 #include "slog.h"

@@ -139,7 +139,8 @@ AC_CHECK_HEADERS(ext/hash_map)
 
 dnl Checks for header files.
 AC_CHECK_HEADERS([fcntl.h inttypes.h limits.h malloc.h stdint.h strings.h syslog.h unistd.h \
-	sys/file.h sys/ioctl.h sys/param.h sys/time.h netinet/in_systm.h cygwin.h arpa/inet.h netinet/in.h])
+	sys/file.h sys/ioctl.h sys/param.h sys/time.h netinet/in_systm.h cygwin.h arpa/inet.h \
+        sys/poll.h sys/mman.h netinet/in.h])
 AC_CHECK_HEADERS([net/ethernet.h net/if.h netinet/ip.h netinet/tcp.h netinet/in_systm.h], [], [],
 [
 #include <sys/types.h>
@@ -161,6 +162,9 @@ AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 AC_HEADER_TIME
 AC_STRUCT_TM
+
+dnl argl, could somebody catapult darwin into the 21st century???
+AC_CHECK_FUNCS(poll)
 
 AC_CACHE_CHECK([for socklen_t], ac_cv_type_socklen_t,
 [
