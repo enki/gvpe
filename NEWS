@@ -1,11 +1,16 @@
 1.9
         - make some dns transport values configurable and document them.
+        - interface initialization (mac, mtu) is now done automatically
+          in most configurations.
+        - improved os dependend information in gvpe.osdep(5).
         - new low-level device native/darwin, which supports the tap
           driver available for darwin (thanks to matthew mead who tested
           it out with me in a long session). tincd/darwin is still available.
         - fixed a bug in relying on the order of global construction
           when tcp transport was enabled. The fix makes it use no
           cpu time unless it is in use, too.
+        - run if-up/node-up etc. scripts via /bin/sh.
+        - check return value of if-up etc. scripts and exit on failure.
 	- skip unparsable config lines instead of stopping parsing and
           continuing with a surely unusable config.
 
