@@ -87,10 +87,10 @@ $ACLOCAL -I m4
 # optionally feature autoheader
 (autoheader --version)  < /dev/null > /dev/null 2>&1 && autoheader
 
+(cd m4 && make -f Makefile.am.in Makefile.am)
 $AUTOMAKE --add-missing
 autoconf
 autoheader
-(cd m4 && make -f Makefile.am.in Makefile.am)
 
 #intltoolize --copy --force --automake
 
