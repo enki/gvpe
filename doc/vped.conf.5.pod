@@ -235,7 +235,7 @@ Same as C<node-up>, but gets called whenever a connection is lost.
 
 =item http-proxy-host = hostname/ip
 
-The C<http-proxy>-family of options are only available if vpe was
+The C<http-proxy-*> family of options are only available if vpe was
 compiled with the C<--enable-http-proxy> option and enable tunneling of
 tcp connections through a http proxy server.
 
