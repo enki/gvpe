@@ -2,28 +2,47 @@
 
 TARGET="dist-$1"
 
-#autoconf
-#autoheader
-#automake
+autoconf
+autoheader
+automake
 #./configure
 
 CONFIGURE="--prefix=/opt/vpe --sysconfdir=/etc --localstatedir=/var --enable-tcp --enable-http-proxy"
 
-eval $(grep VERSION= distdir/configure)
+eval $(grep VERSION= configure)
 
 mkdir -p $TARGET
+
+BASE=/tmp
+MAKE=make
 
 case "$1" in
    gnu-linux )
       HOST=root@localhost
-      BASE=/tmp
       CONFIGURE="$CONFIGURE --enable-icmp"
+   ;;
+   freebsd )
+      HOST=root@192.168.108.4
+      CONFIGURE="$CONFIGURE --enable-icmp"
+      MAKE=gmake
+   ;;
+   openbsd )
+      HOST=root@192.168.108.6
+      CONFIGURE="$CONFIGURE --enable-icmp"
+   ;;
+   netbsd )
+      HOST=root@192.168.108.5
+      CONFIGURE="$CONFIGURE --enable-icmp --with-openssl-include=/usr/local/ssl/include --with-openssl-lib=/usr/local/ssl/lib"
    ;;
    darwin )
       HOST=root@imac.laendle
       BASE=/Users/schmorp
       CONFIGURE="$CONFIGURE --enable-icmp --with-openssl-include=$BASE/include"
       MAKE="LIBS='$BASE/lib/libcrypto.a -lintl'"
+   ;;
+   cygwin )
+      HOST=vm
+      CONFIGURE="$CONFIGURE --enable-icmp"
    ;;
 esac
 
@@ -37,10 +56,17 @@ ssh $HOST "
    cd $BASE/vpe || exit 1;
    ./configure $CONFIGURE || exit 2;
    rm -rf $BASE/dist;
-   make $MAKE all || exit 3;
-   make $MAKE prefix=$BASE/dist install || exit 4;
+   $MAKE all || exit 3;
+   $MAKE prefix=$BASE/dist install || exit 4;
    strip $BASE/dist/sbin/vped $BASE/dist/bin/vpectrl;
-" 2>&1 | tee $TARGET/buildlog
+   strip $BASE/dist/sbin/vped.exe $BASE/dist/bin/vpectrl.exe;
+   echo vpectrl;
+   ldd $BASE/dist/bin/vpectrl;
+   echo vped;
+   ldd $BASE/dist/sbin/vped;
+   uname -a
+   true;
+" 2>&1 | tee $TARGET/buildlog || exit 1
 
 mkdir -p $TARGET/opt
 rsync -avzPessh $HOST:$BASE/dist/. $TARGET/opt/. --delete

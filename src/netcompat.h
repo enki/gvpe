@@ -61,6 +61,10 @@
 # define IPPROTO_GRE 47
 #endif
 
+#ifndef ICMP_ECHOREPLY
+# define ICMP_ECHOREPLY 0
+#endif
+
 #ifndef HAVE_SOCKLEN_T
 typedef int socklen_t;
 #endif
