@@ -1100,23 +1100,24 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
       case vpn_packet::PT_CONNECT_INFO:
         if (ictx && octx && rsi == si && pkt->hmac_chk (ictx))
           {
-            connect_info_packet *p = (connect_info_packet *) pkt;
+            connect_info_packet *p = (connect_info_packet *)pkt;
 
-            assert (p->id > 0 && p->id <= vpn->conns.size ()); // hmac-auth does not mean we accept anything
+            if (p->id > 0 && p->id <= vpn->conns.size ()) // hmac-auth does not mean we accept anything
+              {
+                connection *c = vpn->conns[p->id - 1];
 
-            connection *c = vpn->conns[p->id - 1];
+                c->conf->protocols = p->protocols;
+                protocol = best_protocol (c->conf->protocols & THISNODE->protocols & p->si.supported_protocols (c->conf));
+                p->si.upgrade_protocol (protocol, c->conf);
 
-            c->conf->protocols = p->protocols;
-            protocol = best_protocol (c->conf->protocols & THISNODE->protocols & p->si.supported_protocols (c->conf));
-            p->si.upgrade_protocol (protocol, c->conf);
+                slog (L_TRACE, "<<%d PT_CONNECT_INFO(%d,%s) (%d)",
+                               conf->id, p->id, (const char *)p->si, !c->ictx && !c->octx);
 
-            slog (L_TRACE, "<<%d PT_CONNECT_INFO(%d,%s) (%d)",
-                           conf->id, p->id, (const char *)p->si, !c->ictx && !c->octx);
+                const sockinfo &dsi = forward_si (p->si);
 
-            const sockinfo &dsi = forward_si (p->si);
-
-            if (dsi.valid ())
-              c->send_auth_request (dsi, true);
+                if (dsi.valid ())
+                  c->send_auth_request (dsi, true);
+              }
           }
 
         break;
