@@ -56,11 +56,12 @@
 #define MIN_SEND_INTERVAL 0.01 // wait at least this time between sending requests
 #define MAX_SEND_INTERVAL 0.5 // optimistic?
 
-#define MAX_OUTSTANDING 10 // max. outstanding requests
+#define LATENCY_FACTOR   0.5 // RTT * LATENCY_FACTOR == sending rate
+#define MAX_OUTSTANDING   20 // max. outstanding requests
 #define MAX_WINDOW      1000 // max. for MAX_OUTSTANDING, and backlog
 #define MAX_BACKLOG     (100*1024) // size of gvpe protocol backlog (bytes), must be > MAXSIZE
 
-#define MAX_DOMAIN_SIZE 220 // 255 is legal limit, but bind doesn't compress well
+#define MAX_DOMAIN_SIZE 200 // 255 is legal limit, but bind doesn't compress well
 // 240 leaves about 4 bytes of server reply data
 // every two request bytes less give room for one reply byte
 
@@ -549,7 +550,7 @@ struct dns_connection
 
   tstamp last_received;
   tstamp last_sent;
-  double last_latency;
+  double min_latency;
   double poll_interval, send_interval;
 
   vector<dns_rcv *> rcvpq;
@@ -733,7 +734,7 @@ dns_connection::dns_connection (connection *c)
   last_sent = last_received = 0;
   poll_interval = MIN_POLL_INTERVAL;
   send_interval = 0.5; // starting rate
-  last_latency = INITIAL_TIMEOUT;
+  min_latency = INITIAL_TIMEOUT;
 }
 
 dns_connection::~dns_connection ()
@@ -756,6 +757,7 @@ void dns_connection::receive_rep (dns_rcv *r)
   else
     {
       poll_interval *= 1.5;
+
       if (poll_interval > MAX_POLL_INTERVAL)
         poll_interval = MAX_POLL_INTERVAL;
     }
@@ -1026,10 +1028,12 @@ vpn::dnsv4_client (dns_packet &pkt)
             // the latency surely puts an upper bound on
             // the minimum send interval
             double latency = NOW - (*i)->sent;
-            dns->last_latency = latency;
 
-            if (dns->send_interval > latency)
-              dns->send_interval = latency;
+            if (latency < dns->min_latency)
+              dns->min_latency = latency;
+
+            if (dns->send_interval > dns->min_latency * LATENCY_FACTOR)
+              dns->send_interval = dns->min_latency * LATENCY_FACTOR;
           }
 
         delete *i;
@@ -1221,7 +1225,7 @@ dns_connection::time_cb (time_watcher &w)
               send = r;
 
               r->retry++;
-              r->timeout = NOW + (r->retry * last_latency * 8.);
+              r->timeout = NOW + (r->retry * min_latency * 8.);
 
               // the following code changes the query section a bit, forcing
               // the forwarder to generate a new request
@@ -1256,7 +1260,7 @@ dns_connection::time_cb (time_watcher &w)
                    && !SEQNO_EQ (rcvseq, sndseq - (MAX_WINDOW - 1)))
             {
               //printf ("sending data request etc.\n"); //D
-              if (!snddq.empty ())
+              if (!snddq.empty () || last_received + 1. > NOW)
                 {
                   poll_interval = send_interval;
                   NEXT (NOW + send_interval);
@@ -1264,7 +1268,7 @@ dns_connection::time_cb (time_watcher &w)
 
               send = new dns_snd (this);
               send->gen_stream_req (sndseq, snddq);
-              send->timeout = NOW + last_latency * 8.;
+              send->timeout = NOW + min_latency * 8.;
 
               sndseq = (sndseq + 1) & SEQNO_MASK;
             }
