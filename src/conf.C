@@ -160,8 +160,8 @@ configuration::clear_config ()
   init ();
 }
 
-#define parse_bool(target,name,trueval,falseval)		\
-  if (!strcmp (val, "yes"))		target = trueval;	\
+#define parse_bool(target,name,trueval,falseval) do {		\
+  if      (!strcmp (val, "yes"))	target = trueval;	\
   else if (!strcmp (val, "no"))		target = falseval;	\
   else if (!strcmp (val, "true"))	target = trueval;	\
   else if (!strcmp (val, "false"))	target = falseval;	\
@@ -170,7 +170,8 @@ configuration::clear_config ()
   else								\
     slog (L_WARN,						\
             _("illegal value for '%s', only 'yes|true|on' or 'no|false|off' allowed, at '%s' line %d"), \
-            name, var, fname, lineno);
+            name, var, fname, lineno);				 \
+} while (0)
 
 void configuration::read_config (bool need_keys)
 {
