@@ -19,7 +19,7 @@
 #ifndef VPE_DEVICE_H__
 #define VPE_DEVICE_H__
 
-#define IFNAMESIZE 256
+#define IFNAMESIZE 256 // be conservative
 
 #include "gettext.h"
 
@@ -78,16 +78,16 @@ struct tap_packet : net_packet {
   u8 data[MAXSIZE - 12];
 };
 
-struct tap_device {
+struct tap_device_base {
   int fd;
 
-  // linux tuntap
+  // network interface name or identifier
   char ifrname[IFNAMESIZE + 1];
 
   char *device;
 
-  tap_device ();
-  ~tap_device ();
+  bool open ();
+  void close ();
 
   const char *interface () { return ifrname; }
   const char *info ();
@@ -95,6 +95,10 @@ struct tap_device {
   tap_packet *recv ();
   void send (tap_packet *pkt);
 };
+
+struct tap_device;
+
+extern tap_device tap;
 
 #endif
 
