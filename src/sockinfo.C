@@ -137,7 +137,7 @@ sockinfo::upgrade_protocol (u8 prot_, conf_node *conf)
           && conf->udp_port)
         {
           prot = prot_;
-          port = conf->udp_port;
+          port = htons (conf->udp_port);
           return true;
         }
 
@@ -147,7 +147,7 @@ sockinfo::upgrade_protocol (u8 prot_, conf_node *conf)
           && conf->tcp_port)
         {
           prot = prot_;
-          port = conf->tcp_port;
+          port = htons (conf->tcp_port);
           return true;
         }
     }
