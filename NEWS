@@ -1,3 +1,6 @@
+   - protocol version 0.1, compatible with older releases.
+   - do not RESET on sequence number problems.
+
 1.5 Fri Jan 30 00:50:04 CET 2004
    - protocol version 0.1, compatible with older releases.
    - vped will refuse to start when hostkey and public key do not match.

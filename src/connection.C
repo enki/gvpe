@@ -1061,7 +1061,6 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                   }
 
                 delete d;
-
                 break;
               }
           }
