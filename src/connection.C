@@ -19,10 +19,6 @@
 
 #include "config.h"
 
-extern "C" {
-# include "lzf/lzf.h"
-}
-
 #include <cassert>
 
 #include <list>
@@ -47,6 +43,12 @@ extern "C" {
 #endif
 
 #define MAGIC "vped\xbd\xc6\xdb\x82"	// 8 bytes of magic
+
+#define ULTRA_FAST 1
+#define HLOG 15
+#include "lzf/lzf.h"
+#include "lzf/lzf_c.c"
+#include "lzf/lzf_d.c"
 
 struct crypto_ctx
 {

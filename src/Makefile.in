@@ -158,7 +158,7 @@ EXTRA_DIST = device-linux.C device-cygwin.C device-tincd.C callback.pl	\
    tincd/cygwin/device.c tincd/darwin/device.c tincd/freebsd/device.c	\
    tincd/linux/device.c tincd/mingw/device.c tincd/netbsd/device.c	\
    tincd/openbsd/device.c tincd/raw_socket/device.c tincd/solaris/device.c \
-   ether_emu.C
+   ether_emu.C lzf/lzf_c.c lzf/lzf_d.c
 
 
 COMMON = global.h conf.h conf.C util.h util.C \
@@ -166,7 +166,7 @@ COMMON = global.h conf.h conf.C util.h util.C \
 
 
 vped_SOURCES = vped.C hash_map.h vpn.h vpn.C vpn_tcp.C sockinfo.h sockinfo.C \
-               lzf/lzf.h lzf/lzfP.h lzf/lzf_c.c lzf/lzf_d.c iom.h iom_conf.h iom.C \
+               lzf/lzf.h lzf/lzfP.h iom.h iom_conf.h iom.C \
                connection.h connection.C callback.h device.h device.C \
                $(COMMON)
 
@@ -200,9 +200,8 @@ vpectrl_OBJECTS = $(am_vpectrl_OBJECTS)
 vpectrl_DEPENDENCIES = $(top_builddir)/lib/libvpe.a
 vpectrl_LDFLAGS =
 am_vped_OBJECTS = vped.$(OBJEXT) vpn.$(OBJEXT) vpn_tcp.$(OBJEXT) \
-	sockinfo.$(OBJEXT) lzf_c.$(OBJEXT) lzf_d.$(OBJEXT) \
-	iom.$(OBJEXT) connection.$(OBJEXT) device.$(OBJEXT) \
-	$(am__objects_1)
+	sockinfo.$(OBJEXT) iom.$(OBJEXT) connection.$(OBJEXT) \
+	device.$(OBJEXT) $(am__objects_1)
 vped_OBJECTS = $(am_vped_OBJECTS)
 vped_DEPENDENCIES = $(top_builddir)/lib/libvpe.a
 vped_LDFLAGS =
@@ -212,7 +211,6 @@ depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 @AMDEP_TRUE@DEP_FILES = ./$(DEPDIR)/conf.Po ./$(DEPDIR)/connection.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/device.Po ./$(DEPDIR)/iom.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/lzf_c.Po ./$(DEPDIR)/lzf_d.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/slog.Po ./$(DEPDIR)/sockinfo.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/util.Po ./$(DEPDIR)/vpectrl.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/vped.Po ./$(DEPDIR)/vpn.Po \
@@ -233,7 +231,7 @@ SOURCES = $(vpectrl_SOURCES) $(vped_SOURCES)
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .C .c .o .obj
+.SUFFIXES: .C .o .obj
 $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ Makefile.am  $(top_srcdir)/configure.ac $(ACLOCAL_M4)
 	cd $(top_srcdir) && \
 	  $(AUTOMAKE) --gnu  src/Makefile
@@ -304,8 +302,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/connection.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/device.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iom.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lzf_c.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lzf_d.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/slog.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sockinfo.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Po@am__quote@
@@ -335,72 +331,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	depfile='$(DEPDIR)/$*.Po' tmpdepfile='$(DEPDIR)/$*.TPo' @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXXCOMPILE) -c -o $@ `if test -f '$<'; then $(CYGPATH_W) '$<'; else $(CYGPATH_W) '$(srcdir)/$<'; fi`
-
-.c.o:
-@am__fastdepCC_TRUE@	if $(COMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" \
-@am__fastdepCC_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/$*.Tpo" "$(DEPDIR)/$*.Po"; \
-@am__fastdepCC_TRUE@	else rm -f "$(DEPDIR)/$*.Tpo"; exit 1; \
-@am__fastdepCC_TRUE@	fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	depfile='$(DEPDIR)/$*.Po' tmpdepfile='$(DEPDIR)/$*.TPo' @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(COMPILE) -c `test -f '$<' || echo '$(srcdir)/'`$<
-
-.c.obj:
-@am__fastdepCC_TRUE@	if $(COMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" \
-@am__fastdepCC_TRUE@	  -c -o $@ `if test -f '$<'; then $(CYGPATH_W) '$<'; else $(CYGPATH_W) '$(srcdir)/$<'; fi`; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/$*.Tpo" "$(DEPDIR)/$*.Po"; \
-@am__fastdepCC_TRUE@	else rm -f "$(DEPDIR)/$*.Tpo"; exit 1; \
-@am__fastdepCC_TRUE@	fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	depfile='$(DEPDIR)/$*.Po' tmpdepfile='$(DEPDIR)/$*.TPo' @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(COMPILE) -c `if test -f '$<'; then $(CYGPATH_W) '$<'; else $(CYGPATH_W) '$(srcdir)/$<'; fi`
-
-lzf_c.o: lzf/lzf_c.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lzf_c.o -MD -MP -MF "$(DEPDIR)/lzf_c.Tpo" \
-@am__fastdepCC_TRUE@	  -c -o lzf_c.o `test -f 'lzf/lzf_c.c' || echo '$(srcdir)/'`lzf/lzf_c.c; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/lzf_c.Tpo" "$(DEPDIR)/lzf_c.Po"; \
-@am__fastdepCC_TRUE@	else rm -f "$(DEPDIR)/lzf_c.Tpo"; exit 1; \
-@am__fastdepCC_TRUE@	fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='lzf/lzf_c.c' object='lzf_c.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	depfile='$(DEPDIR)/lzf_c.Po' tmpdepfile='$(DEPDIR)/lzf_c.TPo' @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lzf_c.o `test -f 'lzf/lzf_c.c' || echo '$(srcdir)/'`lzf/lzf_c.c
-
-lzf_c.obj: lzf/lzf_c.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lzf_c.obj -MD -MP -MF "$(DEPDIR)/lzf_c.Tpo" \
-@am__fastdepCC_TRUE@	  -c -o lzf_c.obj `if test -f 'lzf/lzf_c.c'; then $(CYGPATH_W) 'lzf/lzf_c.c'; else $(CYGPATH_W) '$(srcdir)/lzf/lzf_c.c'; fi`; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/lzf_c.Tpo" "$(DEPDIR)/lzf_c.Po"; \
-@am__fastdepCC_TRUE@	else rm -f "$(DEPDIR)/lzf_c.Tpo"; exit 1; \
-@am__fastdepCC_TRUE@	fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='lzf/lzf_c.c' object='lzf_c.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	depfile='$(DEPDIR)/lzf_c.Po' tmpdepfile='$(DEPDIR)/lzf_c.TPo' @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lzf_c.obj `if test -f 'lzf/lzf_c.c'; then $(CYGPATH_W) 'lzf/lzf_c.c'; else $(CYGPATH_W) '$(srcdir)/lzf/lzf_c.c'; fi`
-
-lzf_d.o: lzf/lzf_d.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lzf_d.o -MD -MP -MF "$(DEPDIR)/lzf_d.Tpo" \
-@am__fastdepCC_TRUE@	  -c -o lzf_d.o `test -f 'lzf/lzf_d.c' || echo '$(srcdir)/'`lzf/lzf_d.c; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/lzf_d.Tpo" "$(DEPDIR)/lzf_d.Po"; \
-@am__fastdepCC_TRUE@	else rm -f "$(DEPDIR)/lzf_d.Tpo"; exit 1; \
-@am__fastdepCC_TRUE@	fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='lzf/lzf_d.c' object='lzf_d.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	depfile='$(DEPDIR)/lzf_d.Po' tmpdepfile='$(DEPDIR)/lzf_d.TPo' @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lzf_d.o `test -f 'lzf/lzf_d.c' || echo '$(srcdir)/'`lzf/lzf_d.c
-
-lzf_d.obj: lzf/lzf_d.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lzf_d.obj -MD -MP -MF "$(DEPDIR)/lzf_d.Tpo" \
-@am__fastdepCC_TRUE@	  -c -o lzf_d.obj `if test -f 'lzf/lzf_d.c'; then $(CYGPATH_W) 'lzf/lzf_d.c'; else $(CYGPATH_W) '$(srcdir)/lzf/lzf_d.c'; fi`; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/lzf_d.Tpo" "$(DEPDIR)/lzf_d.Po"; \
-@am__fastdepCC_TRUE@	else rm -f "$(DEPDIR)/lzf_d.Tpo"; exit 1; \
-@am__fastdepCC_TRUE@	fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='lzf/lzf_d.c' object='lzf_d.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	depfile='$(DEPDIR)/lzf_d.Po' tmpdepfile='$(DEPDIR)/lzf_d.TPo' @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lzf_d.obj `if test -f 'lzf/lzf_d.c'; then $(CYGPATH_W) 'lzf/lzf_d.c'; else $(CYGPATH_W) '$(srcdir)/lzf/lzf_d.c'; fi`
 uninstall-info-am:
 
 ETAGS = etags
@@ -462,7 +392,7 @@ top_distdir = ..
 distdir = $(top_distdir)/$(PACKAGE)-$(VERSION)
 
 distdir: $(DISTFILES)
-	$(mkinstalldirs) $(distdir)/tincd $(distdir)/tincd/cygwin $(distdir)/tincd/darwin $(distdir)/tincd/freebsd $(distdir)/tincd/linux $(distdir)/tincd/mingw $(distdir)/tincd/netbsd $(distdir)/tincd/openbsd $(distdir)/tincd/raw_socket $(distdir)/tincd/solaris
+	$(mkinstalldirs) $(distdir)/lzf $(distdir)/tincd $(distdir)/tincd/cygwin $(distdir)/tincd/darwin $(distdir)/tincd/freebsd $(distdir)/tincd/linux $(distdir)/tincd/mingw $(distdir)/tincd/netbsd $(distdir)/tincd/openbsd $(distdir)/tincd/raw_socket $(distdir)/tincd/solaris
 	@srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`; \
 	topsrcdirstrip=`echo "$(top_srcdir)" | sed 's|.|.|g'`; \
 	list='$(DISTFILES)'; for file in $$list; do \

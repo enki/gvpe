@@ -7,6 +7,7 @@ TODO tcp_connection::tcpv4_ev does not handle EOF well, or does it? (CHECK)
 1.5
    - protocol version 0.1, compatible with older releases.
    - vped will refuse to start when hostkey and public key do not match.
+   - updated lzf code to version 1.2.
    - better error reporting for "unusual" conditions, like failing
      to allocate memory, that should not normally happen and
      will otherwise result in spurious other error messages. Also

@@ -8,7 +8,7 @@ EXTRA_DIST = device-linux.C device-cygwin.C device-tincd.C callback.pl	\
    tincd/cygwin/device.c tincd/darwin/device.c tincd/freebsd/device.c	\
    tincd/linux/device.c tincd/mingw/device.c tincd/netbsd/device.c	\
    tincd/openbsd/device.c tincd/raw_socket/device.c tincd/solaris/device.c \
-   ether_emu.C
+   ether_emu.C lzf/lzf_c.c lzf/lzf_d.c
 
 INCLUDES = @INCLUDES@ -I$(top_builddir) -I$(top_srcdir)/lib
 
@@ -18,7 +18,7 @@ COMMON = global.h conf.h conf.C util.h util.C \
          slog.h slog.C netcompat.h
 
 vped_SOURCES = vped.C hash_map.h vpn.h vpn.C vpn_tcp.C sockinfo.h sockinfo.C \
-               lzf/lzf.h lzf/lzfP.h lzf/lzf_c.c lzf/lzf_d.c iom.h iom_conf.h iom.C \
+               lzf/lzf.h lzf/lzfP.h iom.h iom_conf.h iom.C \
                connection.h connection.C callback.h device.h device.C \
                $(COMMON)
 vped_LDADD = $(top_builddir)/lib/libvpe.a

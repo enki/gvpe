@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000-2002 Marc Alexander Lehmann <pcg@goof.com>
+ * Copyright (c) 2000-2003 Marc Alexander Lehmann <pcg@goof.com>
  * 
  * Redistribution and use in source and binary forms, with or without modifica-
  * tion, are permitted provided that the following conditions are met:
@@ -56,6 +56,9 @@
  *
  * The buffers must not be overlapping.
  *
+ * If the option LZF_STATE_ARG is enabled, an extra argument must be
+ * supplied which is not reflected in this header file. Refer to lzf_c.c.
+ *
  */
 unsigned int 
 lzf_compress (const void *const in_data,  unsigned int in_len,
@@ -66,7 +69,7 @@ lzf_compress (const void *const in_data,  unsigned int in_len,
  * function and stored at location in_data and length in_len. The result
  * will be stored at out_data up to a maximum of out_len characters.
  *
- * If * the output buffer is not large enough to hold the decompressed
+ * If the output buffer is not large enough to hold the decompressed
  * data, a 0 is returned and errno is set to E2BIG. Otherwise the number
  * of decompressed bytes (i.e. the original length of the data) is
  * returned.

@@ -353,13 +353,23 @@ echo "*** HMAC length:  $HMAC"
 echo "*** RAND used:    $RAND"
 echo "*** Max. MTU:     $MTU"
 echo "*** Compression:  $COMPRESS"
-echo "***"
 
 if test "x$DIGEST" = xmd4; then
-echo "*** WARNING"
-echo "*** The digest you have chosen ($DIGEST) is known to be insecure"
 echo "***"
+echo "*** WARNING: The digest you have chosen ($DIGEST) is known to be insecure"
 fi
+
+if test "$HMAC" -lt 12; then
+echo "***"
+echo "*** WARNING: The hmac length you have chosen ($HMAC) might be insecure"
+fi
+
+if test "$RAND" -lt 8; then
+echo "***"
+echo "*** WARNING: The random prefix you have chosen ($RAND) might be insecure"
+fi
+
+echo "***"
 
 echo
 
