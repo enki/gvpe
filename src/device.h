@@ -78,7 +78,7 @@ struct tap_packet : net_packet {
   u8 data[MAXSIZE - 12];
 };
 
-struct tap_device_base {
+struct tap_device {
   int fd;
 
   // network interface name or identifier
