@@ -666,8 +666,6 @@ void dns_snd::gen_syn_req ()
 {
   timeout = NOW + INITIAL_SYN_TIMEOUT;
 
-  printf ("send syn\n");//D
-
   pkt->flags = htons (DEFAULT_CLIENT_FLAGS);
   pkt->qdcount = htons (1);
 
