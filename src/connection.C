@@ -726,7 +726,7 @@ connection::establish_connection_cb (time_watcher &w)
       && conf != THISNODE
       && connectmode != conf_node::C_NEVER
       && connectmode != conf_node::C_DISABLED
-      && w.at <= NOW)
+      && NOW > w.at)
     {
       double retry_int = double (retry_cnt & 3 ? (retry_cnt & 3) : 1 << (retry_cnt >> 2)) * 0.6;
 
