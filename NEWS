@@ -9,6 +9,7 @@
         - new configure option --enable-static-daemon.
         - fix configure --help output.
         - many documentation layout fixes.
+        - synced iom.[Ch] from rxvt-unicode.
 
 1.6.1 Wed May 12 14:48:20 CEST 2004
 	- fix -c switch that has been broken due to a last-minute fix
