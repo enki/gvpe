@@ -49,6 +49,9 @@
 typedef double tstamp;
 extern tstamp NOW;
 
+// TSTAMP_MAX must still fit into a positive struct timeval
+#define TSTAMP_MAX (double)(1UL<<31)
+
 struct watcher;
 #if IOM_IO
 struct io_watcher;

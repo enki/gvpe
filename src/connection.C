@@ -747,22 +747,23 @@ connection::establish_connection_cb (time_watcher &w)
       && connectmode != conf_node::C_DISABLED
       && NOW > w.at)
     {
-      double retry_int = double (retry_cnt & 3 ? (retry_cnt & 3) : 1 << (retry_cnt >> 2)) * 0.6;
+      w.at = TSTAMP_MAX; // first disable this watcher in case of recursion
 
-      if (retry_int < conf->max_retry)
-        retry_cnt++;
-      else
-        retry_int = conf->max_retry;
-
-      w.start (NOW + retry_int);
+      double retry_int = double (retry_cnt & 3
+                                 ? (retry_cnt & 3) + 1
+                                 : 1 << (retry_cnt >> 2));
 
       reset_si ();
+
+      bool slow = si.prot & PROT_SLOW;
 
       if (si.prot && !si.host)
         vpn->send_connect_request (conf->id);
       else
         {
           const sockinfo &dsi = forward_si (si);
+
+          slow = slow || (dsi.prot & PROT_SLOW);
 
           if (dsi.valid () && auth_rate_limiter.can (dsi))
             {
@@ -772,6 +773,15 @@ connection::establish_connection_cb (time_watcher &w)
                 send_ping (dsi, 0);
             }
         }
+
+      retry_int *= slow ? 3. : 0.7;
+
+      if (retry_int < conf->max_retry)
+        retry_cnt++;
+      else
+        retry_int = conf->max_retry;
+
+      w.start (NOW + retry_int);
     }
 }
 

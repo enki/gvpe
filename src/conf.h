@@ -33,7 +33,7 @@
 #define DEFAULT_KEEPALIVE	60	// one keepalive/minute (it's just 8 bytes...)
 #define DEFAULT_UDPPORT		655	// same as tinc, conflicts would be rare
 #define DEFAULT_MTU		1500	// let's ether-net
-#define DEFAULT_MAX_RETRY	28800	// retry at least this often
+#define DEFAULT_MAX_RETRY	3600	// retry at least this often
 
 enum {
   PROT_UDPv4  = 0x01, // udp over ipv4
@@ -42,6 +42,9 @@ enum {
   PROT_ICMPv4 = 0x08, // icmp over ipv4
   PROT_DNSv4  = 0x10, // dns tunnel ipv4 (server)
 };
+
+#define PROT_RELIABLE (PROT_TCPv4 | PROT_DNSv4)
+#define PROT_SLOW     PROT_DNSv4
 
 // select the "best" protocol of the available ones
 u8 best_protocol (u8 protset);

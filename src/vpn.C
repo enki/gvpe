@@ -237,6 +237,16 @@ vpn::setup ()
       if (dnsv4_fd < 0)
         return -1;
 
+#if defined(SOL_IP) && defined(IP_MTU_DISCOVER)
+      // this I really consider a linux bug. I am neither connected
+      // nor do I fragment myself. Linux still sets DF and doesn't
+      // fragment for me sometimes.
+      {
+        int oval = IP_PMTUDISC_DONT;
+        setsockopt (udpv4_fd, SOL_IP, IP_MTU_DISCOVER, &oval, sizeof oval);
+      }
+#endif
+
       // standard daemon practise...
       {
         int oval = 1;

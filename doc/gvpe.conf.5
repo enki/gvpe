@@ -129,7 +129,7 @@
 .\" ========================================================================
 .\"
 .IX Title "GVPE.CONF 5"
-.TH GVPE.CONF 5 "2005-03-06" "1.8" "GNU Virtual Private Ethernet"
+.TH GVPE.CONF 5 "2005-03-07" "1.8" "GNU Virtual Private Ethernet"
 .SH "NAME"
 gvpe.conf \- configuration file for the GNU VPE daemon
 .SH "SYNOPSIS"
@@ -431,8 +431,7 @@ take it down after the keepalive interval) or \f(CW\*(C`disabled\*(C'\fR (node i
 don't talk to it).
 .IP "dns-domain = domain-suffix" 4
 .IX Item "dns-domain = domain-suffix"
-The \s-1DNS\s0 domain suffix that points to the \s-1DNS\s0 tunnel server. Needs to be
-set on both client and server.
+The \s-1DNS\s0 domain suffix that points to the \s-1DNS\s0 tunnel server for this node.
 .Sp
 The domain must point to a \s-1NS\s0 record that points to the \fIdns-hostname\fR,
 i.e.
@@ -455,20 +454,28 @@ but for the \s-1DNS\s0 tunnel protocol only. Default: \f(CW0.0.0.0\fR, but that 
 change.
 .IP "dns-port = port-number" 4
 .IX Item "dns-port = port-number"
-The port to bind the \s-1DNS\s0 tunnel socket to. Must be \f(CW0\fR on all \s-1DNS\s0 tunnel
-clients and \f(CW53\fR on the server.
+The port to bind the \s-1DNS\s0 tunnel socket to. Must be \f(CW53\fR on \s-1DNS\s0 tunnel servers.
+.IP "enable-dns = yes|true|on | no|false|off" 4
+.IX Item "enable-dns = yes|true|on | no|false|off"
+Enable the \s-1DNS\s0 tunneling protocol on this node, either as server or as
+client (only available when gvpe was compiled with \f(CW\*(C`\-\-enable\-dns\*(C'\fR).
+.Sp
+This is the worst choice of transport protocol with respect to overhead
+(overhead cna be 2\-3 times higher than the transferred data), and probably
+the best choice when tunneling through firewalls.
 .IP "enable-rawip = yes|true|on | no|false|off" 4
 .IX Item "enable-rawip = yes|true|on | no|false|off"
 Enable the \s-1RAW\s0 IPv4 transport using the \f(CW\*(C`ip\-proto\*(C'\fR protocol
-(default: \f(CW\*(C`no\*(C'\fR). This is the best choice, since the overhead per packet
-is only 38 bytes, as opposed to \s-1UDP\s0's 58 (or \s-1TCP\s0's 60+).
+(default: \f(CW\*(C`no\*(C'\fR). This is the best choice, since the minimum overhead per
+packet is only 38 bytes, as opposed to \s-1UDP\s0's 58 (or \s-1TCP\s0's 60+).
 .IP "enable-tcp = yes|true|on | no|false|off" 4
 .IX Item "enable-tcp = yes|true|on | no|false|off"
 Enable the TCPv4 transport using the \f(CW\*(C`tcp\-port\*(C'\fR port
 (default: \f(CW\*(C`no\*(C'\fR). Support for this horribly unsuitable protocol is only
 available when gvpe was compiled using the \f(CW\*(C`\-\-enable\-tcp\*(C'\fR option. Never
-use this transport unless you really must, it is horribly ineffiecent and
-resource-intensive compared to the other transports.
+use this transport unless you really must, it is very inefficient and
+resource-intensive compared to the other transports (except for \s-1DNS\s0, which
+is worse).
 .IP "enable-udp = yes|true|on | no|false|off" 4
 .IX Item "enable-udp = yes|true|on | no|false|off"
 Enable the UDPv4 transport using the \f(CW\*(C`udp\-port\*(C'\fR port (default: \f(CW\*(C`no\*(C'\fR,
@@ -487,14 +494,14 @@ outgoing tunnel packets will have the same \s-1TOS\s0 setting as the packets sen
 to the tunnel device, which is usually what you want.
 .IP "max-retry = positive-number" 4
 .IX Item "max-retry = positive-number"
-The maximum interval in seconds (default: \f(CW28800\fR, 8 hours) between
+The maximum interval in seconds (default: \f(CW3600\fR, one hour) between
 retries to establish a connection to this node. When a connection cannot
 be established, gvpe uses exponential backoff capped at this value. It's
 sometimes useful to set this to a much lower value (e.g. \f(CW120\fR) on
 connections to routers that usually are stable but sometimes are down, to
-assure quick reconnections.
-.IP "router-priority = 0 | 1 | positive\-number>2" 4
-.IX Item "router-priority = 0 | 1 | positive-number>2"
+assure quick reconnections even after longer downtimes.
+.IP "router-priority = 0 | 1 | positive\-number>=2" 4
+.IX Item "router-priority = 0 | 1 | positive-number>=2"
 Sets the router priority of the given host (default: \f(CW0\fR, disabled). If
 some host tries to connect to another host without a hostname, it asks
 the router host for it's \s-1IP\s0 address. The router host is the one with the

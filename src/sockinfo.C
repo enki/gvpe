@@ -173,17 +173,6 @@ sockinfo::upgrade_protocol (u8 prot_, conf_node *conf)
           port = htons (conf->tcp_port);
           return true;
         }
-
-#if ENABLE_DNS
-      if (conf
-          && prot_ & PROT_DNSv4
-          && conf->protocols & PROT_DNSv4
-          && conf->dns_port)
-        {
-          set (::conf.dns_forw_host, ::conf.dns_forw_port, prot_);
-          return true;
-        }
-#endif
     }
 
   return false;

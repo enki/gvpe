@@ -345,28 +345,31 @@ change.
 
 =item dns-port = port-number
 
-The port to bind the DNS tunnel socket to. Must be C<0> on all DNS tunnel
-clients and C<53> on the server.
+The port to bind the DNS tunnel socket to. Must be C<53> on DNS tunnel servers.
 
 =item enable-dns = yes|true|on | no|false|off
 
-Enable the DNS tunneling protocol on this node, either as server
-C<dns-port != 0> or as client C<dns-port == 0> (both at the same time is
-not possible at the moment).
+Enable the DNS tunneling protocol on this node, either as server or as
+client (only available when gvpe was compiled with C<--enable-dns>).
+
+This is the worst choice of transport protocol with respect to overhead
+(overhead cna be 2-3 times higher than the transferred data), and probably
+the best choice when tunneling through firewalls.
 
 =item enable-rawip = yes|true|on | no|false|off
 
 Enable the RAW IPv4 transport using the C<ip-proto> protocol
-(default: C<no>). This is the best choice, since the overhead per packet
-is only 38 bytes, as opposed to UDP's 58 (or TCP's 60+).
+(default: C<no>). This is the best choice, since the minimum overhead per
+packet is only 38 bytes, as opposed to UDP's 58 (or TCP's 60+).
 
 =item enable-tcp = yes|true|on | no|false|off
 
 Enable the TCPv4 transport using the C<tcp-port> port
 (default: C<no>). Support for this horribly unsuitable protocol is only
 available when gvpe was compiled using the C<--enable-tcp> option. Never
-use this transport unless you really must, it is horribly ineffiecent and
-resource-intensive compared to the other transports.
+use this transport unless you really must, it is very inefficient and
+resource-intensive compared to the other transports (except for DNS, which
+is worse).
 
 =item enable-udp = yes|true|on | no|false|off
 
@@ -388,14 +391,14 @@ to the tunnel device, which is usually what you want.
 
 =item max-retry = positive-number
 
-The maximum interval in seconds (default: C<28800>, 8 hours) between
+The maximum interval in seconds (default: C<3600>, one hour) between
 retries to establish a connection to this node. When a connection cannot
 be established, gvpe uses exponential backoff capped at this value. It's
 sometimes useful to set this to a much lower value (e.g. C<120>) on
 connections to routers that usually are stable but sometimes are down, to
-assure quick reconnections.
+assure quick reconnections even after longer downtimes.
 
-=item router-priority = 0 | 1 | positive-number>2
+=item router-priority = 0 | 1 | positive-number>=2
 
 Sets the router priority of the given host (default: C<0>, disabled). If
 some host tries to connect to another host without a hostname, it asks

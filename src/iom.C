@@ -45,9 +45,6 @@
 // until that happens, sys/select.h must come last
 #include <sys/select.h>
 
-// TSTAMP_MAX must still fit into a positive struct timeval
-#define TSTAMP_MAX (double)(1UL<<31)
-
 #define TIMEVAL timeval
 #define TV_FRAC tv_usec
 #define TV_MULT 1000000L

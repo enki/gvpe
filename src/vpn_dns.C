@@ -267,7 +267,7 @@ static basecoder cdc26 ("dPhZrQmJkBtSvLxAeFwGyO");
 /////////////////////////////////////////////////////////////////////////////
 
 #define HDRSIZE 6
-
+ 
 inline void encode_header (char *data, int clientid, int seqno, int retry = 0)
 {
   seqno &= SEQNO_MASK;
@@ -411,17 +411,23 @@ struct dns_cfg
   static int next_uid;
 
   u8 id1, id2, id3, id4;
+
   u8 version;
-  u8 rrtype;
   u8 flags;
+  u8 rrtype;
   u8 def_ttl;
-  u8 rcv_cdc;
-  u8 snd_cdc;
-  u16 max_size;
+
   u16 client;
   u16 uid; // to make request unique
 
-  u8 reserved[8];
+  u16 max_size;
+  u8 seq_cdc;
+  u8 req_cdc;
+
+  u8 rep_cdc;
+  u8 r2, r3, r4;
+
+  u8 r5, r6, r7, r8;
 
   void reset (int clientid);
   bool valid ();
@@ -440,14 +446,16 @@ void dns_cfg::reset (int clientid)
 
   rrtype   = RR_TYPE_TXT;
   flags    = 0;
-  def_ttl  = 1;
-  rcv_cdc  = 0;
-  snd_cdc  = 62;
+  def_ttl  = 0;
+  seq_cdc  = 26;
+  req_cdc  = 62;
+  rep_cdc  = 0;
   max_size = ntohs (MAX_PKT_SIZE);
   client   = ntohs (clientid);
   uid      = next_uid++;
 
-  memset (reserved, 0, 8);
+  r2 = r3 = r4 = 0;
+  r4 = r5 = r6 = r7 = 0;
 }
 
 bool dns_cfg::valid ()
@@ -456,10 +464,10 @@ bool dns_cfg::valid ()
       && id2 == 'V'
       && id3 == 'P'
       && id4 == 'E'
+      && seq_cdc == 26
+      && req_cdc == 62
+      && rep_cdc == 0
       && version == 1
-      && flags == 0
-      && rcv_cdc == 0
-      && snd_cdc == 62
       && max_size == ntohs (MAX_PKT_SIZE);
 }
 
@@ -469,7 +477,7 @@ struct dns_packet : net_packet
   u16 flags; // QR:1 Opcode:4 AA:1 TC:1 RD:1 RA:1 Z:3 RCODE:4
   u16 qdcount, ancount, nscount, arcount;
 
-  u8 data[MAXSIZE - 6 * 2];
+  u8 data [MAXSIZE - 6 * 2];
 
   int decode_label (char *data, int size, int &offs);
 };
@@ -807,7 +815,7 @@ vpn::dnsv4_server (dns_packet &pkt)
   if (0 == (flags & (FLAG_RESPONSE | FLAG_OP_MASK))
       && pkt.qdcount == htons (1))
     {
-      char qname[MAXSIZE];
+      char qname [MAXSIZE];
       int qlen = pkt.decode_label ((char *)qname, MAXSIZE - offs, offs);
 
       u16 qtype  = pkt [offs++] << 8; qtype  |= pkt [offs++];
@@ -824,7 +832,7 @@ vpn::dnsv4_server (dns_packet &pkt)
 
       if (qclass == RR_CLASS_IN
           && qlen > dlen + 1
-          && !memcmp (qname + qlen - dlen - 1, THISNODE->domain, dlen))
+          && !memcmp (qname + qlen - (dlen + 1), THISNODE->domain, dlen))
         {
           // now generate reply
           pkt.ancount = htons (1); // one answer RR
@@ -956,7 +964,7 @@ vpn::dnsv4_server (dns_packet &pkt)
               pkt [offs++] = 0; pkt [offs++] = cfg.def_ttl; // TTL
               pkt [offs++] = 0; pkt [offs++] = 4; // rdlength
 
-              slog (L_INFO, _("DNS: client %d tries to connect"), client);
+              slog (L_INFO, _("DNS: client %d connects"), client);
 
               pkt [offs++] = CMD_IP_1; pkt [offs++] = CMD_IP_2; pkt [offs++] = CMD_IP_3;
               pkt [offs++] = CMD_IP_REJ;
@@ -1148,13 +1156,13 @@ vpn::dnsv4_ev (io_watcher &w, short revents)
 
       if (pkt->len > 0)
         {
-          if (THISNODE->dns_port)
+          if (ntohs (pkt->flags) & FLAG_RESPONSE)
+            dnsv4_client (*pkt);
+          else
             {
               dnsv4_server (*pkt);
               sendto (w.fd, pkt->at (0), pkt->len, 0, (sockaddr *)&sa, sa_len);
             }
-          else
-            dnsv4_client (*pkt);
 
           delete pkt;
         }
