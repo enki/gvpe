@@ -64,7 +64,7 @@ static const rsachallenge &
 challenge_bytes ()
 {
   static rsachallenge challenge;
-  static double challenge_ttl;	// time this challenge needs to be recreated
+  static tstamp challenge_ttl;	// time this challenge needs to be recreated
 
   if (NOW > challenge_ttl)
     {
@@ -266,50 +266,74 @@ pkt_queue::~pkt_queue ()
     delete queue[i];
 }
 
-// only do action once every x seconds per host.
-// currently this is quite a slow implementation,
-// but suffices for normal operation.
-struct u32_rate_limiter : private map<u32, tstamp>
- {
-   tstamp every;
+struct net_rateinfo {
+  u32    host;
+  double pcnt, diff;
+  tstamp last;
+};
 
-   bool can (u32 host);
+// only do action once every x seconds per host whole allowing bursts.
+// this implementation ("splay list" ;) is inefficient,
+// but low on resources.
+struct net_rate_limiter : private list<net_rateinfo>
+{
+  static const double ALPHA  = 1. - 1. / 90.; // allow bursts
+  static const double CUTOFF = 20.;           // one event every CUTOFF seconds
+  static const double EXPIRE = CUTOFF * 30.;  // expire entries after this time
 
-   u32_rate_limiter (tstamp every = 1)
-   {
-     this->every = every;
-   }
- };
+  bool can (u32 host);
+  bool can (SOCKADDR *sa) { return can((u32)sa->sin_addr.s_addr); }
+  bool can (sockinfo &si) { return can((u32)si.host);             }
+};
 
-struct net_rate_limiter : u32_rate_limiter
-  {
-    bool can (SOCKADDR *sa) { return u32_rate_limiter::can((u32)sa->sin_addr.s_addr); }
-    bool can (sockinfo &si) { return u32_rate_limiter::can((u32)si.host); }
+net_rate_limiter auth_rate_limiter, reset_rate_limiter;
 
-    net_rate_limiter (tstamp every) : u32_rate_limiter (every) {}
-  };
-
-bool u32_rate_limiter::can (u32 host)
+bool net_rate_limiter::can (u32 host)
 {
   iterator i;
 
   for (i = begin (); i != end (); )
-    if (i->second <= NOW)
-      {
-        erase (i);
-        i = begin ();
-      }
+    if (i->host == host)
+      break;
+    else if (i->last < NOW - EXPIRE)
+      i = erase (i);
     else
-      ++i;
+      i++;
 
-  i = find (host);
+  if (i == end ())
+    {
+      net_rateinfo ri;
 
-  if (i != end ())
-    return false;
+      ri.host = host;
+      ri.pcnt = 1.;
+      ri.diff = CUTOFF * (1. / (1. - ALPHA));
+      ri.last = NOW;
 
-  insert (value_type (host, NOW + every));
+      push_front (ri);
 
-  return true;
+      return true;
+    }
+  else
+    {
+      net_rateinfo ri (*i);
+      erase (i);
+
+      ri.pcnt = ri.pcnt * ALPHA;
+      ri.diff = ri.diff * ALPHA + (NOW - ri.last);
+
+      ri.last = NOW;
+
+      bool send = ri.diff / ri.pcnt > CUTOFF;
+
+      if (send)
+        ri.pcnt++;
+
+      //printf ("RATE %d %f,%f = %f > %f\n", !!send, ri.pcnt, ri.diff, ri.diff / ri.pcnt, CUTOFF);
+
+      push_front (ri);
+
+      return send;
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -667,9 +691,7 @@ connection::send_ping (SOCKADDR *dsa, u8 pong)
 void
 connection::send_reset (SOCKADDR *dsa)
 {
-  static net_rate_limiter limiter(1);
-
-  if (limiter.can (dsa) && connectmode != conf_node::C_DISABLED)
+  if (reset_rate_limiter.can (dsa) && connectmode != conf_node::C_DISABLED)
     {
       config_packet *pkt = new config_packet;
 
@@ -695,9 +717,7 @@ gen_challenge (u32 seqrand, SOCKADDR *sa)
 void
 connection::send_auth (auth_subtype subtype, SOCKADDR *sa, const rsachallenge *k)
 {
-  static net_rate_limiter limiter(0.2);
-
-  if (subtype != AUTH_INIT || limiter.can (sa))
+  if (subtype == AUTH_REPLY || auth_rate_limiter.can (sa))
     {
       if (!k)
         k = gen_challenge (seqrand, sa);
@@ -734,7 +754,7 @@ connection::establish_connection_cb (tstamp &ts)
           if (sa.sin_addr.s_addr)
             if (retry_cnt < 4)
               send_auth (AUTH_INIT, &sa);
-            else
+            else if (auth_rate_limiter.can (&sa))
               send_ping (&sa, 0);
         }
       else
@@ -831,10 +851,6 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
   switch (pkt->typ ())
     {
     case vpn_packet::PT_PING:
-      send_ping (ssa, 1); // pong
-      break;
-
-    case vpn_packet::PT_PONG:
       // we send pings instead of auth packets after some retries,
       // so reset the retry counter and establish a conenction
       // when we receive a pong.
@@ -844,7 +860,12 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
           establish_connection.at = 0;
           establish_connection ();
         }
+      else
+        send_ping (ssa, 1); // pong
 
+      break;
+
+    case vpn_packet::PT_PONG:
       break;
 
     case vpn_packet::PT_RESET:
@@ -884,6 +905,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
               {
                 slog (L_ERR, _("challenge from %s (%s) illegal or corrupted"),
                       conf->nodename, (const char *)sockinfo (ssa));
+                send_reset (ssa);
                 break;
               }
 
@@ -1446,6 +1468,7 @@ vpn::event_cb (tstamp &ts)
   ts = TSTAMP_CANCEL;
 }
 
+#include <sys/time.h>//D
 vpn::vpn (void)
 : udp_ev_watcher (this, &vpn::udp_ev)
 , vpn_ev_watcher (this, &vpn::vpn_ev)
