@@ -1,4 +1,3 @@
-#include <unistd.h>
 /*
     iom.C -- I/O multiplexor
  
@@ -25,7 +24,6 @@
 #include <functional>
 
 #include "slog.h"
-
 #include "iom.h"
 
 inline bool lowest_first (const time_watcher *a, const time_watcher *b)

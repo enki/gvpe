@@ -124,7 +124,7 @@ struct time_watcher : callback<void, tstamp &> {
       call (at);
     }
 
-  void start (tstamp when)
+  void start (tstamp when = NOW)
     {
       set (when);
     }
