@@ -74,7 +74,7 @@ struct io_manager_vec : vector<watcher *> {
     watcher *w = (*this)[this->size () - 1];
     this->pop_back ();
 
-    if (this->size ())
+    if (!this->empty ())
       if (((*this)[pos] = w)) // '=' is correct!
         w->active = pos + 1;
   }
