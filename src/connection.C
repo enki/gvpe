@@ -480,7 +480,7 @@ void config_packet::setup (ptype type, int dst)
   prot_minor = PROTOCOL_MINOR;
   randsize = RAND_SIZE;
   hmaclen = HMACLENGTH;
-  flags = ENABLE_COMPRESSION ? 0x81 : 0x80;
+  flags = 0;
   challengelen = sizeof (rsachallenge);
   features = get_features ();
 
@@ -500,10 +500,6 @@ bool config_packet::chk_config () const
     slog (L_WARN, _("rand size mismatch (remote %d <=> local %d)"), randsize, RAND_SIZE);
   else if (hmaclen != HMACLENGTH)
     slog (L_WARN, _("hmac length mismatch (remote %d <=> local %d)"), hmaclen, HMACLENGTH);
-#if 0 // this implementation should handle all flag settings
-  else if (flags != curflags ())
-    slog (L_WARN, _("flag mismatch (remote %x <=> local %x)"), flags, curflags ());
-#endif
   else if (challengelen != sizeof (rsachallenge))
     slog (L_WARN, _("challenge length mismatch (remote %d <=> local %d)"), challengelen, sizeof (rsachallenge));
   else if (cipher_nid != htonl (EVP_CIPHER_nid (CIPHER)))
@@ -949,9 +945,6 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 
                     octx   = new crypto_ctx (k, 1);
                     oseqno = ntohl (*(u32 *)&k[CHG_SEQNO]) & 0x7fffffff;
-
-                    // compatibility code, remove when no longer required
-                    if (p->flags & 1) p->features |= FEATURE_COMPRESSION;
 
                     conf->protocols = p->protocols;
                     features = p->features & config_packet::get_features ();
