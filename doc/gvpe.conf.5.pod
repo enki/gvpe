@@ -324,8 +324,7 @@ don't talk to it).
 
 =item dns-domain = domain-suffix
 
-The DNS domain suffix that points to the DNS tunnel server. Needs to be
-set on both client and server.
+The DNS domain suffix that points to the DNS tunnel server for this node.
 
 The domain must point to a NS record that points to the I<dns-hostname>,
 i.e.
@@ -348,6 +347,12 @@ change.
 
 The port to bind the DNS tunnel socket to. Must be C<0> on all DNS tunnel
 clients and C<53> on the server.
+
+=item enable-dns = yes|true|on | no|false|off
+
+Enable the DNS tunneling protocol on this node, either as server
+C<dns-port != 0> or as client C<dns-port == 0> (both at the same time is
+not possible at the moment).
 
 =item enable-rawip = yes|true|on | no|false|off
 
