@@ -37,6 +37,7 @@ enum {
   PROT_IPv4   = 0x02, // generic ip protocol
   PROT_TCPv4  = 0x04, // tcp over ipv4
   PROT_ICMPv4 = 0x08, // icmp over ipv4
+  PROT_DNSv4  = 0x10, // dns tunnel over ipv4
 };
 
 // select the "best" protocol of the available ones
@@ -52,7 +53,7 @@ struct conf_node {
   char *hostname; // hostname, if known, or NULL.
 
   u8 protocols;   // protocols this host can send & receive
-  u16 udp_port, tcp_port;   // the port to bind to
+  u16 udp_port, tcp_port, dns_port;   // the port to bind to
 
   enum connectmode { C_ONDEMAND, C_NEVER, C_ALWAYS, C_DISABLED } connectmode;
   bool compress;
@@ -86,6 +87,7 @@ struct configuration {
   char *script_if_up;
   char *script_node_up;
   char *script_node_down;
+  char *pidfilename;
 
 #if ENABLE_HTTP_PROXY
   char *proxy_auth;	// login:password

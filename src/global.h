@@ -72,7 +72,6 @@
 
 extern char *confbase;		// directory in which all config files are
 extern char *thisnode;		// config for current node (TODO: remove)
-extern char *pidfilename;	// pid file location
 
 #endif
 

@@ -64,6 +64,7 @@ sockinfo::set (const conf_node *conf, u8 prot_)
  set (conf->hostname,
         prot_ == PROT_UDPv4 ? conf->udp_port
       : prot_ == PROT_TCPv4 ? conf->tcp_port
+      : prot_ == PROT_DNSv4 ? conf->dns_port
       : 0,
       prot_);
 }
@@ -120,6 +121,11 @@ sockinfo::supported_protocols (conf_node *conf)
       && conf->protocols & PROT_TCPv4
       && conf->tcp_port)
     protocols |= PROT_TCPv4;
+
+  if (conf
+      && prot & PROTv4
+      && conf->protocols & PROT_DNSv4)
+    protocols |= PROT_DNSv4;
 
   return protocols;
 }

@@ -151,8 +151,8 @@ void cleanup_and_exit(int c)
 {
   network.shutdown_all ();
 
-  if (pidfilename)
-    remove_pid (pidfilename);
+  if (conf.pidfilename)
+    remove_pid (conf.pidfilename);
 
   slog (L_INFO, _("terminating with exit code %d"), c);
 

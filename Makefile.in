@@ -165,16 +165,20 @@ EXTRA_DIST = device-linux.C device-cygwin.C device-tincd.C callback.pl	\
    ether_emu.C lzf/lzf_c.c lzf/lzf_d.c
 
 
+@ROHC_TRUE@ROHCLIB = rohc/librohc.a
+@ROHC_FALSE@ROHCLIB = 
+
 COMMON = global.h conf.h conf.C util.h util.C \
          slog.h slog.C netcompat.h
 
 
-vped_SOURCES = vped.C hash_map.h vpn.h vpn.C vpn_tcp.C sockinfo.h sockinfo.C \
+vped_SOURCES = vped.C hash_map.h vpn.h vpn.C vpn_tcp.C vpn_dns.C \
+               sockinfo.h sockinfo.C \
                lzf/lzf.h lzf/lzfP.h iom.h iom_conf.h iom.C \
                connection.h connection.C callback.h device.h device.C \
                $(COMMON)
 
-vped_LDADD = $(top_builddir)/lib/libvpe.a
+vped_LDADD = $(top_builddir)/lib/libvpe.a $(ROHCLIB)
 vpectrl_SOURCES = vpectrl.C \
                   $(COMMON)
 
@@ -204,10 +208,12 @@ vpectrl_OBJECTS = $(am_vpectrl_OBJECTS)
 vpectrl_DEPENDENCIES = $(top_builddir)/lib/libvpe.a
 vpectrl_LDFLAGS =
 am_vped_OBJECTS = vped.$(OBJEXT) vpn.$(OBJEXT) vpn_tcp.$(OBJEXT) \
-	sockinfo.$(OBJEXT) iom.$(OBJEXT) connection.$(OBJEXT) \
-	device.$(OBJEXT) $(am__objects_1)
+	vpn_dns.$(OBJEXT) sockinfo.$(OBJEXT) iom.$(OBJEXT) \
+	connection.$(OBJEXT) device.$(OBJEXT) $(am__objects_1)
 vped_OBJECTS = $(am_vped_OBJECTS)
-vped_DEPENDENCIES = $(top_builddir)/lib/libvpe.a
+@ROHC_TRUE@vped_DEPENDENCIES = $(top_builddir)/lib/libvpe.a \
+@ROHC_TRUE@	rohc/librohc.a
+@ROHC_FALSE@vped_DEPENDENCIES = $(top_builddir)/lib/libvpe.a
 vped_LDFLAGS =
 
 DEFAULT_INCLUDES =  -I. -I$(srcdir) -I$(top_builddir)
@@ -218,7 +224,7 @@ am__depfiles_maybe = depfiles
 @AMDEP_TRUE@	./$(DEPDIR)/slog.Po ./$(DEPDIR)/sockinfo.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/util.Po ./$(DEPDIR)/vpectrl.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/vped.Po ./$(DEPDIR)/vpn.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/vpn_tcp.Po
+@AMDEP_TRUE@	./$(DEPDIR)/vpn_dns.Po ./$(DEPDIR)/vpn_tcp.Po
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
 CXXLD = $(CXX)
@@ -319,6 +325,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vpectrl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vped.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vpn.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vpn_dns.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vpn_tcp.Po@am__quote@
 
 .C.o:

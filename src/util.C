@@ -48,7 +48,7 @@ write_pidfile (void)
 {
   int pid;
 
-  pid = check_pid (pidfilename);
+  pid = check_pid (conf.pidfilename);
 
   if (pid)
     {
@@ -57,7 +57,7 @@ write_pidfile (void)
     }
 
   /* if it's locked, write-protected, or whatever */
-  if (!write_pid (pidfilename))
+  if (!write_pid (conf.pidfilename))
     return 1;
 
   return 0;
@@ -68,7 +68,7 @@ kill_other (int signal)
 {
   int pid;
 
-  pid = read_pid (pidfilename);
+  pid = read_pid (conf.pidfilename);
 
   if (!pid)
     {
@@ -84,7 +84,7 @@ kill_other (int signal)
       fprintf (stderr, _("The vped is no longer running. "));
 
       fprintf (stderr, _("Removing stale lock file.\n"));
-      remove_pid (pidfilename);
+      remove_pid (conf.pidfilename);
     }
 
   return 0;
@@ -114,7 +114,7 @@ detach (int do_detach)
 
       /* Now UPDATE the pid in the pidfile, because we changed it... */
 
-      if (!write_pid (pidfilename))
+      if (!write_pid (conf.pidfilename))
         return -1;
 
       log_to (LOGTO_SYSLOG);
@@ -130,8 +130,8 @@ detach (int do_detach)
 void
 make_names (void)
 {
-  if (!pidfilename)
-    pidfilename = LOCALSTATEDIR "/run/vped.pid";
+  if (!conf.pidfilename)
+    conf.pidfilename = strdup (LOCALSTATEDIR "/run/vped.pid");
 
   if (!confbase)
     asprintf (&confbase, "%s/vpe", CONFDIR);

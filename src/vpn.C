@@ -225,6 +225,32 @@ vpn::setup ()
     }
 #endif
 
+#if ENABLE_DNS
+  if (THISNODE->protocols & PROT_DNSv4)
+    {
+      dnsv4_fd = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+
+      if (dnsv4_fd < 0)
+        return -1;
+
+      // standard daemon practise...
+      {
+        int oval = 1;
+        setsockopt (tcpv4_fd, SOL_SOCKET, SO_REUSEADDR, &oval, sizeof oval);
+      }
+
+      sockinfo si (THISNODE, PROT_DNSv4);
+
+      if (bind (dnsv4_fd, si.sav4 (), si.salenv4 ()))
+        {
+          slog (L_ERR, _("can't bind dnsv4 on %s: %s"), (const char *)si, strerror (errno));
+          exit (EXIT_FAILURE);
+        }
+
+      dnsv4_ev_watcher.start (dnsv4_fd, EVENT_READ);
+    }
+#endif
+
   tap = new tap_device ();
   if (!tap) //D this, of course, never catches
     {
@@ -261,6 +287,11 @@ vpn::send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 #if ENABLE_ICMP
       case PROT_ICMPv4:
         return send_icmpv4_packet (pkt, si, tos);
+#endif
+
+#if ENABLE_DNS
+      case PROT_DNSv4:
+        return send_dnsv4_packet (pkt, si, tos);
 #endif
 
       default:
@@ -574,7 +605,7 @@ vpn::event_cb (time_watcher &w)
           slog (L_INFO, _("preparing shutdown..."));
 
           shutdown_all ();
-          remove_pid (pidfilename);
+          remove_pid (conf.pidfilename);
           slog (L_INFO, _("terminating"));
           exit (EXIT_SUCCESS);
         }
@@ -686,6 +717,9 @@ vpn::vpn (void)
 #endif
 #if ENABLE_ICMP
 , icmpv4_ev_watcher(this, &vpn::icmpv4_ev)
+#endif
+#if ENABLE_DNS
+, dnsv4_ev_watcher (this, &vpn::dnsv4_ev)
 #endif
 , tap_ev_watcher   (this, &vpn::tap_ev)
 {

@@ -25,7 +25,8 @@ endif
 COMMON = global.h conf.h conf.C util.h util.C \
          slog.h slog.C netcompat.h
 
-vped_SOURCES = vped.C hash_map.h vpn.h vpn.C vpn_tcp.C sockinfo.h sockinfo.C \
+vped_SOURCES = vped.C hash_map.h vpn.h vpn.C vpn_tcp.C vpn_dns.C \
+               sockinfo.h sockinfo.C \
                lzf/lzf.h lzf/lzfP.h iom.h iom_conf.h iom.C \
                connection.h connection.C callback.h device.h device.C \
                $(COMMON)
