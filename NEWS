@@ -4,6 +4,12 @@ TODO vpn::tap_ev does not handle EOF well, or does it? (CHECK)
 TODO vpn::tcpv4_ev does not handle EOF well, or does it? (CHECK)
 TODO tcp_connection::tcpv4_ev does not handle EOF well, or does it? (CHECK)
 
+1.5
+   - protocol version 0.1, compatible with older releases.
+   - fix a bug where queued vpn packets were cleared to zero. while
+     this doesn't affect security, it did cause warning messages and
+     unnecessary connectivity delays.
+
 1.4 Sat Jan 17 15:49:21 CET 2004
    - protocol version 0.1, compatible with older releases.
    - better retry behaviour on key mismatch.

@@ -45,7 +45,7 @@ typedef u8 rsaresponse[RSA_RESLEN]; // the encrypted ripemd160 hash
 
 struct crypto_ctx;
 
-struct hmac_packet:net_packet
+struct hmac_packet : net_packet
 {
   u8 hmac[HMACLENGTH];		// each and every packet has a hmac field, but that is not (yet) checked everywhere
 

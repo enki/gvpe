@@ -312,7 +312,7 @@ void vpn_packet::set_hdr (ptype type_, unsigned int dst)
 #define MAXVPNDATA (MAX_MTU - 6 - 6)
 #define DATAHDR (sizeof (u32) + RAND_SIZE)
 
-struct vpndata_packet:vpn_packet
+struct vpndata_packet : vpn_packet
   {
     u8 data[MAXVPNDATA + DATAHDR]; // seqno
 
@@ -506,7 +506,7 @@ struct auth_req_packet : config_packet
 {
   char magic[8];
   u8 initiate; // false if this is just an automatic reply
-  u8 protocols; // supported protocols (will get patches on forward)
+  u8 protocols; // supported protocols (will be patched on forward)
   u8 pad2, pad3;
   rsaid id;
   rsaencrdata encr;
@@ -834,7 +834,7 @@ void connection::inject_vpn_packet (vpn_packet *pkt, int tos)
     send_vpn_packet (pkt, si, tos);
   else
     {
-      vpn_queue.put (new vpn_packet (*pkt));
+      vpn_queue.put ((vpn_packet *)new data_packet (*(data_packet *)pkt));
 
       establish_connection ();
     }
