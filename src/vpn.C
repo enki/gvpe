@@ -531,38 +531,44 @@ vpn::tap_ev (io_watcher &w, short revents)
 
       pkt = tap->recv ();
 
-      int dst = mac2id (pkt->dst);
-      int src = mac2id (pkt->src);
+      if (!pkt)
+        return;
 
-      if (src != THISNODE->id)
+      if (pkt->len > 14)
         {
-          slog (L_ERR, _("FATAL: tap packet not originating on current node received, exiting."));
-          exit (1);
-        }
+          int dst = mac2id (pkt->dst);
+          int src = mac2id (pkt->src);
 
-      if (dst == THISNODE->id)
-        {
-          slog (L_ERR, _("FATAL: tap packet destined for current node received, exiting."));
-          exit (1);
-        }
-
-      if (dst > conns.size ())
-        slog (L_ERR, _("tap packet for unknown node %d received, ignoring."), dst);
-      else
-        {
-          if (dst)
+          if (src != THISNODE->id)
             {
-              // unicast
-              if (dst != THISNODE->id)
-                conns[dst - 1]->inject_data_packet (pkt);
+              slog (L_ERR, _("FATAL: tap packet not originating on current node received, exiting."));
+              exit (1);
             }
+
+          if (dst == THISNODE->id)
+            {
+              slog (L_ERR, _("FATAL: tap packet destined for current node received, exiting."));
+              exit (1);
+            }
+
+          if (dst > conns.size ())
+            slog (L_ERR, _("tap packet for unknown node %d received, ignoring."), dst);
           else
             {
-              // broadcast, this is ugly, but due to the security policy
-              // we have to connect to all hosts...
-              for (conns_vector::iterator c = conns.begin (); c != conns.end (); ++c)
-                if ((*c)->conf != THISNODE)
-                  (*c)->inject_data_packet (pkt);
+              if (dst)
+                {
+                  // unicast
+                  if (dst != THISNODE->id)
+                    conns[dst - 1]->inject_data_packet (pkt);
+                }
+              else
+                {
+                  // broadcast, this is ugly, but due to the security policy
+                  // we have to connect to all hosts...
+                  for (conns_vector::iterator c = conns.begin (); c != conns.end (); ++c)
+                    if ((*c)->conf != THISNODE)
+                      (*c)->inject_data_packet (pkt);
+                }
             }
         }
 

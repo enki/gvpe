@@ -69,7 +69,8 @@ AC_ARG_ENABLE(iftype,
      Working combinations are:
         "native/linux"
         "tincd/linux"
-        "tincd/freebsd";
+        "tincd/freebsd"
+        "native/cygwin";
      Untested combinations are:
         "tincd/netbsd"
         "tincd/darwin"

@@ -36,12 +36,12 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <syslog.h>
 #include <cstring>
 
 #include "conf.h"
 #include "util.h"
 
+#include <io.h>
 #include <w32api/windows.h>
 #include <w32api/winioctl.h>
 
@@ -53,12 +53,10 @@
 
 #define TAP_CONTROL_CODE(request,method) CTL_CODE(FILE_DEVICE_PHYSICAL_NETCARD | 8000, request, method, FILE_ANY_ACCESS)
 
-#define TAP_IOCTL_GET_LASTMAC    TAP_CONTROL_CODE(0, METHOD_BUFFERED)
-#define TAP_IOCTL_GET_MAC        TAP_CONTROL_CODE(1, METHOD_BUFFERED)
-#define TAP_IOCTL_SET_STATISTICS TAP_CONTROL_CODE(2, METHOD_BUFFERED)
-
-static HANDLE device_handle = INVALID_HANDLE_VALUE;
-static mac my_mac;
+#define TAP_IOCTL_GET_LASTMAC      TAP_CONTROL_CODE(0, METHOD_BUFFERED)
+#define TAP_IOCTL_GET_MAC          TAP_CONTROL_CODE(1, METHOD_BUFFERED)
+#define TAP_IOCTL_SET_STATISTICS   TAP_CONTROL_CODE(2, METHOD_BUFFERED)
+#define TAP_IOCTL_SET_MEDIA_STATUS TAP_CONTROL_CODE(7, METHOD_BUFFERED)
 
 static const char *
 wstrerror (int err)
@@ -72,10 +70,49 @@ wstrerror (int err)
       strncpy (buf, _("(unable to format errormessage)"), sizeof (buf));
     };
 
-  if ((char *newline = strchr (buf, '\r')))
-    *newline = '\0';
+  char *nl;
+  if ((nl = strchr (buf, '\r')))
+    *nl = '\0';
 
   return buf;
+}
+
+static HANDLE device_handle = INVALID_HANDLE_VALUE;
+static mac local_mac;
+static tap_packet *rcv_pkt;
+static int iopipe[2];
+static HANDLE pipe_handle, send_event, thread;
+
+static DWORD WINAPI
+read_thread(void *)
+{
+  static OVERLAPPED overlapped;
+  static DWORD dlen;
+  static u32 len;
+  static u8 data[MAX_MTU];
+
+  overlapped.hEvent = CreateEvent (NULL, FALSE, FALSE, NULL);
+
+  for (;;)
+    {
+      if (!ReadFile (device_handle, data, MAX_MTU, &dlen, &overlapped))
+        {
+          if (GetLastError () == ERROR_IO_PENDING)
+            GetOverlappedResult (device_handle, &overlapped, &dlen, TRUE);
+          else
+            {
+              slog (L_ERR, "WIN32 TAP: ReadFile returned error: %s", wstrerror (GetLastError ()));
+              exit (1);
+            }
+        }
+
+      if (dlen > 0)
+        {
+          len = dlen;
+          WriteFile (pipe_handle, &len, sizeof (len), &dlen, NULL);
+          WriteFile (pipe_handle, data, len, &dlen, NULL);
+        }
+    }
 }
 
 const char *
@@ -91,9 +128,9 @@ tap_device::tap_device ()
 
   char regpath[1024];
   char adapterid[1024];
-  char adaptername[1024];
+  BYTE adaptername[1024];
   char tapname[1024];
-  long len;
+  DWORD len;
 
   bool found = false;
 
@@ -103,9 +140,9 @@ tap_device::tap_device ()
 
   if (RegOpenKeyEx (HKEY_LOCAL_MACHINE, REG_CONTROL_NET, 0, KEY_READ, &key))
     {
-      slog (L_ERR, _("Unable to read registry: %s"),
+      slog (L_ERR, _("WIN32 TAP: unable to read registry: %s"),
 	    wstrerror (GetLastError ()));
-      return false;
+      exit (1);
     }
 
   for (i = 0;; i++)
@@ -155,17 +192,15 @@ tap_device::tap_device ()
 
   if (!found)
     {
-      slog (L_ERR, _("No Windows tap device found!"));
+      slog (L_ERR, _("WIN32 TAP: no windows tap device found!"));
       exit (1);
     }
-
-  strcpy (ifrname, adaptername);
 
   /* Try to open the corresponding tap device */
 
   if (device_handle == INVALID_HANDLE_VALUE)
     {
-      snprintf (tapname, sizeof (tapname), USERMODEDEVICEDIR "%s" TAPSUFFIX, device);
+      snprintf (tapname, sizeof (tapname), USERMODEDEVICEDIR "%s" TAPSUFFIX, adapterid);
       device_handle =
 	CreateFile (tapname, GENERIC_WRITE | GENERIC_READ, 0, 0,
 		    OPEN_EXISTING,
@@ -174,28 +209,47 @@ tap_device::tap_device ()
 
   if (device_handle == INVALID_HANDLE_VALUE)
     {
-      slog (L_ERR, _("%s is not a usable Windows tap device: %s"),
-	      adaptername, wstrerror (GetLastError ()));
+      slog (L_ERR, _("WIN32 TAP: %s is not a usable windows tap device %s: %s"),
+	      adaptername, tapname, wstrerror (GetLastError ()));
       exit (1);
     }
 
-  fd = cygwin_attach_handle_to_fd (tapname, -1, device_handle, 1, GENERIC_WRITE | GENERIC_READ);
+  strcpy (ifrname, (char *)tapname);
 
   /* Get MAC address from tap device */
 
-  if (!DeviceIoControl
-      (device_handle, TAP_IOCTL_GET_MAC, &mac, sizeof (mac), &mac, sizeof (mac), &len, 0))
+  if (!DeviceIoControl (device_handle, TAP_IOCTL_GET_MAC,
+                        &local_mac, sizeof (local_mac), &local_mac, sizeof (local_mac),
+                        &len, 0))
     {
       slog (L_ERR,
-	      _("Could not get MAC address from Windows tap device %s: %s"),
+	      _("WIN32 TAP: could not get MAC address from windows tap device %s: %s"),
 	      adaptername, wstrerror (GetLastError ()));
       exit (1);
     }
+
+  pipe (iopipe);
+  fd = iopipe[0];
+  pipe_handle = (HANDLE) get_osfhandle (iopipe[1]);
+
+  send_event = CreateEvent (NULL, FALSE, FALSE, NULL);
+
+  thread = CreateThread (NULL, 0, read_thread, NULL, 0, NULL);
+
+  /* try to set driver media status to 'connected' */
+  ULONG status = TRUE;
+  DeviceIoControl (device_handle, TAP_IOCTL_SET_MEDIA_STATUS,
+                   &status, sizeof (status),
+                   &status, sizeof (status), &len, NULL);
+  // ignore error here on purpose
 }
 
 tap_device::~tap_device ()
 {
-  close (fd);
+  close (iopipe[0]);
+  close (iopipe[1]);
+  CloseHandle (device_handle);
+  CloseHandle (send_event);
 }
 
 tap_packet *
@@ -203,24 +257,26 @@ tap_device::recv ()
 {
   tap_packet *pkt = new tap_packet;
 
-  pkt->len = read (fd, &((*pkt)[0]), MAX_MTU);
-
-  if (pkt->len <= 0)
+  if (sizeof (u32) != read (iopipe[0], &pkt->len, sizeof (u32)))
     {
-      slog (L_ERR, _("error while reading from %s %s: %s"),
-	    info (), conf.ifname, strerror (errno));
-      free (pkt);
+      slog (L_ERR, _("WIN32 TAP: i/o thread delivered incomplete pkt length"));
+      delete pkt;
       return 0;
     }
-
+    
+  if (pkt->len != read (iopipe[0], &((*pkt)[0]), pkt->len))
+    {
+      slog (L_ERR, _("WIN32 TAP: i/o thread delivered incomplete pkt"));
+      delete pkt;
+      return 0;
+    }
+    
   id2mac (THISNODE->id, &((*pkt)[6]));
 
   if (pkt->is_arp ())
     {
-      if ((*pkt)[22] == 0x08)
-	id2mac (THISNODE->id, &((*pkt)[22]));
-      if ((*pkt)[32] == 0x08)
-	id2mac (THISNODE->id, &((*pkt)[32]));
+      if (!memcmp (&(*pkt)[22], &local_mac, sizeof (mac))) id2mac (THISNODE->id, &((*pkt)[22]));
+      if (!memcmp (&(*pkt)[32], &local_mac, sizeof (mac))) id2mac (THISNODE->id, &((*pkt)[32]));
     }
 
   return pkt;
@@ -229,130 +285,27 @@ tap_device::recv ()
 void
 tap_device::send (tap_packet * pkt)
 {
-  (*pkt)[6] = 0x08;
-  (*pkt)[7] = 0x00;
-  (*pkt)[8] = 0x58;
-  (*pkt)[9] = 0x00;
-  (*pkt)[10] = 0x00;
-  (*pkt)[11] = 0x01;
+  memcpy (&(*pkt)[6], &local_mac, sizeof (mac));
 
   if (pkt->is_arp ())
     {
       if ((*pkt)[22] == 0xfe && (*pkt)[27] == THISNODE->id)
-	memcpy (&(*pkt)[22], &(*pkt)[6], sizeof (mac));
+	memcpy (&(*pkt)[22], &local_mac, sizeof (mac));
 
       if ((*pkt)[32] == 0xfe && (*pkt)[37] == THISNODE->id)
-	memcpy (&(*pkt)[32], &(*pkt)[6], sizeof (mac));
+	memcpy (&(*pkt)[32], &local_mac, sizeof (mac));
     }
 
-  if (write (fd, &((*pkt)[0]), pkt->len) < 0)
-    slog (L_ERR, _("can't write to %s %s: %s"), info (), conf.ifname,
-	  strerror (errno));
-}
+  DWORD dlen;
+  OVERLAPPED overlapped;
+  overlapped.hEvent = send_event;
 
-#if 0
-
-slog (L_DEBUG, _indent: Standard input:377: Error:Stmt nesting error.
-("Tap reader running"));
-
-	/* Read from tap device and send to parent */
-
-overlapped.hEvent = CreateEvent (NULL, TRUE, FALSE, NULL);
-
-for indent
-: Standard input: 320: Error:Stmt nesting error.(;;
-  )
-{
-  overlapped.Offset = 0;
-  overlapped.OffsetHigh = 0;
-  ResetEvent (overlapped.hEvent);
-
-  status = ReadFile (device_handle, buf, sizeof (buf), &len, &overlapped);
-
-  if (!status)
+  if (!WriteFile (device_handle, &((*pkt)[0]), pkt->len, &dlen, &overlapped))
     {
       if (GetLastError () == ERROR_IO_PENDING)
-	{
-	  WaitForSingleObject (overlapped.hEvent, INFINITE);
-	  if (!GetOverlappedResult (device_handle, &overlapped, &len, FALSE))
-	    continue;
-	}
+        GetOverlappedResult (device_handle, &overlapped, &dlen, TRUE);
       else
-	{
-	  slog (L_ERR, _("Error while reading from %s %s: %s"),
-		  device_info, device, strerror (errno));
-	  return -1;
-	}
+        slog (L_ERR, _("WIN32 TAP: can't write to %s %s: %s"), info (), conf.ifname,
+              wstrerror (GetLastError ()));
     }
-
-  if (send (sock, buf, len, 0) <= 0)
-    return -1;
 }
-}
-
-void
-close_device (void)
-{
-  cp ();
-
-  CloseHandle (device_handle);
-}
-
-bool
-read_packet (vpn_packet_t * packet)
-{
-  int lenin;
-
-  cp ();
-
-  if ((lenin = recv (device_fd, packet->data, MTU, 0)) <= 0)
-    {
-      slog (L_ERR, _("Error while reading from %s %s: %s"), device_info,
-	      device, strerror (errno));
-      return false;
-    }
-
-  packet->len = lenin;
-
-  device_total_in += packet->len;
-
-  ifdebug (TRAFFIC) slog (L_DEBUG, _("Read packet of %d bytes from %s"),
-			    packet->len, device_info);
-
-  return true;
-}
-
-bool
-write_packet (vpn_packet_t * packet)
-{
-  long lenout;
-  OVERLAPPED overlapped = { 0 };
-
-  cp ();
-
-  ifdebug (TRAFFIC) slog (L_DEBUG, _("Writing packet of %d bytes to %s"),
-			    packet->len, device_info);
-
-  if (!WriteFile
-      (device_handle, packet->data, packet->len, &lenout, &overlapped))
-    {
-      slog (L_ERR, _("Error while writing to %s %s: %s"), device_info,
-	      device, wstrerror (GetLastError ()));
-      return false;
-    }
-
-  device_total_out += packet->len;
-
-  return true;
-}
-
-void
-dump_device_stats (void)
-{
-  cp ();
-
-  slog (L_DEBUG, _("Statistics for %s %s:"), device_info, device);
-  slog (L_DEBUG, _(" total bytes in:  %10d"), device_total_in);
-  slog (L_DEBUG, _(" total bytes out: %10d"), device_total_out);
-}
-#endif
