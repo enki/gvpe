@@ -129,31 +129,31 @@
 .\" ========================================================================
 .\"
 .IX Title "GVPE 5"
-.TH GVPE 5 "2004-09-18" "1.7" "GNU Virtual Private Ethernet"
+.TH GVPE 5 "2005-01-27" "1.7" "GNU Virtual Private Ethernet"
 .SH "NAME"
 GNU\-VPE \- Overview of the GNU Virtual Private Ethernet suite.
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
 \&\s-1GVPE\s0 is a suite designed to provide a virtual private network for multiple
 nodes over an untrusted network.
-.PP
-\&\*(L"Virtual\*(R" means that no physical network is created (of course), but an
+.IP "\(bu" 4
+.IX Xref "Virtual"
+Virtual means that no physical network is created (of course), but an
 ethernet is emulated by creating multiple tunnels between the member
 nodes.
-.IX Xref "Virtual"
-.PP
-\&\*(L"Private\*(R" means that non-participating nodes cannot decode (\*(L"sniff)\*(R" nor
-inject (\*(L"spoof\*(R") packets.
+.IP "\(bu" 4
 .IX Xref "Private"
-.PP
+Private means that non-participating nodes cannot decode (\*(L"sniff)\*(R" nor
+inject (\*(L"spoof\*(R") packets.
+.Sp
 In the case of gvpe, even participating nodes cannot sniff packets send to
 other nodes or spoof packets as if sent from other nodes.
-.PP
-\&\*(L"Network\*(R" means that more than two parties can participate in the
-network, so for instance it's possible to connect multiple branches of a
-company into a single network. Many so-called \*(L"vpn\*(R" solutions only create
-point-to-point tunnels.
+.IP "\(bu" 4
 .IX Xref "Network"
+Network means that more than two parties can participate in the network,
+so for instance it's possible to connect multiple branches of a company
+into a single network. Many so-called \*(L"vpn\*(R" solutions only create
+point-to-point tunnels.
 .Sh "\s-1DESIGN\s0 \s-1GOALS\s0"
 .IX Subsection "DESIGN GOALS"
 .IP "\s-1SIMPLE\s0 \s-1DESIGN\s0" 4
