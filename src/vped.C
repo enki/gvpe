@@ -248,8 +248,8 @@ main (int argc, char **argv, char **envp)
       slog (L_ERR, _("system call `%s' failed: %s"), "mlockall", strerror (errno));
 #endif
 
-  make_names ();
   conf.read_config (true);
+  make_names ();
 
   set_loglevel (llevel != L_NONE ? llevel : conf.llevel);
 
