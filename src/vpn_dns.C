@@ -55,8 +55,8 @@
 #define MIN_SEND_INTERVAL 0.01
 #define MAX_SEND_INTERVAL 0.5 // optimistic?
 
-#define MAX_OUTSTANDING 800 // max. outstanding requests
-#define MAX_WINDOW      1000 // max. for MAX_OUTSTANDING
+#define MAX_OUTSTANDING 40 // max. outstanding requests
+#define MAX_WINDOW      100 // max. for MAX_OUTSTANDING
 #define MAX_BACKLOG     (100*1024) // size of protocol backlog, must be > MAXSIZE
 
 #define MAX_DOMAIN_SIZE 220 // 255 is legal limit, but bind doesn't compress well
