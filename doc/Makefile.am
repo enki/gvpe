@@ -3,14 +3,14 @@
 # commented out, no use to distribute yet
 info_TEXINFOS = vpe.texi
 
-man_MANS = vpe.5 vped.8 vpectrl.8 vped.conf.5 vpe.protocol.7
+man_MANS = vpe.5 vped.8 vpectrl.8 vped.conf.5 vpe.protocol.7 vpe.osdep.5
 
 PERL = @PERL@
-MAINTAINERCLEANFILES = vpe.texi vpe.5 vped.8 vpectrl.8 vped.conf.5 vpe.protocol.7
+MAINTAINERCLEANFILES = vpe.texi vpe.5 vped.8 vpectrl.8 vped.conf.5 vpe.protocol.7 vpe.osdep.5
 
 EXTRA_DIST = $(man_MANS) vpe.texi \
   Makefile.maint GNUmakefile Makefile.summ \
-  vpe.texi.in vpe.5.pod vped.8.pod vpectrl.8.pod vped.conf.5.pod vpe.protocol.7.pod \
+  vpe.texi.in vpe.5.pod vped.8.pod vpectrl.8.pod vped.conf.5.pod vpe.protocol.7.pod vpe.osdep.5.pod \
   complex-example/README complex-example/if-up complex-example/node-up complex-example/vped.conf
 
 

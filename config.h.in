@@ -244,6 +244,12 @@
 /* Size of HMAC in each packet in bytes. */
 #undef HMACLENGTH
 
+/* kernel interface subtype */
+#undef IFSUBTYPE
+
+/* kernel interface type */
+#undef IFTYPE
+
 /* Location of if_tun.h */
 #undef LINUX_IF_TUN_H
 

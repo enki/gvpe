@@ -165,7 +165,9 @@ interface MAC to this value. You will most likely use one of these:
    ip link set $IFNAME address $MAC mtu $MTU up # GNU/Linux
    ifconfig $IFNAME ether $MAC mtu $MTU up      # FreeBSD
 
-=item IFTYPE=native
+Please see the C<vpe.osdep(5)> manpage for platform-specific information.
+
+=item IFTYPE=native # or tincd
 
 =item IFSUBTYPE=linux # or freebsd, darwin etc..
 

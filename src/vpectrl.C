@@ -299,6 +299,7 @@ main (int argc, char **argv, char **envp)
     {
       printf (_("%s version %s (built %s %s, protocol %d.%d)\n"), get_identity (),
               VERSION, __DATE__, __TIME__, PROTOCOL_MAJOR, PROTOCOL_MINOR);
+      printf (_("Built with kernel interface %s/%s.\n"), IFTYPE, IFSUBTYPE);
       printf (_
               ("Copyright (C) 2003 Marc Lehmann <vpe@plan9.de> and others.\n"
                "See the AUTHORS file for a complete list.\n\n"

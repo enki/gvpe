@@ -56,16 +56,13 @@ const char *vpn::script_if_up ()
   mtu -= ETH_OVERHEAD - 6 - 6; // and get interface mtu again
 
   char *env;
-  asprintf (&env, "CONFBASE=%s", confbase);
-  putenv (env);
-  asprintf (&env, "NODENAME=%s", THISNODE->nodename);
-  putenv (env);
-  asprintf (&env, "NODEID=%d", THISNODE->id);
-  putenv (env);
-  asprintf (&env, "IFNAME=%s", tap->interface ());
-  putenv (env);
-  asprintf (&env, "MTU=%d", mtu);
-  putenv (env);
+  asprintf (&env, "CONFBASE=%s", confbase); putenv (env);
+  asprintf (&env, "NODENAME=%s", THISNODE->nodename); putenv (env);
+  asprintf (&env, "NODEID=%d", THISNODE->id); putenv (env);
+  asprintf (&env, "IFNAME=%s", tap->interface ()); putenv (env);
+  asprintf (&env, "IFTYPE=%s", IFTYPE); putenv (env);
+  asprintf (&env, "IFSUBTYPE=%s", IFSUBTYPE); putenv (env);
+  asprintf (&env, "MTU=%d", mtu); putenv (env);
   asprintf (&env, "MAC=%02x:%02x:%02x:%02x:%02x:%02x",
             0xfe, 0xfd, 0x80, 0x00, THISNODE->id >> 8,
             THISNODE->id & 0xff);

@@ -227,11 +227,12 @@ retry:
             }
           else if (!strcmp (var, "ip-proto"))
             ip_proto = atoi (val);
-#if ENABLE_ICMP
-          //TODO: error message
           else if (!strcmp (var, "icmp-type"))
-            icmp_type = atoi (val);
+            {
+#if ENABLE_ICMP
+              icmp_type = atoi (val);
 #endif
+            }
 
           // per config
           else if (!strcmp (var, "node"))
@@ -300,14 +301,24 @@ retry:
             script_node_up = strdup (val);
           else if (!strcmp (var, "node-down"))
             script_node_down = strdup (val);
-#if ENABLE_HTTP_PROXY
           else if (!strcmp (var, "http-proxy-host"))
-            proxy_host = strdup (val);
-          else if (!strcmp (var, "http-proxy-port"))
-            proxy_port = atoi (val);
-          else if (!strcmp (var, "http-proxy-auth"))
-            proxy_auth = (char *)base64_encode ((const u8 *)val, strlen (val));
+            {
+#if ENABLE_HTTP_PROXY
+              proxy_host = strdup (val);
 #endif
+            }
+          else if (!strcmp (var, "http-proxy-port"))
+            {
+#if ENABLE_HTTP_PROXY
+              proxy_port = atoi (val);
+#endif
+            }
+          else if (!strcmp (var, "http-proxy-auth"))
+            {
+#if ENABLE_HTTP_PROXY
+              proxy_auth = (char *)base64_encode ((const u8 *)val, strlen (val));
+#endif
+            }
 
           /* node-specific, non-defaultable */
           else if (node != &default_node && !strcmp (var, "hostname"))

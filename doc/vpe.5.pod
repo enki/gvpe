@@ -69,6 +69,9 @@ network members. It should be run on the gateway machine.
 
 =head1 COMPILETIME CONFIGURATION
 
+Please have a look at the C<vpe.osdep(5)> manpage for platform-specific
+information.
+
 Here are a few recipes for compiling your vpe:
 
 =head2 AS LOW PACKET OVERHEAD AS POSSIBLE
@@ -204,8 +207,8 @@ again.
 
 =head1 SEE ALSO
 
-vped.conf(5), vpectrl(8), and for a description of the protocol and
-routing algorithms, vpe.protocol(7).
+vpe.osdep(5) for OS-depedendent information, vped.conf(5), vpectrl(8), and
+for a description of the protocol and routing algorithms, vpe.protocol(7).
 
 =head1 AUTHOR
 

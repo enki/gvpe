@@ -14,7 +14,7 @@ eval $(grep VERSION= distdir/configure)
 mkdir -p $TARGET
 
 case "$1" in
-   linux )
+   gnu-linux )
       HOST=root@localhost
       BASE=/tmp
       CONFIGURE="$CONFIGURE --enable-icmp"

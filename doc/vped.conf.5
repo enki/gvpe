@@ -286,8 +286,10 @@ interface \s-1MAC\s0 to this value. You will most likely use one of these:
 \&   ip link set $IFNAME address $MAC mtu $MTU up # GNU/Linux
 \&   ifconfig $IFNAME ether $MAC mtu $MTU up      # FreeBSD
 .Ve
-.IP "IFTYPE=native" 4
-.IX Item "IFTYPE=native"
+.Sp
+Please see the \f(CW\*(C`vpe.osdep(5)\*(C'\fR manpage for platform-specific information.
+.IP "IFTYPE=native # or tincd" 4
+.IX Item "IFTYPE=native # or tincd"
 .PD 0
 .IP "IFSUBTYPE=linux # or freebsd, darwin etc.." 4
 .IX Item "IFSUBTYPE=linux # or freebsd, darwin etc.."
