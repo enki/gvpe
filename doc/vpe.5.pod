@@ -204,7 +204,8 @@ again.
 
 =head1 SEE ALSO
 
-vpe(5), vped.conf(5), vpectrl(8).
+vped.conf(5), vpectrl(8), and for a description of the protocol and
+routing algorithms, vpe.protocol(7).
 
 =head1 AUTHOR
 

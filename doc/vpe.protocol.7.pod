@@ -1,0 +1,78 @@
+=head1 The VPE Protocol
+
+=head2 Anatomy of a VPN packet
+
+The exact layout and field lengths of a VPN packet is determined at
+compiletime and doesn't change. The same structure is used for all
+protocols, be it rawip or tcp.
+
+ +------+------+--------+------+
+ | HMAC | TYPE | SRCDST | DATA |
+ +------+------+--------+------+
+
+The HMAC field is present in all packets, even if not used (e.g. in
+authentification packets), in which case it is set to all zeroes. The
+checksum itself is over the TYPE, SRCDST and DATA fields in all cases.
+
+The TYPE field is a single byte and determines the purpose of the packet
+(e.g. RESET, COMPRESSED/UNCOMPRESSED DATA, PING, AUTH REQUEST/RESPONSE,
+CONNECT REQUEST/INFO etc.).
+
+SRCDST is a three byte field which contains the source and destination
+node ids (12 bits each). The protocol does not yet scale well beyond 30+
+hosts, since all hosts connect to each other on startup. But if restarts
+are rare or tolerable and most connections are on demand, larger networks
+are possible.
+
+The DATA portion differs between each packet type, naturally, and is the
+only part that can be encrypted encrypted. Data packets contain more
+fields, as shown:
+
+ +------+------+--------+------+-------+------+
+ | HMAC | TYPE | SRCDST | RAND | SEQNO | DATA |
+ +------+------+--------+------+-------+------+
+
+RAND is a sequence of fully random bytes, used to increase the entropy of the data
+for encryption purposes.
+
+SEQNO is a 32-bit sequence number. It is negotiated at every connection
+initialization and starts at some random value.
+
+=head2 The authentification protocol
+
+Before hosts can exchange packets, they need to establish authenticity of
+the other side and a key. Every host has a private RSA key and the public
+RSA keys of all other hosts.
+
+A host establishes a simplex connection by sending the other host a RSA
+challenge containing the random digest and encryption keys (different)
+to use when sending packets, plus more randomness plus some PKCS1_OAEP
+padding plus a random 16 byte id. The destination host will respond by
+replying with an (unencrypted) RIPEMD160 hash of the decrypted data, which
+will authentify that host. The destination host will also set the outgoing
+encryption parameters as given in the packet.
+
+When the source host receives a correct auth reply (by verifying the
+hash and the id, which will expire after 20 seconds). it will start to
+accept data packets from the destination host. The protocol is completely
+symmetric, so to be able to send packets the destination host must send a
+challenge in the exact same way as already described.
+
+=head2 Retrying
+
+When there is no response to an auth request, the host will send auth
+requests in bursts with an exponential backoff. After some time it will
+resort to PING packets, which are very small (8 byte) and lightweight (no
+RSA operations). A host that receives ping requests from an unconnected
+peer will respond by trying to create a connection.
+
+In addition to the exponential backoff, there is a global rate-limit on
+a per-ip base. It allows long bursts but will limit total packet rate to
+something like one control packet every ten seconds, to avoid accidental
+floods due to protocol problems (like a rsa key file mismatch between two
+hosts).
+
+=head2 Routing and Protocol translation
+
+... not yet written, please bug me ...
+
