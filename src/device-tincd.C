@@ -29,6 +29,12 @@
 
 #include "conf.h"
 
+// following headers used by cygwin (maybe others)
+#include "netcompat.h"
+#include <signal.h>
+
+#define xstrdup(strd) strdup(str)
+
 /* make the tincd sources feel comfortable in our environment. */
 /* this was reasonably easy to do. */
 #define routing_mode 1

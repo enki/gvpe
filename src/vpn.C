@@ -33,31 +33,14 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <net/if.h>
-#ifdef HAVE_NETINET_IN_SYSTM_H
-# include <netinet/in_systm.h>
-#endif
-#ifdef HAVE_NETINET_IP_H
-# include <netinet/ip.h>
-#endif
-#ifdef HAVE_NETINET_TCP_H
-# include <netinet/tcp.h>
-#endif
-#if ENABLE_ICMP
-# include <netinet/ip_icmp.h>
-#endif
+
+#include "netcompat.h"
 
 #include "pidfile.h"
 
 #include "connection.h"
 #include "util.h"
 #include "vpn.h"
-
-#if !defined(SOL_IP) && defined(IPPROTO_IP)
-# define SOL_IP IPPROTO_IP
-#endif
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -322,23 +305,6 @@ ipv4_checksum (u16 *data, unsigned int len)
 }
 
 #if ENABLE_ICMP
-struct icmp_header {
-  u8          type;
-  u8          code;
-  u16         checksum;
-  union {
-        struct {
-                u16   id;
-                u16   sequence;
-        } echo;
-        u32   gateway;
-        struct {
-                u16   unused;
-                u16   mtu;
-        } frag;
-  } un;
-};
-
 bool
 vpn::send_icmpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {

@@ -31,9 +31,7 @@
 #include <sys/socket.h>
 #include <sys/poll.h>
 #include <sys/wait.h>
-#include <netinet/in.h>
 #include <sys/uio.h>
-#include <arpa/inet.h>
 #include <errno.h>
 #include <time.h>
 #include <unistd.h>
@@ -42,6 +40,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/poll.h>
+
+#include "netcompat.h"
 
 #include "vpn.h"
 

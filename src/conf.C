@@ -33,17 +33,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#ifdef ENABLE_ICMP
-# ifdef HAVE_NETINET_IN_SYSTM_H
-#  include <netinet/in_systm.h>
-# endif
-# ifdef HAVE_NETINET_IP_H
-#  include <netinet/ip.h>
-# endif
-# include <netinet/ip_icmp.h>
-#endif
+#include "netcompat.h"
 
 #include <openssl/err.h>
 #include <openssl/pem.h>

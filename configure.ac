@@ -3,7 +3,7 @@ dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.57)
 AC_INIT(src/vped.C)
 AC_CANONICAL_TARGET
-AM_INIT_AUTOMAKE(vpe, 1.0)
+AM_INIT_AUTOMAKE(vpe, 1.2)
 AM_CONFIG_HEADER(config.h)
 AM_MAINTAINER_MODE
 
@@ -67,13 +67,13 @@ AC_ARG_ENABLE(iftype,
   [AC_HELP_STRING(--enable-iftype[=TYPE/SUBTYPE], [
      Use kernel/net device interface TYPE/SUBTYPE.
      Working combinations are:
-        "native/linux" "tincd/linux";
+        "native/linux" "tincd/linux" "tincd/freebsd";
      Untested combinations are:
-        "tincd/freebsd" "tincd/netbsd" "tincd/darwin" "tincd/solaris"
-        "tincd/openbsd" "tincd/netbsd" "tincd/cygwin";
+        "tincd/netbsd" "tincd/darwin" "tincd/solaris"
+        "tincd/openbsd" "tincd/cygwin";
      Broken combinations are:
         "native/cygwin";
-     The default is autodetected.
+     The default is to autodetect.
   ])],
   [
     IFTYPE=`echo $enableval | sed s%/.*%%`
@@ -241,23 +241,23 @@ AC_ARG_ENABLE(rohc,
 )
 
 AC_ARG_ENABLE(icmp,
-  [AC_HELP_STRING(--enable-icmp, [enable icmp protocol support.])],
+  [AC_HELP_STRING(--enable-icmp, [enable icmp protocol support (default disabled).])],
   AC_DEFINE_UNQUOTED(ENABLE_ICMP, 1, [ICMP protocol support.])
 )
 
 AC_ARG_ENABLE(tcp,
-  [AC_HELP_STRING(--enable-tcp, [enable tcp protocol support.])],
+  [AC_HELP_STRING(--enable-tcp, [enable tcp protocol support (default disabled).])],
   AC_DEFINE_UNQUOTED(ENABLE_TCP, 1, [TCP protocol support.])
 )
 
 AC_ARG_ENABLE(http-proxy,
-  [AC_HELP_STRING(--enable-http-proxy, [enable http proxy connect support.])],
+  [AC_HELP_STRING(--enable-http-proxy, [enable http proxy connect support (default disabled).])],
   AC_DEFINE_UNQUOTED(ENABLE_HTTP_PROXY, 1, [http proxy connect support.])
 )
 
-HMAC=16    dnl see also the AC_HELP_STRING
+HMAC=12    dnl see also the AC_HELP_STRING
 AC_ARG_ENABLE(hmac-length,
-  [AC_HELP_STRING(--enable-hmac-length=BYTES, [use a hmac of length BYTES bytes (default 16). Allowed values are 4, 8, 12, 16.])],
+  [AC_HELP_STRING(--enable-hmac-length=BYTES, [use a hmac of length BYTES bytes (default 12). Allowed values are 4, 8, 12, 16.])],
   HMAC=$enableval
 )
 AC_DEFINE_UNQUOTED(HMACLENGTH, $HMAC, [Size of HMAC in each packet in bytes.])
@@ -289,7 +289,7 @@ CIPHER=bf_cbc
 AC_ARG_ENABLE(cipher,
   [AC_HELP_STRING(--enable-cipher, [
      Select the symmetric cipher (default "bf"). Must be one of
-     "bf" (blowfish), "aes-128", "aes-192" or "aes-256".])],
+     "bf" (blowfish), "aes-128" (rijndael), "aes-192" or "aes-256".])],
   if test "x$enableval" = xbf     ; then CIPHER=bf_cbc     ; fi
   if test "x$enableval" = xaes-128; then CIPHER=aes_128_cbc; fi
   if test "x$enableval" = xaes-192; then CIPHER=aes_192_cbc; fi
@@ -301,11 +301,11 @@ DIGEST=sha1
 AC_ARG_ENABLE(digest,
   [AC_HELP_STRING(--enable-digest, [
      Select the digets algorithm to use (default "sha1"). Must be one of
-     "sha1", "ripemd160", "md4" or "md5".])],
+     "sha1", "ripemd160", "md5" or "md4" (insecure).])],
   if test "x$enableval" = xsha1     ; then DIGEST=sha1     ; fi
   if test "x$enableval" = xripemd160; then DIGEST=ripemd160; fi
-  if test "x$enableval" = xmd4      ; then DIGEST=md4      ; fi
   if test "x$enableval" = xmd5      ; then DIGEST=md5      ; fi
+  if test "x$enableval" = xmd4      ; then DIGEST=md4      ; fi
 )
 AC_DEFINE_UNQUOTED(ENABLE_DIGEST, EVP_${DIGEST}, [Select the digest algorithm to use.])
 

@@ -1,8 +1,9 @@
 1.1
-   - tincd kernel interface code imported, greater portability
+   - tincd kernel interface code imported, more supported platforms
    - portability workarounds, especially for unfriendly freebsd
    - very minor bugfixes
    - warnings when choosing insecure ciphers/hashes
+   - reduced default hmac length to 12.
 
 1.0
    - tweaked various timeouts to help very slow (486) class
