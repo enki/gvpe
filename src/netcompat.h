@@ -25,7 +25,9 @@
 #ifdef HAVE_NETINET_IN_H
 # include <netinet/in.h>
 #endif
-#include <arpa/inet.h>
+#ifdef HAVE_ARPA_INET_H
+# include <arpa/inet.h>
+#endif
 #include <net/if.h>
 #ifdef HAVE_NETINET_IN_SYSTM_H
 # include <netinet/in_systm.h>
