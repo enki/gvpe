@@ -54,10 +54,10 @@
 #define INITIAL_SYN_TIMEOUT 10. // retry timeout for initial syn
 
 #define MIN_SEND_INTERVAL 0.01 // wait at least this time between sending requests
-#define MAX_SEND_INTERVAL 0.5 // optimistic?
+#define MAX_SEND_INTERVAL 2. // optimistic?
 
 #define LATENCY_FACTOR   0.5 // RTT * LATENCY_FACTOR == sending rate
-#define MAX_OUTSTANDING   20 // max. outstanding requests
+#define MAX_OUTSTANDING   40 // max. outstanding requests
 #define MAX_WINDOW      1000 // max. for MAX_OUTSTANDING, and backlog
 #define MAX_BACKLOG     (100*1024) // size of gvpe protocol backlog (bytes), must be > MAXSIZE
 
@@ -451,8 +451,8 @@ void dns_cfg::reset (int clientid)
   seq_cdc  = 26;
   req_cdc  = 62;
   rep_cdc  = 0;
-  max_size = ntohs (MAX_PKT_SIZE);
-  client   = ntohs (clientid);
+  max_size = htons (MAX_PKT_SIZE);
+  client   = htons (clientid);
   uid      = next_uid++;
 
   r2 = r3 = r4 = 0;
@@ -468,8 +468,7 @@ bool dns_cfg::valid ()
       && seq_cdc == 26
       && req_cdc == 62
       && rep_cdc == 0
-      && version == 1
-      && max_size == ntohs (MAX_PKT_SIZE);
+      && version == 1;
 }
 
 struct dns_packet : net_packet
@@ -896,12 +895,13 @@ vpn::dnsv4_server (dns_packet &pkt)
 
                     int rdlen_offs = offs += 2;
 
-                    int dlen = (dns ? ntohs (dns->cfg.max_size) : MAX_PKT_SIZE) - offs;
-                    // bind doesn't compress well, so reduce further by one label length
-                    dlen -= qlen;
-
                     if (dns)
                       {
+                        int dlen = ntohs (dns->cfg.max_size) - offs;
+
+                        // bind doesn't compress well, so reduce further by one label length
+                        dlen -= qlen;
+
                         // only put data into in-order sequence packets, if
                         // we receive out-of-order packets we generate empty
                         // replies
@@ -1022,9 +1022,6 @@ vpn::dnsv4_client (dns_packet &pkt)
 #if 0
             dns->send_interval *= 0.999;
 #endif
-            if (dns->send_interval < MIN_SEND_INTERVAL)
-              dns->send_interval = MIN_SEND_INTERVAL;
-
             // the latency surely puts an upper bound on
             // the minimum send interval
             double latency = NOW - (*i)->sent;
@@ -1034,6 +1031,9 @@ vpn::dnsv4_client (dns_packet &pkt)
 
             if (dns->send_interval > dns->min_latency * LATENCY_FACTOR)
               dns->send_interval = dns->min_latency * LATENCY_FACTOR;
+
+            if (dns->send_interval < MIN_SEND_INTERVAL)
+              dns->send_interval = MIN_SEND_INTERVAL;
           }
 
         delete *i;
@@ -1231,7 +1231,7 @@ dns_connection::time_cb (time_watcher &w)
               // the forwarder to generate a new request
               if (r->stdhdr)
                 {
-                  //printf ("reencoded header for ID %d retry %d:%d:%d\n", htons (r->pkt->id), THISNODE->id, r->seqno, r->retry);printf ("reencoded header for ID %d retry %d:%d:%d\n", htons (r->pkt->id), THISNODE->id, r->seqno, r->retry);
+                  //printf ("reencoded header for ID %d retry %d:%d:%d (%p)\n", htons (r->pkt->id), THISNODE->id, r->seqno, r->retry);
                   //encode_header ((char *)r->pkt->at (6 * 2 + 1), THISNODE->id, r->seqno, r->retry);
                 }
             }
@@ -1240,7 +1240,7 @@ dns_connection::time_cb (time_watcher &w)
         NEXT (r->timeout);
     }
 
-  if (last_sent + send_interval <= NOW)
+  if (send || (last_sent + send_interval <= NOW))
     {
       if (!send)
         {
@@ -1273,7 +1273,7 @@ dns_connection::time_cb (time_watcher &w)
               sndseq = (sndseq + 1) & SEQNO_MASK;
             }
 
-          if (send)
+          if (send && !send->retry)
             vpn->dns_sndpq.push_back (send);
         }
 
@@ -1288,9 +1288,10 @@ dns_connection::time_cb (time_watcher &w)
   else
     NEXT (last_sent + send_interval);
 
-  slog (L_NOISE, "DNS: pi %f si %f N %f (%d:%d)",
+  slog (L_NOISE, "DNS: pi %f si %f N %f (%d:%d %d)",
         poll_interval, send_interval, next - NOW,
-        vpn->dns_sndpq.size (), snddq.size ());
+        vpn->dns_sndpq.size (), snddq.size (),
+        rcvpq.size ());
 
   // TODO: no idea when this happens, but when next < NOW, we have a problem
   if (next < NOW + 0.0001)

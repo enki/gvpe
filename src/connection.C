@@ -770,7 +770,7 @@ connection::establish_connection_cb (time_watcher &w)
             }
         }
 
-      retry_int *= slow ? 3. : 0.7;
+      retry_int *= slow ? 8. : 0.7;
 
       if (retry_int < conf->max_retry)
         retry_cnt++;
