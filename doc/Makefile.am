@@ -6,10 +6,9 @@ info_TEXINFOS = vpe.texi
 man_MANS = vpe.5 vped.8 vpectrl.8 vped.conf.5
 
 PERL = @PERL@
-HELP2MAN = help2man
 MAINTAINERCLEANFILES = vpe.texi vpe.5 vped.8 vpectrl.8 vped.conf.5
 
-EXTRA_DIST = $(man_MANS) vpe.texi $(HELP2MAN) \
+EXTRA_DIST = $(man_MANS) vpe.texi \
   Makefile.maint GNUmakefile Makefile.summ \
   vpe.texi.in vpe.5.pod vped.8.pod vpectrl.8.pod vped.conf.5.pod
 

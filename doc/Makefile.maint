@@ -8,8 +8,6 @@
 
 include Makefile.summ
 
-HELP2MAN-run = $(PERL) -w -- $(srcdir)/$(HELP2MAN)
-
 # Depend on configure.in to get version number changes.
 $(dyn_MANS): $(top_srcdir)/configure.in
 
@@ -19,23 +17,6 @@ regular-men = $(filter-out $(irregular-men),$(dyn_MANS))
 $(regular-men): %.8: $(top_srcdir)/src/%.c
 
 executable = $(patsubst %/install,%/ginstall, ../src/$(basename $@))
-$(dyn_MANS): %.8: %.x $(HELP2MAN)
-	@if test -f $(executable); then \
-	  echo "Updating man page $@"; \
-	  rm -f $@-t $@; \
-	  $(HELP2MAN-run) \
-	    --name="$($(basename $@)-summary)" \
-	    --include=$(basename $@).x \
-	    $(executable) > $@-t; \
-	  chmod -w $@-t; \
-	  mv $@-t $@; \
-	else \
-	  echo "WARNING: The man page $@ cannot be updated yet."; \
-	  echo "         Retry once the corresponding executable is built."; \
-	fi
-
-sample-config.tar.gz:
-	GZIP=$(GZIP_ENV) $(AMTAR) chozf sample-config.tar.gz sample-config
 
 %.5: %.5.pod Makefile.maint
 	pod2man -n$(shell perl -e '$$ARGV[0] =~ s/\.\d$$//; print uc $$ARGV[0]' $@) -qnone -r$(VERSION) -s5 -c "Virtual Private Ethernet" $< >$@
@@ -46,6 +27,6 @@ sample-config.tar.gz:
 vpe.texi: vpe.texi.in
 	./pod2texi <vpe.texi.in >vpe.texi
 
-../README: vpe.pod
-	pod2text -q\\\" -a vpe.pod >../README
+../README: vpe.5.pod
+	pod2text -q\\\" -a vpe.5.pod >../README
 

@@ -3,6 +3,8 @@
 sbin_PROGRAMS = vped
 bin_PROGRAMS = vpectrl
 
+EXTRA_DIST = device-linux.C device-cygwin.C
+
 INCLUDES = @INCLUDES@ -I$(top_builddir) -I$(top_srcdir)/lib
 
 LIBS = @LIBS@ @LIBINTL@
@@ -11,9 +13,11 @@ COMMON = global.h conf.h conf.C util.h util.C device.h device.C \
          slog.h slog.C
 
 vped_SOURCES = vped.C hash_map.h protocol.h protocol.C sockinfo.h sockinfo.C \
-               lzf/lzf.h lzf/lzfP.h lzf/lzf_c.c lzf/lzf_d.c iom.h iom.C $(COMMON)
+               lzf/lzf.h lzf/lzfP.h lzf/lzf_c.c lzf/lzf_d.c iom.h iom.C \
+               $(COMMON)
 vped_LDADD = $(top_builddir)/lib/libvpe.a
-vpectrl_SOURCES = vpectrl.C $(COMMON)
+vpectrl_SOURCES = vpectrl.C \
+                  $(COMMON)
 vpectrl_LDADD = $(top_builddir)/lib/libvpe.a
 
 localedir = $(datadir)/locale

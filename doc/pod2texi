@@ -38,11 +38,12 @@ while (<>) {
 	      } elsif ($n->is_text) {
                  print escape_texi $n->get_text;
 	      } elsif ($n->is_verbatim) {
-                 print "\n\n\@verbatim\n";
+                 print "\n\n\@example\n";
                  my $text = $n->get_text;
                  $text =~ s/\n+$//;
+                 $text =~ s/([\@\{\}])/@$1/g;
                  print $text;
-                 print "\n\@end verbatim\n\n";
+                 print "\n\@end example\n\n";
 	      } elsif ($n->is_sequence) {
 	         if ($n->get_letter eq "C") {
 	            print "\@t{";
