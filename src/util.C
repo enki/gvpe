@@ -1,7 +1,7 @@
 /*
     util.C -- process management and other utility functions
     
-    Most of these are taken from tinc, see the AUTHORS file.
+    Some of these are taken from tinc, see the AUTHORS file.
  
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -140,15 +140,5 @@ make_names (void)
 
   if (!confbase)
     asprintf (&confbase, "%s/vpe", CONFDIR);
-}
-
-sockinfo::operator const char *()
-{
-  static char hostport[15 + 1 + 5 + 1];
-  in_addr ia = { host };
-
-  sprintf (hostport, "%.15s:%d", inet_ntoa (ia), ntohs (port) & 0xffff);
-
-  return hostport;
 }
 

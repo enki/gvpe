@@ -22,15 +22,8 @@
 #ifndef UTIL_H__
 #define UTIL_H__
 
-#include <sys/socket.h>
-#include <netinet/in.h>
-
-#include <map>
-
 #include "iom.h"
 #include "device.h"
-
-#define SOCKADDR	sockaddr_in	// this is lame, I know
 
 /*
  * check for an existing vped for this net, and write pid to pidfile
@@ -72,59 +65,6 @@ id2mac (unsigned int id, void *m)
 
 #define mac2id(p) (p[0] & 0x01 ? 0 : (p[4] << 8) | p[5])
 
-struct sockinfo
-  {
-    u32 host;
-    u16 port;
-
-    void set (const SOCKADDR *sa)
-    {
-      host = sa->sin_addr.s_addr;
-      port = sa->sin_port;
-    }
-
-    sockinfo()
-    {
-      host = port = 0;
-    }
-
-    sockinfo(const SOCKADDR &sa)
-    {
-      set (&sa);
-    }
-
-    sockinfo(const SOCKADDR *sa)
-    {
-      set (sa);
-    }
-
-    SOCKADDR *sa()
-    {
-      static SOCKADDR sa;
-
-      sa.sin_family = AF_INET;
-      sa.sin_port = port;
-      sa.sin_addr.s_addr = host;
-
-      return &sa;
-    }
-
-    operator const char *();
-  };
-
-inline bool
-operator == (const sockinfo &a, const sockinfo &b)
-{
-  return a.host == b.host && a.port == b.port;
-}
-
-inline bool
-operator < (const sockinfo &a, const sockinfo &b)
-{
-  return a.host < b.host 
-         || (a.host == b.host && a.port < b.port);
-}
-
 struct sliding_window {
   u32 v[(WINDOWSIZE + 31) / 32];
   u32 seq;
@@ -160,7 +100,6 @@ struct sliding_window {
           u32 *cell = v + (s >> 5);
           u32 mask = 1 << (s & 31);
 
-          //printf ("received seqno %08lx, seq %08lx, mask %08lx is %08lx\n", seqno, seq, mask, ismask);
           if (*cell & mask)
             {
               slog (L_ERR, _("received duplicate packet (received %08lx, expected %08lx)\n"

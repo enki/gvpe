@@ -22,6 +22,7 @@
 #include "config.h"
 
 #include <cstdlib>
+#include <cstring>
 
 #include <net/if.h>
 
@@ -33,6 +34,11 @@ struct net_packet {
   u32 len; // actually u16, but padding...
 
   u8 &operator[] (u16 offset);
+
+  void skip_hdr (u16 hdrsize)
+    {
+      memmove ((void *)&(*this)[0], (void *)&(*this)[hdrsize], len -= hdrsize);
+    }
 
   bool is_arp ()
     {

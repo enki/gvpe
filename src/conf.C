@@ -33,6 +33,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <netinet/in.h>
+
 #include <openssl/err.h>
 #include <openssl/pem.h>
 #include <openssl/rsa.h>
@@ -68,10 +70,13 @@ void configuration::init ()
   rekey     = DEFAULT_REKEY;
   keepalive = DEFAULT_KEEPALIVE;
   llevel    = L_INFO;
+  ip_proto  = IPPROTO_GRE;
 
-  default_node.port        = DEFAULT_PORT;
+  default_node.udp_port    = DEFAULT_UDPPORT;
   default_node.connectmode = conf_node::C_ALWAYS;
   default_node.compress    = true;
+  default_node.can_send    = PROT_UDPv4;
+  default_node.can_recv    = PROT_IPv4;
 }
 
 void configuration::cleanup()
@@ -96,6 +101,18 @@ configuration::clear_config ()
   cleanup ();
   init ();
 }
+
+#define parse_bool(target,name,trueval,falseval)		\
+  if (!strcmp (val, "yes"))		target = trueval;	\
+  else if (!strcmp (val, "no"))		target = falseval;	\
+  else if (!strcmp (val, "true"))	target = trueval;	\
+  else if (!strcmp (val, "false"))	target = falseval;	\
+  else if (!strcmp (val, "on"))		target = trueval;	\
+  else if (!strcmp (val, "off"))	target = falseval;	\
+  else								\
+    slog (L_WARN,						\
+            _("illegal value for '%s', only 'yes|true|on' or 'no|false|off' allowed, at '%s' line %d"), \
+            name, var, fname, lineno);
 
 void configuration::read_config (bool need_keys)
 {
@@ -169,6 +186,8 @@ retry:
               else
                 slog (L_WARN, "'%s': %s, at '%s' line %d", val, UNKNOWN_LOGLEVEL, fname, line);
             }
+          else if (!strcmp (var, "ip-proto"))
+            ip_proto = atoi (val);
 
           // per config
           else if (!strcmp (var, "node"))
@@ -221,14 +240,7 @@ retry:
             prikeyfile = strdup (val);
           else if (!strcmp (var, "ifpersist"))
             {
-              if (!strcmp (val, "yes"))
-                ifpersist = true;
-              else if (!strcmp (val, "no"))
-                ifpersist = false;
-              else
-                slog (L_WARN,
-                        _("illegal value for 'ifpersist', only 'yes' or 'no' allowed, at '%s' line %d"),
-                        var, fname, lineno);
+              parse_bool (ifpersist, "ifpersist", true, false);
             }
           else if (!strcmp (var, "ifname"))
             ifname = strdup (val);
@@ -254,9 +266,7 @@ retry:
 
           /* node-specific, defaultable */
           else if (!strcmp (var, "udp-port"))
-            node->port = atoi (val);
-          else if (!strcmp (var, "port")) //deprecated
-            node->port = atoi (val);
+            node->udp_port = atoi (val);
           else if (!strcmp (var, "router-priority"))
             node->routerprio = atoi (val);
           else if (!strcmp (var, "connect"))
@@ -276,26 +286,28 @@ retry:
             }
           else if (!strcmp (var, "inherit-tos"))
             {
-              if (!strcmp (val, "yes"))
-                node->inherit_tos = true;
-              else if (!strcmp (val, "no"))
-                node->inherit_tos = false;
-              else
-                slog (L_WARN,
-                        _("illegal value for 'compress', only 'yes' or 'no' allowed, at '%s' line %d"),
-                        var, fname, lineno);
+              parse_bool (node->inherit_tos, "inherit-tos", true, false);
             }
-
           else if (!strcmp (var, "compress"))
             {
-              if (!strcmp (val, "yes"))
-                node->compress = true;
-              else if (!strcmp (val, "no"))
-                node->compress = false;
-              else
-                slog (L_WARN,
-                        _("illegal value for 'compress', only 'yes' or 'no' allowed, at '%s' line %d"),
-                        var, fname, lineno);
+              parse_bool (node->compress, "compress", true, false);
+            }
+          // all these bool options really really cost a lot of executable size!
+          else if (!strcmp (var, "can-send-udp"))
+            {
+              u8 v; parse_bool (v, "can-send-udp", PROT_UDPv4, 0); node->can_send = (node->can_send & ~PROT_UDPv4) | v;
+            }
+          else if (!strcmp (var, "can-recv-udp"))
+            {
+              u8 v; parse_bool (v, "can-recv-udp", PROT_UDPv4, 0); node->can_recv = (node->can_recv & ~PROT_UDPv4) | v;
+            }
+          else if (!strcmp (var, "can-send-rawip"))
+            {
+              u8 v; parse_bool (v, "can-send-rawip", PROT_IPv4, 0); node->can_send = (node->can_send & ~PROT_IPv4) | v;
+            }
+          else if (!strcmp (var, "can-recv-rawip"))
+            {
+              u8 v; parse_bool (v, "can-recv-rawip", PROT_IPv4, 0); node->can_recv = (node->can_recv & ~PROT_IPv4) | v;
             }
 
           // unknown or misplaced
@@ -398,7 +410,7 @@ conf_node::print ()
           nodename,
           hostname ? hostname : "",
           hostname ? ":" : "",
-          hostname ? port : 0
+          hostname ? udp_port : 0
           );
 }
 

@@ -35,8 +35,13 @@
 #include "global.h"
 
 #define DEFAULT_REKEY		3600
-#define DEFAULT_KEEPALIVE	60	// one keepalive/minute (it's just 48 bytes...)
-#define DEFAULT_PORT		655	// same as tinc, conflicts would be rara
+#define DEFAULT_KEEPALIVE	60	// one keepalive/minute (it's just 8 bytes...)
+#define DEFAULT_UDPPORT		655	// same as tinc, conflicts would be rare
+
+enum {
+  PROT_UDPv4 = 1, // udp over ipv4
+  PROT_IPv4  = 2, // generic ip protocol
+};
 
 struct conf_node {
   int id;         // the id of this node, a 12-bit-number
@@ -45,21 +50,17 @@ struct conf_node {
   char *nodename; // nodename, an internal nickname.
 
   char *hostname; // hostname, if known, or NULL.
-  u16 port;       // the port to bind to
+
+  u8 can_send, can_recv;
+  u16 udp_port;   // the port to bind to
 
   enum connectmode { C_ONDEMAND, C_NEVER, C_ALWAYS, C_DISABLED } connectmode;
   bool compress;
   bool inherit_tos; // inherit TOS in packets send to this destination
-  u32 can_recv, can_send;
 
   u32 routerprio;
 
   void print ();
-
-  conf_node()
-  {
-    memset (this, 0, sizeof *this);
-  }
 
   ~conf_node ()
     {
@@ -81,6 +82,7 @@ struct configuration {
   double keepalive; // keepalive probes interval
   char *ifname;     // the interface name (tap0 ...)
   bool ifpersist;   // should the interface be persistent
+  u8 ip_proto;    // the ip protocol to use
   char *prikeyfile;
   loglevel llevel;
   RSA *rsa_key;     // our private rsa key

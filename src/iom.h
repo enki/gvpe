@@ -41,6 +41,8 @@ class io_manager {
   void idle_cb (tstamp &ts); time_watcher *idle;
 public:
 
+  void reschedule_time_watchers ();
+
   // register a watcher
   void reg (int fd, short events, io_watcher *w);
   void unreg (const io_watcher *w);
@@ -104,6 +106,11 @@ struct io_watcher : callback<void, short> {
     : callback<void, short>(object,method)
     { }
 
+  ~io_watcher ()
+    {
+      iom.unreg (this);
+    }
+
   void start (int fd, short events)
     {
       iom.reg (fd, events, this);
@@ -118,12 +125,19 @@ struct io_watcher : callback<void, short> {
 #define TSTAMP_CANCEL -1.
 
 struct time_watcher : callback<void, tstamp &> {
+  bool registered; // already registered?
   tstamp at;
 
   template<class O1, class O2>
   time_watcher (O1 *object, void (O2::*method)(tstamp &))
     : callback<void, tstamp &>(object,method)
+    , registered(false)
     { }
+
+  ~time_watcher ()
+    {
+      iom.unreg (this);
+    }
 
   void set (tstamp when);
   void trigger ();

@@ -182,6 +182,7 @@ sighup_handler (int a)
 RETSIGTYPE
 sigusr1_handler (int a)
 {
+  network.dump_status ();
 }
 
 RETSIGTYPE

@@ -28,6 +28,7 @@
 #include "conf.h"
 #include "iom.h"
 #include "util.h"
+#include "sockinfo.h"
 #include "device.h"
 
 /* Protocol version. Different major versions are incompatible,
@@ -70,13 +71,15 @@ struct connection
     conf_node *conf;
     struct vpn *vpn;
 
-    SOCKADDR sa; // the current(!) destination ip to send packets to
+    sockinfo si; // the current(!) destination ip to send packets to
     int retry_cnt;
 
     tstamp last_activity;	// time of last packet received
 
     u32 oseqno;
     sliding_window iseqno;
+
+    u8 prot_send, prot_recv;
 
     pkt_queue queue;
 
@@ -93,19 +96,22 @@ struct connection
     void rekey_cb (tstamp &ts); time_watcher rekey; // next rekying (actually current reset + reestablishing)
     void keepalive_cb (tstamp &ts); time_watcher keepalive; // next keepalive probe
 
-    void send_auth_request (SOCKADDR *sa, bool initiate);
-    void send_auth_response (SOCKADDR *sa, const rsaid &id, const rsachallenge &chg);
-    void send_reset (SOCKADDR *dsa);
-    void send_ping (SOCKADDR *dss, u8 pong = 0);
+    void send_auth_request (const sockinfo &si, bool initiate);
+    void send_auth_response (const sockinfo &si, const rsaid &id, const rsachallenge &chg);
+    void send_reset (const sockinfo &dsi);
+    void send_ping (const sockinfo &dsi, u8 pong = 0);
     void send_data_packet (tap_packet *pkt, bool broadcast = false);
     void inject_data_packet (tap_packet *pkt, bool broadcast = false);
     void connect_request (int id);
 
-    void recv_vpn_packet (vpn_packet *pkt, SOCKADDR *rsa);
+    void send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos = IPTOS_RELIABILITY);
+    void recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi);
 
     void script_node ();
     const char *script_node_up (int);
     const char *script_node_down (int);
+
+    void dump_status ();
 
     connection(struct vpn *vpn_);
     ~connection ();
@@ -113,7 +119,9 @@ struct connection
 
 struct vpn
   {
-    int socket_fd;
+    int udpv4_fd;
+    int ipv4_fd;
+
     int events;
 
     enum {
@@ -130,18 +138,25 @@ struct vpn
 
     connection *find_router ();
 
-    void send_vpn_packet (vpn_packet *pkt, SOCKADDR *sa, int tos = IPTOS_RELIABILITY);
     void reconnect_all ();
     void shutdown_all ();
     void connect_request (int id);
 
-    void vpn_ev (short revents); io_watcher vpn_ev_watcher;
-    void udp_ev (short revents); io_watcher udp_ev_watcher;
+    void tap_ev (short revents); io_watcher tap_ev_watcher;
+    void ipv4_ev (short revents); io_watcher ipv4_ev_watcher;
+    void udpv4_ev (short revents); io_watcher udpv4_ev_watcher;
+
+    void recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi);
+
+    void send_udpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos = IPTOS_RELIABILITY);
+    void send_ipv4_packet (vpn_packet *pkt, const sockinfo &si, int tos = IPTOS_RELIABILITY);
 
     vpn ();
     ~vpn ();
 
     int setup ();
+
+    void dump_status ();
 
     const char *script_if_up (int);
   };

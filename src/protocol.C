@@ -60,6 +60,15 @@ static time_t next_timecheck;
 
 #define MAGIC "vped\xbd\xc6\xdb\x82"	// 8 bytes of magic
 
+static u8
+best_protocol (u8 protset)
+{
+  if (protset & PROT_IPv4)
+    return PROT_IPv4;
+
+  return PROT_UDPv4;
+}
+
 struct crypto_ctx
   {
     EVP_CIPHER_CTX cctx;
@@ -239,15 +248,14 @@ struct net_rateinfo {
 // only do action once every x seconds per host whole allowing bursts.
 // this implementation ("splay list" ;) is inefficient,
 // but low on resources.
-struct net_rate_limiter : private list<net_rateinfo>
+struct net_rate_limiter : list<net_rateinfo>
 {
   static const double ALPHA  = 1. - 1. / 90.; // allow bursts
   static const double CUTOFF = 20.;           // one event every CUTOFF seconds
   static const double EXPIRE = CUTOFF * 30.;  // expire entries after this time
 
+  bool can (const sockinfo &si) { return can((u32)si.host);             }
   bool can (u32 host);
-  bool can (SOCKADDR *sa) { return can((u32)sa->sin_addr.s_addr); }
-  bool can (sockinfo &si) { return can((u32)si.host);             }
 };
 
 net_rate_limiter auth_rate_limiter, reset_rate_limiter;
@@ -364,17 +372,17 @@ struct vpn_packet : hmac_packet
 
     void set_hdr (ptype type, unsigned int dst);
 
-    unsigned int src ()
+    unsigned int src () const
     {
       return src1 | ((srcdst >> 4) << 8);
     }
 
-    unsigned int dst ()
+    unsigned int dst () const
     {
       return dst1 | ((srcdst & 0xf) << 8);
     }
 
-    ptype typ ()
+    ptype typ () const
     {
       return (ptype) type;
     }
@@ -539,49 +547,54 @@ struct config_packet : vpn_packet
            | (ENABLE_COMPRESSION ? 0x01 : 0x00);
   }
 
-  void setup (ptype type, int dst)
-  {
-    prot_major = PROTOCOL_MAJOR;
-    prot_minor = PROTOCOL_MINOR;
-    randsize = RAND_SIZE;
-    hmaclen = HMACLENGTH;
-    flags = curflags ();
-    challengelen = sizeof (rsachallenge);
-
-    cipher_nid = htonl (EVP_CIPHER_nid (CIPHER));
-    digest_nid = htonl (EVP_MD_type (RSA_HASH));
-    hmac_nid   = htonl (EVP_MD_type (DIGEST));
-
-    len = sizeof (*this) - sizeof (net_packet);
-    set_hdr (type, dst);
-  }
-
-  bool chk_config ()
-    {
-      return prot_major == PROTOCOL_MAJOR
-             && randsize == RAND_SIZE
-             && hmaclen == HMACLENGTH
-             && flags == curflags ()
-             && challengelen == sizeof (rsachallenge)
-             && cipher_nid == htonl (EVP_CIPHER_nid (CIPHER))
-             && digest_nid == htonl (EVP_MD_type (RSA_HASH))
-             && hmac_nid   == htonl (EVP_MD_type (DIGEST));
-    }
+  void setup (ptype type, int dst);
+  bool chk_config () const;
 };
+
+void config_packet::setup (ptype type, int dst)
+{
+  prot_major = PROTOCOL_MAJOR;
+  prot_minor = PROTOCOL_MINOR;
+  randsize = RAND_SIZE;
+  hmaclen = HMACLENGTH;
+  flags = curflags ();
+  challengelen = sizeof (rsachallenge);
+
+  cipher_nid = htonl (EVP_CIPHER_nid (CIPHER));
+  digest_nid = htonl (EVP_MD_type (RSA_HASH));
+  hmac_nid   = htonl (EVP_MD_type (DIGEST));
+
+  len = sizeof (*this) - sizeof (net_packet);
+  set_hdr (type, dst);
+}
+
+bool config_packet::chk_config () const
+{
+  return prot_major == PROTOCOL_MAJOR
+         && randsize == RAND_SIZE
+         && hmaclen == HMACLENGTH
+         && flags == curflags ()
+         && challengelen == sizeof (rsachallenge)
+         && cipher_nid == htonl (EVP_CIPHER_nid (CIPHER))
+         && digest_nid == htonl (EVP_MD_type (RSA_HASH))
+         && hmac_nid   == htonl (EVP_MD_type (DIGEST));
+}
 
 struct auth_req_packet : config_packet
 {
   char magic[8];
-  u8 initiate; // false if this is just an automatic reply
-  u8 pad1, pad2, pad3;
+  u8 initiate, can_recv; // false if this is just an automatic reply
+  u8 pad2, pad3;
   rsaid id;
   rsaencrdata encr;
 
-  auth_req_packet (int dst, bool initiate_)
+  auth_req_packet (int dst, bool initiate_, u8 can_recv_)
   {
     config_packet::setup (PT_AUTH_REQ, dst);
-    initiate = !!initiate_;
     strncpy (magic, MAGIC, 8);
+    initiate = !!initiate_;
+    can_recv = can_recv_;
+
     len = sizeof (*this) - sizeof (net_packet);
   }
 };
@@ -596,6 +609,7 @@ struct auth_res_packet : config_packet
   auth_res_packet (int dst)
   {
     config_packet::setup (PT_AUTH_RES, dst);
+
     len = sizeof (*this) - sizeof (net_packet);
   }
 };
@@ -615,15 +629,17 @@ struct connect_req_packet : vpn_packet
 
 struct connect_info_packet : vpn_packet
 {
-  u8 id;
-  u8 pad1, pad2, pad3;
+  u8 id, can_recv;
+  u8 pad1, pad2;
   sockinfo si;
 
-  connect_info_packet (int dst, int id_, sockinfo &si_)
+  connect_info_packet (int dst, int id_, sockinfo &si_, u8 can_recv_)
   {
     id = id_;
+    can_recv = can_recv_;
     si = si_;
     set_hdr (PT_CONNECT_INFO, dst);
+
     len = sizeof (*this) - sizeof (net_packet);
   }
 };
@@ -631,84 +647,62 @@ struct connect_info_packet : vpn_packet
 /////////////////////////////////////////////////////////////////////////////
 
 void
-fill_sa (SOCKADDR *sa, conf_node *conf)
-{
-  sa->sin_family = AF_INET;
-  sa->sin_port = htons (conf->port);
-  sa->sin_addr.s_addr = 0;
-
-  if (conf->hostname)
-    {
-      struct hostent *he = gethostbyname (conf->hostname);
-
-      if (he
-          && he->h_addrtype == AF_INET && he->h_length == 4 && he->h_addr_list[0])
-        {
-          //sa->sin_family = he->h_addrtype;
-          memcpy (&sa->sin_addr, he->h_addr_list[0], 4);
-        }
-      else
-        slog (L_NOTICE, _("unable to resolve host '%s'"), conf->hostname);
-    }
-}
-
-void
 connection::reset_dstaddr ()
 {
-  fill_sa (&sa, conf);
+  si.set (conf);
 }
 
 void
-connection::send_ping (SOCKADDR *dsa, u8 pong)
+connection::send_ping (const sockinfo &si, u8 pong)
 {
   ping_packet *pkt = new ping_packet;
 
   pkt->setup (conf->id, pong ? ping_packet::PT_PONG : ping_packet::PT_PING);
-  vpn->send_vpn_packet (pkt, dsa, IPTOS_LOWDELAY);
+  send_vpn_packet (pkt, si, IPTOS_LOWDELAY);
 
   delete pkt;
 }
 
 void
-connection::send_reset (SOCKADDR *dsa)
+connection::send_reset (const sockinfo &si)
 {
-  if (reset_rate_limiter.can (dsa) && connectmode != conf_node::C_DISABLED)
+  if (reset_rate_limiter.can (si) && connectmode != conf_node::C_DISABLED)
     {
       config_packet *pkt = new config_packet;
 
       pkt->setup (vpn_packet::PT_RESET, conf->id);
-      vpn->send_vpn_packet (pkt, dsa, IPTOS_MINCOST);
+      send_vpn_packet (pkt, si, IPTOS_MINCOST);
 
       delete pkt;
     }
 }
 
 void
-connection::send_auth_request (SOCKADDR *sa, bool initiate)
+connection::send_auth_request (const sockinfo &si, bool initiate)
 {
-  if (!initiate || auth_rate_limiter.can (sa))
-    {
-      auth_req_packet *pkt = new auth_req_packet (conf->id, initiate);
+  auth_req_packet *pkt = new auth_req_packet (conf->id, initiate, THISNODE->can_recv);
 
-      rsachallenge chg;
+  // the next line is very conservative
+  prot_send = best_protocol (THISNODE->can_send & THISNODE->can_recv & conf->can_recv);
 
-      rsa_cache.gen (pkt->id, chg);
+  rsachallenge chg;
 
-      if (0 > RSA_public_encrypt (sizeof chg,
-                                  (unsigned char *)&chg, (unsigned char *)&pkt->encr,
-                                  conf->rsa_key, RSA_PKCS1_OAEP_PADDING))
-        fatal ("RSA_public_encrypt error");
+  rsa_cache.gen (pkt->id, chg);
 
-      slog (L_TRACE, ">>%d PT_AUTH_REQ [%s]", conf->id, (const char *)sockinfo (sa));
+  if (0 > RSA_public_encrypt (sizeof chg,
+                              (unsigned char *)&chg, (unsigned char *)&pkt->encr,
+                              conf->rsa_key, RSA_PKCS1_OAEP_PADDING))
+    fatal ("RSA_public_encrypt error");
 
-      vpn->send_vpn_packet (pkt, sa, IPTOS_RELIABILITY); // rsa is very very costly
+  slog (L_TRACE, ">>%d PT_AUTH_REQ [%s]", conf->id, (const char *)si);
 
-      delete pkt;
-    }
+  send_vpn_packet (pkt, si, IPTOS_RELIABILITY); // rsa is very very costly
+
+  delete pkt;
 }
 
 void
-connection::send_auth_response (SOCKADDR *sa, const rsaid &id, const rsachallenge &chg)
+connection::send_auth_response (const sockinfo &si, const rsaid &id, const rsachallenge &chg)
 {
   auth_res_packet *pkt = new auth_res_packet (conf->id);
 
@@ -718,9 +712,9 @@ connection::send_auth_response (SOCKADDR *sa, const rsaid &id, const rsachalleng
 
   pkt->hmac_set (octx);
 
-  slog (L_TRACE, ">>%d PT_AUTH_RES [%s]", conf->id, (const char *)sockinfo (sa));
+  slog (L_TRACE, ">>%d PT_AUTH_RES [%s]", conf->id, (const char *)si);
 
-  vpn->send_vpn_packet (pkt, sa, IPTOS_RELIABILITY); // rsa is very very costly
+  send_vpn_packet (pkt, si, IPTOS_RELIABILITY); // rsa is very very costly
 
   delete pkt;
 }
@@ -744,11 +738,13 @@ connection::establish_connection_cb (tstamp &ts)
       if (conf->hostname)
         {
           reset_dstaddr ();
-          if (sa.sin_addr.s_addr)
+          if (si.host && auth_rate_limiter.can (si))
+           {
             if (retry_cnt < 4)
-              send_auth_request (&sa, true);
-            else if (auth_rate_limiter.can (&sa))
-              send_ping (&sa, 0);
+              send_auth_request (si, true);
+            else
+              send_ping (si, 0);
+           }
         }
       else
         vpn->connect_request (conf->id);
@@ -761,7 +757,7 @@ connection::reset_connection ()
   if (ictx && octx)
     {
       slog (L_INFO, _("%s(%s): connection lost"),
-            conf->nodename, (const char *)sockinfo (sa));
+            conf->nodename, (const char *)si);
 
       if (::conf.script_node_down)
         run_script (run_script_cb (this, &connection::script_node_down), false);
@@ -770,10 +766,10 @@ connection::reset_connection ()
   delete ictx; ictx = 0;
   delete octx; octx = 0;
 
-  sa.sin_port = 0;
-  sa.sin_addr.s_addr = 0;
+  si.host= 0;
 
   last_activity = 0;
+  retry_cnt = 0;
 
   rekey.reset ();
   keepalive.reset ();
@@ -784,7 +780,7 @@ void
 connection::shutdown ()
 {
   if (ictx && octx)
-    send_reset (&sa);
+    send_reset (si);
 
   reset_connection ();
 }
@@ -799,7 +795,7 @@ connection::rekey_cb (tstamp &ts)
 }
 
 void
-connection::send_data_packet (tap_packet * pkt, bool broadcast)
+connection::send_data_packet (tap_packet *pkt, bool broadcast)
 {
   vpndata_packet *p = new vpndata_packet;
   int tos = 0;
@@ -810,7 +806,7 @@ connection::send_data_packet (tap_packet * pkt, bool broadcast)
     tos = (*pkt)[15] & IPTOS_TOS_MASK;
 
   p->setup (this, broadcast ? 0 : conf->id, &((*pkt)[6 + 6]), pkt->len - 6 - 6, ++oseqno); // skip 2 macs
-  vpn->send_vpn_packet (p, &sa, tos);
+  send_vpn_packet (p, si, tos);
 
   delete p;
 
@@ -833,7 +829,7 @@ connection::inject_data_packet (tap_packet *pkt, bool broadcast)
 }
 
 void
-connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
+connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 {
   last_activity = NOW;
 
@@ -844,16 +840,15 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
     {
     case vpn_packet::PT_PING:
       // we send pings instead of auth packets after some retries,
-      // so reset the retry counter and establish a conenction
-      // when we receive a pong.
+      // so reset the retry counter and establish a connection
+      // when we receive a ping.
       if (!ictx && !octx)
         {
-          retry_cnt = 0;
-          establish_connection.at = 0;
-          establish_connection ();
+          if (auth_rate_limiter.can (rsi))
+            send_auth_request (rsi, true);
         }
       else
-        send_ping (ssa, 1); // pong
+        send_ping (rsi, 1); // pong
 
       break;
 
@@ -869,7 +864,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
         if (!p->chk_config ())
           {
             slog (L_WARN, _("%s(%s): protocol mismatch, disabling node"),
-                  conf->nodename, (const char *)sockinfo (ssa));
+                  conf->nodename, (const char *)rsi);
             connectmode = conf_node::C_DISABLED;
           }
         else if (connectmode == conf_node::C_ALWAYS)
@@ -878,7 +873,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
       break;
 
     case vpn_packet::PT_AUTH_REQ:
-      if (auth_rate_limiter.can (ssa))
+      if (auth_rate_limiter.can (rsi))
         {
           auth_req_packet *p = (auth_req_packet *) pkt;
 
@@ -888,11 +883,11 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
             {
               if (p->prot_minor != PROTOCOL_MINOR)
                 slog (L_INFO, _("%s(%s): protocol minor version mismatch: ours is %d, %s's is %d."),
-                      conf->nodename, (const char *)sockinfo (ssa),
+                      conf->nodename, (const char *)rsi,
                       PROTOCOL_MINOR, conf->nodename, p->prot_minor);
 
               if (p->initiate)
-                send_auth_request (ssa, false);
+                send_auth_request (rsi, false);
 
               rsachallenge k;
 
@@ -900,7 +895,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
                                            (unsigned char *)&p->encr, (unsigned char *)&k,
                                            ::conf.rsa_key, RSA_PKCS1_OAEP_PADDING))
                 slog (L_ERR, _("%s(%s): challenge illegal or corrupted"),
-                      conf->nodename, (const char *)sockinfo (ssa));
+                      conf->nodename, (const char *)rsi);
               else
                 {
                   retry_cnt = 0;
@@ -916,13 +911,14 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
                   octx   = new crypto_ctx (k, 1);
                   oseqno = ntohl (*(u32 *)&k[CHG_SEQNO]) & 0x7fffffff;
 
-                  send_auth_response (ssa, p->id, k);
+                  conf->can_recv = p->can_recv;
+                  send_auth_response (rsi, p->id, k);
 
                   break;
                 }
             }
 
-          send_reset (ssa);
+          send_reset (rsi);
         }
 
       break;
@@ -937,14 +933,14 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
           {
             if (p->prot_minor != PROTOCOL_MINOR)
               slog (L_INFO, _("%s(%s): protocol minor version mismatch: ours is %d, %s's is %d."),
-                    conf->nodename, (const char *)sockinfo (ssa),
+                    conf->nodename, (const char *)rsi,
                     PROTOCOL_MINOR, conf->nodename, p->prot_minor);
 
             rsachallenge chg;
 
             if (!rsa_cache.find (p->id, chg))
               slog (L_ERR, _("%s(%s): unrequested auth response"),
-                    conf->nodename, (const char *)sockinfo (ssa));
+                    conf->nodename, (const char *)rsi);
             else
               {
                 crypto_ctx *cctx = new crypto_ctx (chg, 0);
@@ -952,7 +948,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
                 if (!p->hmac_chk (cctx))
                   slog (L_ERR, _("%s(%s): hmac authentication error on auth response, received invalid packet\n"
                                  "could be an attack, or just corruption or an synchronization error"),
-                        conf->nodename, (const char *)sockinfo (ssa));
+                        conf->nodename, (const char *)rsi);
                 else
                   {
                     rsaresponse h;
@@ -967,7 +963,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
 
                         iseqno.reset (ntohl (*(u32 *)&chg[CHG_SEQNO]) & 0x7fffffff); // at least 2**31 sequence numbers are valid
 
-                        sa = *ssa;
+                        si = rsi;
 
                         rekey.set (NOW + ::conf.rekey);
                         keepalive.set (NOW + ::conf.keepalive);
@@ -982,7 +978,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
                         connectmode = conf->connectmode;
 
                         slog (L_INFO, _("%s(%s): connection established, protocol version %d.%d"),
-                              conf->nodename, (const char *)sockinfo (ssa),
+                              conf->nodename, (const char *)rsi,
                               p->prot_major, p->prot_minor);
 
                         if (::conf.script_node_up)
@@ -992,7 +988,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
                       }
                     else
                       slog (L_ERR, _("%s(%s): sent and received challenge do not match"),
-                            conf->nodename, (const char *)sockinfo (ssa));
+                            conf->nodename, (const char *)rsi);
                   }
 
                 delete cctx;
@@ -1000,12 +996,12 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
           }
       }
 
-      send_reset (ssa);
+      send_reset (rsi);
       break;
 
     case vpn_packet::PT_DATA_COMPRESSED:
 #if !ENABLE_COMPRESSION
-      send_reset (ssa);
+      send_reset (rsi);
       break;
 #endif
 
@@ -1015,12 +1011,12 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
         {
           vpndata_packet *p = (vpndata_packet *)pkt;
 
-          if (*ssa == sa)
+          if (rsi == si)
             {
               if (!p->hmac_chk (ictx))
                 slog (L_ERR, _("%s(%s): hmac authentication error, received invalid packet\n"
                                "could be an attack, or just corruption or an synchronization error"),
-                      conf->nodename, (const char *)sockinfo (ssa));
+                      conf->nodename, (const char *)rsi);
               else
                 {
                   u32 seqno;
@@ -1046,14 +1042,14 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
                 }
             }
           else
-            slog (L_ERR,  _("received data packet from unknown source %s"), (const char *)sockinfo (ssa));//D
+            slog (L_ERR,  _("received data packet from unknown source %s"), (const char *)rsi);
         }
 
-      send_reset (ssa);
+      send_reset (rsi);
       break;
 
     case vpn_packet::PT_CONNECT_REQ:
-      if (ictx && octx && *ssa == sa && pkt->hmac_chk (ictx))
+      if (ictx && octx && rsi == si && pkt->hmac_chk (ictx))
         {
           connect_req_packet *p = (connect_req_packet *) pkt;
 
@@ -1069,29 +1065,25 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
               // send connect_info packets to both sides, in case one is
               // behind a nat firewall (or both ;)
               {
-                sockinfo si(sa);
-                
                 slog (L_TRACE, ">>%d PT_CONNECT_INFO(%d,%s)\n",
                                c->conf->id, conf->id, (const char *)si);
 
-                connect_info_packet *r = new connect_info_packet (c->conf->id, conf->id, si);
+                connect_info_packet *r = new connect_info_packet (c->conf->id, conf->id, si, conf->can_recv);
 
                 r->hmac_set (c->octx);
-                vpn->send_vpn_packet (r, &c->sa);
+                send_vpn_packet (r, c->si);
 
                 delete r;
               }
 
               {
-                sockinfo si(c->sa);
-                
                 slog (L_TRACE, ">>%d PT_CONNECT_INFO(%d,%s)\n",
-                               conf->id, c->conf->id, (const char *)si);
+                               conf->id, c->conf->id, (const char *)c->si);
 
-                connect_info_packet *r = new connect_info_packet (conf->id, c->conf->id, si);
+                connect_info_packet *r = new connect_info_packet (conf->id, c->conf->id, c->si, c->conf->can_recv);
 
                 r->hmac_set (octx);
-                vpn->send_vpn_packet (r, &sa);
+                send_vpn_packet (r, si);
 
                 delete r;
               }
@@ -1101,7 +1093,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
       break;
 
     case vpn_packet::PT_CONNECT_INFO:
-      if (ictx && octx && *ssa == sa && pkt->hmac_chk (ictx))
+      if (ictx && octx && rsi == si && pkt->hmac_chk (ictx))
         {
           connect_info_packet *p = (connect_info_packet *) pkt;
 
@@ -1112,13 +1104,14 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
           slog (L_TRACE, "<<%d PT_CONNECT_INFO(%d,%s) (%d)",
                          conf->id, p->id, (const char *)p->si, !c->ictx && !c->octx);
 
-          c->send_auth_request (p->si.sa (), true);
+          c->conf->can_recv = p->can_recv;
+          c->send_auth_request (p->si, true);
         }
 
       break;
 
     default:
-      send_reset (ssa);
+      send_reset (rsi);
       break;
 
     }
@@ -1136,7 +1129,7 @@ void connection::keepalive_cb (tstamp &ts)
   else if (conf->connectmode != conf_node::C_ONDEMAND
         || THISNODE->connectmode != conf_node::C_ONDEMAND)
     {
-      send_ping (&sa);
+      send_ping (si);
       ts = NOW + 5;
     }
   else
@@ -1150,7 +1143,7 @@ void connection::connect_request (int id)
 
   slog (L_TRACE, ">>%d PT_CONNECT_REQ(%d)", id, conf->id);
   p->hmac_set (octx);
-  vpn->send_vpn_packet (p, &sa);
+  send_vpn_packet (p, si);
 
   delete p;
 }
@@ -1160,14 +1153,10 @@ void connection::script_node ()
   vpn->script_if_up (0);
 
   char *env;
-  asprintf (&env, "DESTID=%d",   conf->id);
-  putenv (env);
-  asprintf (&env, "DESTNODE=%s", conf->nodename);
-  putenv (env);
-  asprintf (&env, "DESTIP=%s",   inet_ntoa (sa.sin_addr));
-  putenv (env);
-  asprintf (&env, "DESTPORT=%d", ntohs (sa.sin_port));
-  putenv (env);
+  asprintf (&env, "DESTID=%d",   conf->id); putenv (env);
+  asprintf (&env, "DESTNODE=%s", conf->nodename); putenv (env);
+  asprintf (&env, "DESTIP=%s",   si.ntoa ()); putenv (env);
+  asprintf (&env, "DESTPORT=%d", ntohs (si.port)); putenv (env);
 }
 
 const char *connection::script_node_up (int)
@@ -1186,6 +1175,16 @@ const char *connection::script_node_down (int)
   putenv ("STATE=down");
 
   return ::conf.script_node_up ? ::conf.script_node_down : "node-down";
+}
+
+// send a vpn packet out to other hosts
+void
+connection::send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos)
+{
+  if (prot_send & PROT_IPv4)
+    vpn->send_ipv4_packet (pkt, si, tos);
+  else
+    vpn->send_udpv4_packet (pkt, si, tos);
 }
 
 connection::connection(struct vpn *vpn_)
@@ -1237,37 +1236,78 @@ const char *vpn::script_if_up (int)
 }
 
 int
-vpn::setup (void)
+vpn::setup ()
 {
-  struct sockaddr_in sa;
+  u8 prots = 0;
 
-  socket_fd = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-  if (socket_fd < 0)
-    return -1;
+  for (configuration::node_vector::iterator i = conf.nodes.begin ();
+       i != conf.nodes.end (); ++i)
+    prots |= (*i)->can_send | (*i)->can_recv;
 
-  fill_sa (&sa, THISNODE);
+  sockinfo si;
 
-  if (bind (socket_fd, (sockaddr *)&sa, sizeof (sa)))
+  si.set (THISNODE);
+
+  udpv4_fd = -1;
+
+  if (prots & PROT_UDPv4)
     {
-      slog (L_ERR, _("can't bind to %s: %s"), (const char *)sockinfo(sa), strerror (errno));
-      exit (1);
-    }
+      udpv4_fd = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+
+      if (udpv4_fd < 0)
+        return -1;
+
+      if (bind (udpv4_fd, si.sav4 (), si.salenv4 ()))
+        {
+          slog (L_ERR, _("can't bind udpv4 to %s: %s"), (const char *)si, strerror (errno));
+          exit (1);
+        }
 
 #ifdef IP_MTU_DISCOVER
-  // this I really consider a linux bug. I am neither connected
-  // nor do I fragment myself. Linux still sets DF and doesn't
-  // fragment for me sometimes.
-  {
-    int oval = IP_PMTUDISC_DONT;
-    setsockopt (socket_fd, SOL_IP, IP_MTU_DISCOVER, &oval, sizeof oval);
-  }
+      // this I really consider a linux bug. I am neither connected
+      // nor do I fragment myself. Linux still sets DF and doesn't
+      // fragment for me sometimes.
+      {
+        int oval = IP_PMTUDISC_DONT;
+        setsockopt (udpv4_fd, SOL_IP, IP_MTU_DISCOVER, &oval, sizeof oval);
+      }
 #endif
-  {
-    int oval = 1;
-    setsockopt (socket_fd, SOL_SOCKET, SO_REUSEADDR, &oval, sizeof oval);
-  }
 
-  udp_ev_watcher.start (socket_fd, POLLIN);
+      // standard daemon practise...
+      {
+        int oval = 1;
+        setsockopt (udpv4_fd, SOL_SOCKET, SO_REUSEADDR, &oval, sizeof oval);
+      }
+
+      udpv4_ev_watcher.start (udpv4_fd, POLLIN);
+    }
+
+  ipv4_fd = -1;
+  if (prots & PROT_IPv4)
+    {
+      ipv4_fd = socket (PF_INET, SOCK_RAW, ::conf.ip_proto);
+
+      if (ipv4_fd < 0)
+        return -1;
+
+      if (bind (ipv4_fd, si.sav4 (), si.salenv4 ()))
+        {
+          slog (L_ERR, _("can't bind ipv4 socket to %s: %s"), (const char *)si, strerror (errno));
+          exit (1);
+        }
+
+#ifdef IP_MTU_DISCOVER
+      // this I really consider a linux bug. I am neither connected
+      // nor do I fragment myself. Linux still sets DF and doesn't
+      // fragment for me sometimes.
+      {
+        int oval = IP_PMTUDISC_DONT;
+        setsockopt (ipv4_fd, SOL_IP, IP_MTU_DISCOVER, &oval, sizeof oval);
+      }
+#endif
+
+      ipv4_ev_watcher.start (ipv4_fd, POLLIN);
+    }
 
   tap = new tap_device ();
   if (!tap) //D this, of course, never catches
@@ -1278,7 +1318,7 @@ vpn::setup (void)
   
   run_script (run_script_cb (this, &vpn::script_if_up), true);
 
-  vpn_ev_watcher.start (tap->fd, POLLIN);
+  tap_ev_watcher.start (tap->fd, POLLIN);
 
   reconnect_all ();
 
@@ -1286,76 +1326,48 @@ vpn::setup (void)
 }
 
 void
-vpn::send_vpn_packet (vpn_packet *pkt, SOCKADDR *sa, int tos)
+vpn::send_ipv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
-  setsockopt (socket_fd, SOL_IP, IP_TOS, &tos, sizeof tos);
-  sendto (socket_fd, &((*pkt)[0]), pkt->len, 0, (sockaddr *)sa, sizeof (*sa));
+  setsockopt (ipv4_fd, SOL_IP, IP_TOS, &tos, sizeof tos);
+  sendto (ipv4_fd, &((*pkt)[0]), pkt->len, 0, si.sav4 (), si.salenv4 ());
 }
 
 void
-vpn::shutdown_all ()
+vpn::send_udpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
-  for (conns_vector::iterator c = conns.begin (); c != conns.end (); ++c)
-    (*c)->shutdown ();
+  setsockopt (udpv4_fd, SOL_IP, IP_TOS, &tos, sizeof tos);
+  sendto (udpv4_fd, &((*pkt)[0]), pkt->len, 0, si.sav4 (), si.salenv4 ());
 }
 
 void
-vpn::reconnect_all ()
+vpn::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 {
-  for (conns_vector::iterator c = conns.begin (); c != conns.end (); ++c)
-    delete *c;
+  unsigned int src = pkt->src ();
+  unsigned int dst = pkt->dst ();
 
-  conns.clear ();
+  slog (L_NOISE, _("<<?/%s received possible vpn packet type %d from %d to %d, length %d"),
+        (const char *)rsi, pkt->typ (), pkt->src (), pkt->dst (), pkt->len);
 
-  for (configuration::node_vector::iterator i = conf.nodes.begin ();
-       i != conf.nodes.end (); ++i)
-    {
-      connection *conn = new connection (this);
-
-      conn->conf = *i;
-      conns.push_back (conn);
-
-      conn->establish_connection ();
-    }
-}
-
-connection *vpn::find_router ()
-{
-  u32 prio = 0;
-  connection *router = 0;
-
-  for (conns_vector::iterator i = conns.begin (); i != conns.end (); ++i)
-    {
-      connection *c = *i;
-
-      if (c->conf->routerprio > prio
-          && c->connectmode == conf_node::C_ALWAYS
-          && c->conf != THISNODE
-          && c->ictx && c->octx)
-        {
-          prio = c->conf->routerprio;
-          router = c;
-        }
-    }
-
-  return router;
-}
-
-void vpn::connect_request (int id)
-{
-  connection *c = find_router ();
-
-  if (c)
-    c->connect_request (id);
-  //else // does not work, because all others must connect to the same router
-  //  // no router found, aggressively connect to all routers
-  //  for (conns_vector::iterator i = conns.begin (); i != conns.end (); ++i)
-  //    if ((*i)->conf->routerprio)
-  //      (*i)->establish_connection ();
+  if (dst > conns.size () || pkt->typ () >= vpn_packet::PT_MAX)
+    slog (L_WARN, _("<<? received CORRUPTED packet type %d from %d to %d"),
+          pkt->typ (), pkt->src (), pkt->dst ());
+  else if (dst == 0 && !THISNODE->routerprio)
+    slog (L_WARN, _("<<%d received broadcast, but we are no router"), dst);
+  else if (dst != 0 && dst != THISNODE->id)
+    slog (L_WARN,
+         _("received frame for node %d ('%s') from %s, but this is node %d ('%s')"),
+         dst, conns[dst - 1]->conf->nodename,
+         (const char *)rsi,
+         THISNODE->id, THISNODE->nodename);
+  else if (src == 0 || src > conns.size ())
+    slog (L_WARN, _("received frame from unknown node %d (%s)"),
+          src, (const char *)rsi);
+  else
+    conns[src - 1]->recv_vpn_packet (pkt, rsi);
 }
 
 void
-vpn::udp_ev (short revents)
+vpn::udpv4_ev (short revents)
 {
   if (revents & (POLLIN | POLLERR))
     {
@@ -1364,38 +1376,20 @@ vpn::udp_ev (short revents)
       socklen_t sa_len = sizeof (sa);
       int len;
 
-      len = recvfrom (socket_fd, &((*pkt)[0]), MAXSIZE, 0, (sockaddr *)&sa, &sa_len);
+      len = recvfrom (udpv4_fd, &((*pkt)[0]), MAXSIZE, 0, (sockaddr *)&sa, &sa_len);
+
+      sockinfo si(sa);
 
       if (len > 0)
         {
           pkt->len = len;
 
-          unsigned int src = pkt->src ();
-          unsigned int dst = pkt->dst ();
-
-          slog (L_NOISE, _("<<?/%s received possible vpn packet type %d from %d to %d, length %d"),
-                (const char *)sockinfo (sa), pkt->typ (), pkt->src (), pkt->dst (), pkt->len);
-
-          if (dst > conns.size () || pkt->typ () >= vpn_packet::PT_MAX)
-            slog (L_WARN, _("<<? received CORRUPTED packet type %d from %d to %d"),
-                  pkt->typ (), pkt->src (), pkt->dst ());
-          else if (dst == 0 && !THISNODE->routerprio)
-            slog (L_WARN, _("<<%d received broadcast, but we are no router"), dst);
-          else if (dst != 0 && dst != THISNODE->id)
-            slog (L_WARN,
-                 _("received frame for node %d ('%s') from %s, but this is node %d ('%s')"),
-                 dst, conns[dst - 1]->conf->nodename,
-                 (const char *)sockinfo (sa),
-                 THISNODE->id, THISNODE->nodename);
-          else if (src == 0 || src > conns.size ())
-            slog (L_WARN, _("received frame from unknown node %d (%s)"), src, (const char *)sockinfo (sa));
-          else
-            conns[src - 1]->recv_vpn_packet (pkt, &sa);
+          recv_vpn_packet (pkt, si);
         }
       else
         {
           // probably ECONNRESET or somesuch
-          slog (L_DEBUG, _("%s: %s"), (const char *)sockinfo(sa), strerror (errno));
+          slog (L_DEBUG, _("%s: %s"), (const char *)si, strerror (errno));
         }
 
       delete pkt;
@@ -1403,7 +1397,7 @@ vpn::udp_ev (short revents)
   else if (revents & POLLHUP)
     {
       // this cannot ;) happen on udp sockets
-      slog (L_ERR, _("FATAL: POLLHUP on socket fd, terminating."));
+      slog (L_ERR, _("FATAL: POLLHUP on udp v4 fd, terminating."));
       exit (1);
     }
   else
@@ -1416,7 +1410,54 @@ vpn::udp_ev (short revents)
 }
 
 void
-vpn::vpn_ev (short revents)
+vpn::ipv4_ev (short revents)
+{
+  if (revents & (POLLIN | POLLERR))
+    {
+      vpn_packet *pkt = new vpn_packet;
+      struct sockaddr_in sa;
+      socklen_t sa_len = sizeof (sa);
+      int len;
+
+      len = recvfrom (ipv4_fd, &((*pkt)[0]), MAXSIZE, 0, (sockaddr *)&sa, &sa_len);
+
+      sockinfo si(sa, PROT_IPv4);
+
+      if (len > 0)
+        {
+          pkt->len = len;
+
+          // raw sockets deliver the ipv4, but don't expect it on sends
+          // this is slow, but...
+          pkt->skip_hdr (IP_OVERHEAD);
+
+          recv_vpn_packet (pkt, si);
+        }
+      else
+        {
+          // probably ECONNRESET or somesuch
+          slog (L_DEBUG, _("%s: %s"), (const char *)si, strerror (errno));
+        }
+
+      delete pkt;
+    }
+  else if (revents & POLLHUP)
+    {
+      // this cannot ;) happen on udp sockets
+      slog (L_ERR, _("FATAL: POLLHUP on ipv4 fd, terminating."));
+      exit (1);
+    }
+  else
+    {
+      slog (L_ERR,
+              _("FATAL: unknown revents %08x in socket, terminating\n"),
+              revents);
+      exit (1);
+    }
+}
+
+void
+vpn::tap_ev (short revents)
 {
   if (revents & POLLIN)
     {
@@ -1482,17 +1523,23 @@ vpn::event_cb (tstamp &ts)
     {
       if (events & EVENT_SHUTDOWN)
         {
+          slog (L_INFO, _("preparing shutdown..."));
+
           shutdown_all ();
 
           remove_pid (pidfilename);
 
-          slog (L_INFO, _("vped terminating"));
+          slog (L_INFO, _("terminating"));
 
           exit (0);
         }
 
       if (events & EVENT_RECONNECT)
-        reconnect_all ();
+        {
+          slog (L_INFO, _("forced reconnect"));
+
+          reconnect_all ();
+        }
 
       events = 0;
     }
@@ -1500,10 +1547,99 @@ vpn::event_cb (tstamp &ts)
   ts = TSTAMP_CANCEL;
 }
 
+void
+vpn::shutdown_all ()
+{
+  for (conns_vector::iterator c = conns.begin (); c != conns.end (); ++c)
+    (*c)->shutdown ();
+}
+
+void
+vpn::reconnect_all ()
+{
+  for (conns_vector::iterator c = conns.begin (); c != conns.end (); ++c)
+    delete *c;
+
+  conns.clear ();
+
+  auth_rate_limiter.clear ();
+  reset_rate_limiter.clear ();
+
+  for (configuration::node_vector::iterator i = conf.nodes.begin ();
+       i != conf.nodes.end (); ++i)
+    {
+      connection *conn = new connection (this);
+
+      conn->conf = *i;
+      conns.push_back (conn);
+
+      conn->establish_connection ();
+    }
+}
+
+connection *vpn::find_router ()
+{
+  u32 prio = 0;
+  connection *router = 0;
+
+  for (conns_vector::iterator i = conns.begin (); i != conns.end (); ++i)
+    {
+      connection *c = *i;
+
+      if (c->conf->routerprio > prio
+          && c->connectmode == conf_node::C_ALWAYS
+          && c->conf != THISNODE
+          && c->ictx && c->octx)
+        {
+          prio = c->conf->routerprio;
+          router = c;
+        }
+    }
+
+  return router;
+}
+
+void vpn::connect_request (int id)
+{
+  connection *c = find_router ();
+
+  if (c)
+    c->connect_request (id);
+  //else // does not work, because all others must connect to the same router
+  //  // no router found, aggressively connect to all routers
+  //  for (conns_vector::iterator i = conns.begin (); i != conns.end (); ++i)
+  //    if ((*i)->conf->routerprio)
+  //      (*i)->establish_connection ();
+}
+
+void
+connection::dump_status ()
+{
+  slog (L_NOTICE, _("node %s (id %d)"), conf->nodename, conf->id);
+  slog (L_NOTICE, _("  connectmode %d (%d) / sockaddr %s / minor %d"),
+        connectmode, conf->connectmode, (const char *)si, (int)prot_minor);
+  slog (L_NOTICE, _("  ictx/octx %08lx/%08lx / oseqno %d / retry_cnt %d"),
+        (long)ictx, (long)octx, (int)oseqno, (int)retry_cnt);
+  slog (L_NOTICE, _("  establish_conn %ld / rekey %ld / keepalive %ld"),
+        (long)(establish_connection.at), (long)(rekey.at), (long)(keepalive.at));
+}
+
+void
+vpn::dump_status ()
+{
+  slog (L_NOTICE, _("BEGIN status dump (%ld)"), (long)NOW);
+
+  for (conns_vector::iterator c = conns.begin (); c != conns.end (); ++c)
+    (*c)->dump_status ();
+
+  slog (L_NOTICE, _("END status dump"));
+}
+
 vpn::vpn (void)
-: udp_ev_watcher (this, &vpn::udp_ev)
-, vpn_ev_watcher (this, &vpn::vpn_ev)
-, event (this, &vpn::event_cb)
+: udpv4_ev_watcher(this, &vpn::udpv4_ev)
+, ipv4_ev_watcher(this, &vpn::ipv4_ev)
+, tap_ev_watcher(this, &vpn::tap_ev)
+, event(this, &vpn::event_cb)
 {
 }
 

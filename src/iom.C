@@ -37,22 +37,28 @@ io_manager iom;
 
 void time_watcher::set (tstamp when)
 {
-  iom.unreg (this);
   at = when;
-  iom.reg (this);
+
+  if (registered)
+    iom.reschedule_time_watchers ();
+  else
+    iom.reg (this);
 }
 
 void time_watcher::trigger ()
 {
-  iom.unreg (this);
   call (at);
-  iom.reg (this);
+
+  if (registered)
+    iom.reschedule_time_watchers ();
+  else
+    iom.reg (this);
 }
 
 void time_watcher::start ()
 {
-  iom.unreg (this);
-  iom.reg (this);
+  if (!registered)
+    iom.reg (this);
 }
 
 void io_manager::reg (int fd, short events, io_watcher *w)
@@ -91,8 +97,16 @@ void io_manager::unreg (const io_watcher *w)
     }
 }
 
+void io_manager::reschedule_time_watchers ()
+{
+  make_heap (tw.begin (), tw.end (), lowest_first);
+}
+
 void io_manager::reg (time_watcher *w)
 {
+  if (w->registered)
+    slog (L_CRIT, "FATAL: io_manager::reg(time_watcher) called on already-registered watcher");
+
   tw.push_back (w);
   push_heap (tw.begin (), tw.end (), lowest_first);
 }
@@ -108,7 +122,7 @@ void io_manager::unreg (const time_watcher *w)
         tw[i] = tw[sz - 1];
 
       tw.pop_back ();
-      make_heap (tw.begin (), tw.end (), lowest_first);
+      reschedule_time_watchers ();
     }
 }
 
@@ -131,14 +145,15 @@ void io_manager::loop ()
         {
           pop_heap (tw.begin (), tw.end (), lowest_first);
           time_watcher *w = *(tw.end () - 1);
+          tw.pop_back ();
 
           if (w->at >= 0)
             {
               w->call (w->at);
-              push_heap (tw.begin (), tw.end (), lowest_first);
+
+              if (!w->registered)
+                reg (w);
             }
-          else
-            tw.pop_back ();
         }
 
       int timeout = (int) ((tw[0]->at - NOW) * 1000);
