@@ -477,14 +477,26 @@ void config_packet::setup (ptype type, int dst)
 
 bool config_packet::chk_config () const
 {
-  return prot_major == PROTOCOL_MAJOR
-         && randsize == RAND_SIZE
-         && hmaclen == HMACLENGTH
-         && flags == curflags ()
-         && challengelen == sizeof (rsachallenge)
-         && cipher_nid == htonl (EVP_CIPHER_nid (CIPHER))
-         && digest_nid == htonl (EVP_MD_type (RSA_HASH))
-         && hmac_nid   == htonl (EVP_MD_type (DIGEST));
+  if (prot_major != PROTOCOL_MAJOR)
+    slog (L_WARN, _("major version mismatch (%d <=> %d)"), prot_major, PROTOCOL_MAJOR);
+  else if (randsize != RAND_SIZE)
+    slog (L_WARN, _("rand size mismatch (%d <=> %d)"), randsize, RAND_SIZE);
+  else if (hmaclen != HMACLENGTH)
+    slog (L_WARN, _("hmac length mismatch (%d <=> %d)"), hmaclen, HMACLENGTH);
+  else if (flags != curflags ())
+    slog (L_WARN, _("flag mismatch (%x <=> %x)"), flags, curflags ());
+  else if (challengelen != sizeof (rsachallenge))
+    slog (L_WARN, _("challenge length mismatch (%d <=> %d)"), challengelen, sizeof (rsachallenge));
+  else if (cipher_nid != htonl (EVP_CIPHER_nid (CIPHER)))
+    slog (L_WARN, _("cipher mismatch (%x <=> %x)"), ntohl (cipher_nid), EVP_CIPHER_nid (CIPHER));
+  else if (digest_nid != htonl (EVP_MD_type (RSA_HASH)))
+    slog (L_WARN, _("digest mismatch (%x <=> %x)"), ntohl (digest_nid), EVP_MD_type (RSA_HASH));
+  else if (hmac_nid != htonl (EVP_MD_type (DIGEST)))
+    slog (L_WARN, _("hmac mismatch (%x <=> %x)"), ntohl (hmac_nid), EVP_MD_type (DIGEST));
+  else
+    return true;
+
+  return false;
 }
 
 struct auth_req_packet : config_packet
@@ -918,6 +930,9 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                     break;
                   }
               }
+            else
+              slog (L_WARN, _("%s(%s): protocol mismatch"),
+                    conf->nodename, (const char *)rsi);
 
             send_reset (rsi);
           }
