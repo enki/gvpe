@@ -96,6 +96,7 @@ get_config_string(const char *key, char **res)
 #elif IF_freebsd
 # include "tincd/freebsd/device.c"
 #elif IF_netbsd
+#define IF_istun 1
 # include "tincd/netbsd/device.c"
 #elif IF_solaris
 # include "tincd/solaris/device.c"
@@ -104,11 +105,17 @@ get_config_string(const char *key, char **res)
 #elif IF_mingw
 # include "tincd/mingw/device.c"
 #elif IF_darwin
+#define IF_istun 1
 # include "tincd/darwin/device.c"
 #elif IF_raw_socket
+#define IF_istun 1
 # include "tincd/raw_socket/device.c"
 #else
 # error No interface implementation for your IFTYPE/IFSUBTYPE combination.
+#endif
+
+#if IF_istun
+# include "ether_emu.C"
 #endif
 
 const char *
@@ -152,13 +159,29 @@ tap_device::recv ()
       return 0;
     }
     
+#if IF_istun
+  // assume ipv4
+  (*pkt)[12] = 0x08;
+  (*pkt)[13] = 0x00;
+
+  if (!ether_emu.tun_to_tap (pkt))
+  {
+    delete pkt;
+    return 0;
+  }
+#endif
+
   return pkt;
 }
 
 void
 tap_device::send (tap_packet *pkt)
 {
-  if (!write_packet (reinterpret_cast<vpn_packet_t *>(pkt)))
+  if (
+#if IF_istun
+      ether_emu.tap_to_tun (pkt) &&
+#endif
+      !write_packet (reinterpret_cast<vpn_packet_t *>(pkt)))
     slog (L_ERR, _("can't write to %s %s: %s"), info (), DEFAULT_DEVICE,
           strerror (errno));
 }
