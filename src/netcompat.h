@@ -37,8 +37,8 @@
 # include <netinet/ip.h>
 #endif
 
-#ifndef IPTOS_LOWCOST
-# define IPTOS_LOWCOST      0x02
+#ifndef IPTOS_MINCOST
+# define IPTOS_MINCOST      0x02
 #endif
 #ifndef IPTOS_RELIABILITY
 # define IPTOS_RELIABILITY  0x04

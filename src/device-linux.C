@@ -45,6 +45,7 @@
 #include "conf.h"
 
 #if TEST_ETHEREMU
+# define IF_istun
 # include "ether_emu.C"
 #endif
 
