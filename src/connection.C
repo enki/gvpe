@@ -962,7 +962,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                   if (!p->hmac_chk (cctx))
                     {
                       slog (L_ERR, _("%s(%s): hmac authentication error on auth response, received invalid packet\n"
-                                     "could be an attack, or just corruption or an synchronization error"),
+                                     "could be an attack, or just corruption or a synchronization error"),
                             conf->nodename, (const char *)rsi);
                       break;
                     }
@@ -1021,7 +1021,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 
             if (!p->hmac_chk (ictx))
               slog (L_ERR, _("%s(%s): hmac authentication error, received invalid packet\n"
-                             "could be an attack, or just corruption or an synchronization error"),
+                             "could be an attack, or just corruption or a synchronization error"),
                     conf->nodename, (const char *)rsi);
             else
               {
