@@ -142,7 +142,6 @@ struct connection
 #if ENABLE_DNS
     struct dns_connection *dns;
 
-    bool send_dnsv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
     void dnsv4_reset_connection ();
 #endif
 
@@ -171,8 +170,8 @@ struct connection
     void inject_data_packet (tap_packet *pkt, bool broadcast = false);
     void inject_vpn_packet (vpn_packet *pkt, int tos = 0); // for forwarding
 
-    void send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos = 0);
     void recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi);
+    void send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos = 0);
 
     void script_node ();
     const char *script_node_up ();

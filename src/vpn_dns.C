@@ -358,11 +358,20 @@ bool byte_stream::put (vpn_packet *pkt)
 
 vpn_packet *byte_stream::get ()
 {
-  unsigned int len = (data [0] << 8) | data [1];
+  unsigned int len;
+  
+  for (;;)
+    {
+      len = (data [0] << 8) | data [1];
 
-  if (len > MAXSIZE && fill >= 2)
-    assert (len <= MAXSIZE || fill < 2); // TODO handle this gracefully, connection reset
+      if (len <= MAXSIZE || fill < 2)
+        break;
 
+      // TODO: handle this better than skipping, e.g. by reset
+      slog (L_DEBUG, _("DNS: corrupted packet stream skipping a byte..."));
+      remove (1);
+    }
+      
   if (fill < len + 2)
     return 0;
 
@@ -500,6 +509,52 @@ int dns_packet::decode_label (char *data, int size, int &offs)
 
 /////////////////////////////////////////////////////////////////////////////
 
+static u16 dns_id = 0; // TODO: should be per-vpn
+
+static u16 next_id ()
+{
+  if (!dns_id)
+    dns_id = time (0);
+
+  // the simplest lsfr with periodicity 65535 i could find
+  dns_id = (dns_id << 1)
+           | (((dns_id >> 1)
+               ^ (dns_id >> 2)
+               ^ (dns_id >> 4)
+               ^ (dns_id >> 15)) & 1);
+
+  return dns_id;
+}
+
+struct dns_rcv;
+struct dns_snd;
+
+struct dns_connection
+{
+  connection *c;
+  struct vpn *vpn;
+
+  dns_cfg cfg;
+
+  bool established;
+
+  tstamp last_received;
+  tstamp last_sent;
+  double last_latency;
+  double poll_interval, send_interval;
+
+  vector<dns_rcv *> rcvpq;
+
+  byte_stream rcvdq; int rcvseq;
+  byte_stream snddq; int sndseq;
+
+  void time_cb (time_watcher &w); time_watcher tw;
+  void receive_rep (dns_rcv *r);
+
+  dns_connection (connection *c);
+  ~dns_connection ();
+};
+
 struct dns_snd
 {
   dns_packet *pkt;
@@ -510,25 +565,11 @@ struct dns_snd
   bool stdhdr;
 
   void gen_stream_req (int seqno, byte_stream &stream);
-  void gen_syn_req (const dns_cfg &cfg);
+  void gen_syn_req ();
 
   dns_snd (dns_connection *dns);
   ~dns_snd ();
 };
-
-static u16 dns_id = 12098; // TODO: should be per-vpn
-
-static u16 next_id ()
-{
-  // the simplest lsfr with periodicity 65535 i could find
-  dns_id = (dns_id << 1)
-           | (((dns_id >> 1)
-               ^ (dns_id >> 2)
-               ^ (dns_id >> 4)
-               ^ (dns_id >> 15)) & 1);
-
-  return dns_id;
-}
 
 dns_snd::dns_snd (dns_connection *dns)
 : dns (dns)
@@ -620,16 +661,18 @@ void dns_snd::gen_stream_req (int seqno, byte_stream &stream)
   pkt->len = offs;
 }
 
-void dns_snd::gen_syn_req (const dns_cfg &cfg)
+void dns_snd::gen_syn_req ()
 {
   timeout = NOW + INITIAL_SYN_TIMEOUT;
+
+  printf ("send syn\n");//D
 
   pkt->flags = htons (DEFAULT_CLIENT_FLAGS);
   pkt->qdcount = htons (1);
 
-  int offs = 6*2;
+  int offs = 6 * 2;
 
-  int elen = cdc26.encode ((char *)pkt->at (offs + 1), (u8 *)&cfg, sizeof (dns_cfg));
+  int elen = cdc26.encode ((char *)pkt->at (offs + 1), (u8 *)&dns->cfg, sizeof (dns_cfg));
 
   assert (elen <= MAX_LBL_SIZE);
 
@@ -668,32 +711,6 @@ dns_rcv::~dns_rcv ()
 
 /////////////////////////////////////////////////////////////////////////////
     
-struct dns_connection
-{
-  connection *c;
-  struct vpn *vpn;
-
-  dns_cfg cfg;
-
-  bool established;
-
-  tstamp last_received;
-  tstamp last_sent;
-  double last_latency;
-  double poll_interval, send_interval;
-
-  vector<dns_rcv *> rcvpq;
-
-  byte_stream rcvdq; int rcvseq;
-  byte_stream snddq; int sndseq;
-
-  void time_cb (time_watcher &w); time_watcher tw;
-  void receive_rep (dns_rcv *r);
-
-  dns_connection (connection *c);
-  ~dns_connection ();
-};
-
 dns_connection::dns_connection (connection *c)
 : c (c)
 , rcvdq (MAX_BACKLOG * 2)
@@ -767,7 +784,7 @@ void dns_connection::receive_rep (dns_rcv *r)
         while (vpn_packet *pkt = rcvdq.get ())
           {
             sockinfo si;
-            si.host = 0; si.port = 0; si.prot = PROT_DNSv4;
+            si.host = 0x01010101; si.port = htons (c->conf->id); si.prot = PROT_DNSv4;
 
             vpn->recv_vpn_packet (pkt, si);
 
@@ -1144,15 +1161,21 @@ vpn::dnsv4_ev (io_watcher &w, short revents)
 }
 
 bool
-connection::send_dnsv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
+vpn::send_dnsv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
-  if (!dns)
-    dns = new dns_connection (this);
+  int client = ntohs (si.port);
+
+  assert (0 < client && client <= conns.size ());
+
+  connection *c = conns [client - 1];
+
+  if (!c->dns)
+    c->dns = new dns_connection (c);
   
-  if (!dns->snddq.put (pkt))
+  if (!c->dns->snddq.put (pkt))
     return false;
 
-  dns->tw.trigger ();
+  c->dns->tw.trigger ();
 
   return true;
 }
@@ -1216,13 +1239,15 @@ dns_connection::time_cb (time_watcher &w)
                 {
                   send = new dns_snd (this);
 
+                  printf ("new conn %p %d\n", this, c->conf->id);//D
                   cfg.reset (THISNODE->id);
-                  send->gen_syn_req (cfg);
+                  send->gen_syn_req ();
                 }
             }
           else if (vpn->dns_sndpq.size () < MAX_OUTSTANDING
                    && !SEQNO_EQ (rcvseq, sndseq - (MAX_WINDOW - 1)))
             {
+              //printf ("sending data request etc.\n"); //D
               if (!snddq.empty ())
                 {
                   poll_interval = send_interval;

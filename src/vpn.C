@@ -240,10 +240,12 @@ vpn::setup ()
       // standard daemon practise...
       {
         int oval = 1;
-        setsockopt (tcpv4_fd, SOL_SOCKET, SO_REUSEADDR, &oval, sizeof oval);
+        setsockopt (dnsv4_fd, SOL_SOCKET, SO_REUSEADDR, &oval, sizeof oval);
       }
 
-      sockinfo si (THISNODE, PROT_DNSv4);
+      sockinfo si (THISNODE->dns_hostname,
+                   THISNODE->dns_hostname ? THISNODE->dns_port : 0,
+                   PROT_DNSv4);
 
       if (bind (dnsv4_fd, si.sav4 (), si.salenv4 ()))
         {
@@ -395,6 +397,35 @@ vpn::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
       else
         c->recv_vpn_packet (pkt, rsi);
     }
+}
+
+bool
+vpn::send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos)
+{
+  switch (si.prot)
+    {
+      case PROT_IPv4:
+        return send_ipv4_packet (pkt, si, tos);
+      case PROT_UDPv4:
+        return send_udpv4_packet (pkt, si, tos);
+#if ENABLE_TCP 
+      case PROT_TCPv4:
+        return send_tcpv4_packet (pkt, si, tos);
+#endif
+#if ENABLE_ICMP
+      case PROT_ICMPv4:
+        return send_icmpv4_packet (pkt, si, tos);
+#endif
+#if ENABLE_DNS
+      case PROT_DNSv4:
+        return send_dnsv4_packet (pkt, si, tos);
+#endif
+
+      default:
+        slog (L_CRIT, _("%s: FATAL: trying to send packet with unsupported protocol"), (const char *)si);
+    }
+
+  return false;
 }
 
 void

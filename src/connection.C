@@ -646,8 +646,8 @@ connection::forward_si (const sockinfo &si) const
 
       if (r)
         {
-          slog (L_DEBUG, _("%s: no common protocol, trying indirectly through %s"),
-                conf->nodename, r->conf->nodename);
+          slog (L_DEBUG, _("%s: no common protocol, trying indirectly through %s (%s)"),
+                conf->nodename, r->conf->nodename, (const char *)r->si);
           return r->si;
         }
       else
@@ -661,33 +661,7 @@ connection::forward_si (const sockinfo &si) const
 void
 connection::send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
-  bool ok;
-
-  switch (si.prot)
-    {
-      case PROT_IPv4:
-        ok = vpn->send_ipv4_packet (pkt, si, tos); break;
-      case PROT_UDPv4:
-        ok = vpn->send_udpv4_packet (pkt, si, tos); break;
-#if ENABLE_TCP 
-      case PROT_TCPv4:
-        ok = vpn->send_tcpv4_packet (pkt, si, tos); break;
-#endif
-#if ENABLE_ICMP
-      case PROT_ICMPv4:
-        ok = vpn->send_icmpv4_packet (pkt, si, tos); break;
-#endif
-#if ENABLE_DNS
-      case PROT_DNSv4:
-        ok = send_dnsv4_packet (pkt, si, tos); break;
-#endif
-
-      default:
-        slog (L_CRIT, _("%s: FATAL: trying to send packet with unsupported protocol"), (const char *)si);
-        ok = false;
-    }
-
-  if (!ok)
+  if (!vpn->send_vpn_packet (pkt, si, tos))
     reset_connection ();
 }
 

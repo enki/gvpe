@@ -47,20 +47,22 @@ struct sockinfo
 
     const sockaddr *sav4 () const;
     const socklen_t salenv4 () const
-      { return sizeof (sockaddr_in); }
+    {
+      return sizeof (sockaddr_in);
+    }
 
     const char *ntoa () const;
 
     bool valid () const
-      { return prot != 0 && host != 0; }
+    {
+      return prot != 0 && host != 0;
+    }
 
     sockinfo() { prot = 0; }
 
-    sockinfo(const sockaddr_in &sa, u8 prot)
-      { set (&sa, prot); }
-
-    sockinfo(const conf_node *conf, u8 prot)
-      { set (conf, prot); }
+    sockinfo(const char *hostname, u16 port, u8 prot) { set (hostname, port, prot); }
+    sockinfo(const sockaddr_in &sa, u8 prot)          { set (&sa, prot);            }
+    sockinfo(const conf_node *conf, u8 prot)          { set (conf, prot);           }
   };
 
 bool operator == (const sockinfo &a, const sockinfo &b);
