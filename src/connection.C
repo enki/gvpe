@@ -883,6 +883,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                           iseqno.reset (ntohl (*(u32 *)&chg[CHG_SEQNO]) & 0x7fffffff); // at least 2**31 sequence numbers are valid
 
                           si = rsi;
+                          protocol = rsi.prot;
 
                           rekey.start (NOW + ::conf.rekey);
                           keepalive.start (NOW + ::conf.keepalive);
@@ -896,9 +897,8 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 
                           connectmode = conf->connectmode;
 
-                          slog (L_INFO, _("%s(%s): %s connection established, protocol version %d.%d"),
+                          slog (L_INFO, _("%s(%s): connection established, protocol version %d.%d"),
                                 conf->nodename, (const char *)rsi,
-                                strprotocol (protocol),
                                 p->prot_major, p->prot_minor);
 
                           if (::conf.script_node_up)
@@ -974,8 +974,8 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
             connect_req_packet *p = (connect_req_packet *) pkt;
 
             assert (p->id > 0 && p->id <= vpn->conns.size ()); // hmac-auth does not mean we accept anything
-            conf->protocols = p->protocols;
             connection *c = vpn->conns[p->id - 1];
+            conf->protocols = p->protocols;
 
             slog (L_TRACE, "<<%d PT_CONNECT_REQ(%d) [%d]\n",
                            conf->id, p->id, c->ictx && c->octx);
@@ -997,11 +997,18 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
             connect_info_packet *p = (connect_info_packet *) pkt;
 
             assert (p->id > 0 && p->id <= vpn->conns.size ()); // hmac-auth does not mean we accept anything
-            conf->protocols = p->protocols;
+
             connection *c = vpn->conns[p->id - 1];
+
+            c->conf->protocols = p->protocols;
+            protocol = best_protocol (c->conf->protocols & THISNODE->protocols & p->si.supported_protocols (c->conf));
+            p->si.upgrade_protocol (protocol, c->conf);
 
             slog (L_TRACE, "<<%d PT_CONNECT_INFO(%d,%s) (%d)",
                            conf->id, p->id, (const char *)p->si, !c->ictx && !c->octx);
+            //slog (L_ERR, "%d PROTOCL(C%x,T%x,0S%x,S%x,P%x,SP%x)", 
+            //      p->id, c->conf->protocols, THISNODE->protocols, p->si.supported_protocols(0), p->si.supported_protocols (c->conf),
+            //      protocol, p->si.prot);
 
             c->send_auth_request (p->si, true);
           }

@@ -92,6 +92,69 @@ sockinfo::operator const char *() const
   return hostport;
 }
 
+u8
+sockinfo::supported_protocols (conf_node *conf)
+{
+  u8 protocols = prot;
+
+  if (prot & (PROT_UDPv4 | PROT_TCPv4))
+    protocols |= PROT_IPv4;
+
+  if (conf
+      && prot & (PROT_IPv4 | PROT_UDPv4 | PROT_TCPv4)
+      && conf->protocols & PROT_UDPv4
+      && conf->udp_port)
+    protocols |= PROT_UDPv4;
+
+  if (conf
+      && prot & (PROT_IPv4 | PROT_UDPv4 | PROT_TCPv4)
+      && conf->protocols & PROT_TCPv4
+      && conf->tcp_port)
+    protocols |= PROT_TCPv4;
+
+  return protocols;
+}
+
+bool
+sockinfo::upgrade_protocol (u8 prot_, conf_node *conf)
+{
+  if (prot_ == prot)
+    return true;
+
+  if (prot & (PROT_IPv4 | PROT_UDPv4 | PROT_TCPv4)
+      && prot_ & (PROT_IPv4 | PROT_UDPv4 | PROT_TCPv4))
+    {
+      if (prot_ & PROT_IPv4)
+        {
+          prot = prot_;
+          port = 0;
+          return true;
+        }
+
+      if (conf
+          && prot_ & PROT_UDPv4
+          && conf->protocols & PROT_UDPv4
+          && conf->udp_port)
+        {
+          prot = prot_;
+          port = conf->udp_port;
+          return true;
+        }
+
+      if (conf
+          && prot_ & PROT_TCPv4
+          && conf->protocols & PROT_TCPv4
+          && conf->tcp_port)
+        {
+          prot = prot_;
+          port = conf->tcp_port;
+          return true;
+        }
+    }
+
+  return false;
+}
+
 bool
 operator == (const sockinfo &a, const sockinfo &b)
 {

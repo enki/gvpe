@@ -38,6 +38,10 @@ struct sockinfo
     void set (const sockaddr_in *sa, u8 prot_);
     void set (const conf_node *conf, u8 prot_);
 
+    // return the supported protocols
+    u8 supported_protocols (conf_node *conf = 0);
+    bool upgrade_protocol (u8 prot_, conf_node *conf = 0);
+
     operator const char *() const;
 
     const sockaddr *sav4 () const;
