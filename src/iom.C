@@ -35,7 +35,7 @@
 
 // for IOM_SIG
 #if IOM_SIG
-# include <signal.h>
+# include <csignal>
 # include <fcntl.h>
 #endif
 
