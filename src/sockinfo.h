@@ -37,6 +37,7 @@ struct sockinfo
 
     void set (const sockaddr_in *sa, u8 prot_);
     void set (const conf_node *conf, u8 prot_);
+    void set (const char *hostname, u16 port_, u8 prot_);
 
     // return the supported protocols
     u8 supported_protocols (conf_node *conf = 0);

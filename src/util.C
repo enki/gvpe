@@ -159,3 +159,52 @@ void run_script (const run_script_cb &cb, bool wait)
         }
     }
 }
+
+#if ENABLE_HTTP_PROXY
+// works like strdup
+u8 *
+base64_encode (const u8 *data, unsigned int len)
+{
+  const static char base64[65] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+  unsigned int t, i;
+  const u8 *end = data + len;
+  u8 *res = new u8 [4 * ((len + 2) / 3) + 1];
+  u8 *out = res;
+
+  while (data <= end - 3)
+    {
+      t = (((data[0] << 8) | data[1]) << 8) | data[2];
+      data += 3;
+      
+      *out++ = base64[(t >> 18) & 0x3f];
+      *out++ = base64[(t >> 12) & 0x3f];
+      *out++ = base64[(t >>  6) & 0x3f];
+      *out++ = base64[(t      ) & 0x3f];
+    }
+
+  for (t = 0, i = 0; data < end; i++)
+    t = (t << 8) | *data++;
+
+  switch (i)
+    {
+      case 2:
+        *out++ = base64[(t >> 10) & 0x3f];
+        *out++ = base64[(t >>  4) & 0x3f];
+        *out++ = base64[(t <<  2) & 0x3f];
+        *out++ = '=';
+        break;
+      case 1:
+        *out++ = base64[(t >>  2) & 0x3f];
+        *out++ = base64[(t <<  4) & 0x3f];
+        *out++ = '=';
+        *out++ = '=';
+        break;
+    }
+
+  *out++ = 0;
+
+  return res;
+}
+#endif
+

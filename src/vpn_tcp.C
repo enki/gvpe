@@ -45,6 +45,10 @@
 
 #include "vpn.h"
 
+#if ENABLE_HTTP_PROXY
+# include "conf.h"
+#endif
+
 struct tcp_connection;
 
 struct lt_sockinfo
@@ -70,13 +74,18 @@ struct tcp_connection : io_watcher {
   const sockinfo si;
   vpn &v;
   bool active; // this connection has been actively established
-  enum { ERROR, IDLE, CONNECTING, ESTABLISHED } state;
+  enum { ERROR, IDLE, CONNECTING, CONNECTING_PROXY, ESTABLISHED } state;
 
   vpn_packet *r_pkt;
   u32 r_len, r_ofs;
 
   vpn_packet *w_pkt;
   u32 w_len, w_ofs;
+
+#if ENABLE_HTTP_PROXY
+  char *proxy_req;
+  int proxy_req_len;
+#endif
 
   void tcpv4_ev (io_watcher &w, short revents);
 
@@ -152,21 +161,6 @@ vpn::send_tcpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
   return i->send_packet (pkt, tos);
 }
 
-void tcp_connection::error ()
-{
-  if (fd >= 0)
-    {
-      close (fd);
-      fd = -1;
-    }
-
-  delete r_pkt; r_pkt = 0;
-  delete w_pkt; w_pkt = 0;
-
-  stop ();
-  state = active ? IDLE : ERROR;
-}
-
 bool
 tcp_connection::write_packet ()
 {
@@ -220,6 +214,14 @@ tcp_connection::tcpv4_ev (io_watcher &w, short revents)
         {
           state = ESTABLISHED;
           set (POLLIN);
+#if ENABLE_HTTP_PROXY
+          if (::conf.proxy_host && ::conf.proxy_port)
+            {
+              state = CONNECTING_PROXY;
+              write (fd, proxy_req, proxy_req_len);
+              free (proxy_req); proxy_req = 0;
+            }
+#endif
         }
       else if (state == ESTABLISHED)
         {
@@ -241,50 +243,99 @@ tcp_connection::tcpv4_ev (io_watcher &w, short revents)
 
   if (revents & POLLIN)
     {
-      for (;;)
-        {
-          if (!r_pkt)
-            {
-              r_pkt = new vpn_packet;
-              r_ofs = 0;
-              r_len = 2; // header
-            }
+      if (state == ESTABLISHED)
+        for (;;)
+          {
+            if (!r_pkt)
+              {
+                r_pkt = new vpn_packet;
+                r_ofs = 0;
+                r_len = 2; // header
+              }
 
-          ssize_t len = read (fd, &((*r_pkt)[r_ofs < 2 ? r_ofs : r_ofs - 2]), r_len);
+            ssize_t len = read (fd, &((*r_pkt)[r_ofs < 2 ? r_ofs : r_ofs - 2]), r_len);
 
-          if (len > 0)
-            {
-              r_len -= len;
-              r_ofs += len;
+            if (len > 0)
+              {
+                r_len -= len;
+                r_ofs += len;
 
-              if (r_len == 0)
-                {
-                  if (r_ofs == 2)
-                    {
-                      r_len = ntohs (*(u16 *)&((*r_pkt)[0]));
-                      r_pkt->len = r_len;
+                if (r_len == 0)
+                  {
+                    if (r_ofs == 2)
+                      {
+                        r_len = ntohs (*(u16 *)&((*r_pkt)[0]));
+                        r_pkt->len = r_len;
 
-                      if (r_len > 0 && r_len < MAXSIZE)
+                        if (r_len > 0 && r_len < MAXSIZE)
+                          continue;
+                      }
+                    else
+                      {
+                        v.recv_vpn_packet (r_pkt, si);
+                        delete r_pkt;
+                        r_pkt = 0;
+
                         continue;
-                    }
-                  else
-                    {
-                      v.recv_vpn_packet (r_pkt, si);
-                      delete r_pkt;
-                      r_pkt = 0;
+                      }
+                  }
+                else
+                  break;
+              }
+            else if (len < 0 && (errno == EINTR || errno == EAGAIN))
+              break;
 
-                      continue;
-                    }
-                }
-              else
-                break;
-            }
-          else if (len < 0 && (errno == EINTR || errno == EAGAIN))
+            error ();
             break;
+          }
+#if ENABLE_HTTP_PROXY
+      else if (state == CONNECTING_PROXY)
+        {
+          fcntl (fd, F_SETFL, 0);
+          char r[1024];
+          int i;
+          bool emptyline = false;
 
-          error ();
-          break;
+          // we do a blocking read of the response, to hell with it
+          for (i = 0; i < 1023; i++)
+            {
+              int l = read (fd, &r[i], 1);
+
+              if (l <= 0)
+                {
+                  error ();
+                  return;
+                }
+
+              if (r[i] == '\012')
+                {
+                  if (emptyline)
+                    break;
+                  else
+                    emptyline = true;
+                }
+              else if (r[i] != '\015')
+                emptyline = false;
+            }
+
+          fcntl (fd, F_SETFL, O_NONBLOCK);
+
+          if (i < 12)
+            {
+              slog (L_ERR, _("unable to do proxy-forwarding, short response"));
+              error ();
+            }
+          else if (r[0] != 'H' || r[1] != 'T' || r[2] != 'T' || r[3] != 'P' || r[4] != '/'
+                   || r[5] != '1' // http-major
+                   || r[9] != '2') // response
+            {
+              slog (L_ERR, _("malformed or unexpected proxy response (%.12s)"), r);
+              error ();
+            }
+          else
+            state = ESTABLISHED;
         }
+#endif
     }
 }
 
@@ -300,9 +351,39 @@ tcp_connection::send_packet (vpn_packet *pkt, int tos)
 
       if (fd >= 0)
         {
-          fcntl (fd, F_SETFL, O_NONBLOCK);
+          const sockinfo *csi = &si;
+
+#if ENABLE_HTTP_PROXY
+          sockinfo psi;
+
+          if (::conf.proxy_host && ::conf.proxy_port)
+            {
+              psi.set (::conf.proxy_host, ::conf.proxy_port, PROT_TCPv4);
+
+              if (psi.valid ())
+                {
+                  csi = &psi;
+
+                  proxy_req_len = asprintf (&proxy_req,
+                                            "CONNECT %s:%d HTTP/1.0\015\012"
+                                            "%s%s%s" // optional proxy-auth
+                                            "\015\012",
+                                            si.ntoa (),
+                                            ntohs (si.port),
+                                            ::conf.proxy_auth ? "Proxy-Authorization: Basic " : "",
+                                            ::conf.proxy_auth ? ::conf.proxy_auth             : "",
+                                            ::conf.proxy_auth ? "\015\012"                    : "");
+
+                }
+              else
+                slog (L_ERR, _("unable to resolve http proxy hostname '%s', trying direct"),
+                      ::conf.proxy_host);
+            }
+#endif
           
-          if (connect (fd, si.sav4 (), si.salenv4 ()) >= 0
+          fcntl (fd, F_SETFL, O_NONBLOCK);
+
+          if (connect (fd, csi->sav4 (), csi->salenv4 ()) >= 0
               || errno == EINPROGRESS)
             {
               state = CONNECTING;
@@ -341,6 +422,24 @@ tcp_connection::send_packet (vpn_packet *pkt, int tos)
   return state != ERROR;
 }
 
+void tcp_connection::error ()
+{
+  if (fd >= 0)
+    {
+      close (fd);
+      fd = -1;
+    }
+
+  delete r_pkt; r_pkt = 0;
+  delete w_pkt; w_pkt = 0;
+#if ENABLE_HTTP_PROXY
+  free (proxy_req); proxy_req = 0;
+#endif
+
+  stop ();
+  state = active ? IDLE : ERROR;
+}
+
 tcp_connection::tcp_connection (int fd_, const sockinfo &si_, vpn &v_)
 : v(v_), si(si_), io_watcher(this, &tcp_connection::tcpv4_ev)
 {
@@ -348,6 +447,9 @@ tcp_connection::tcp_connection (int fd_, const sockinfo &si_, vpn &v_)
   r_pkt = 0;
   w_pkt = 0;
   fd = fd_;
+#if ENABLE_HTTP_PROXY
+  proxy_req = 0;
+#endif
 
   if (fd < 0)
     {

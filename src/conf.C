@@ -71,14 +71,30 @@ const char *strprotocol (u8 protocol)
   return "<unknown>";
 }
 
-configuration::configuration ()
+void
+conf_node::print ()
 {
-  init ();
+  printf ("%4d  fe:fd:80:00:0%1x:%02x  %c  %-8.8s  %-10.10s  %s%s%d\n",
+          id,
+          id >> 8, id & 0xff,
+          compress ? 'Y' : 'N',
+          connectmode   == C_ONDEMAND ? "ondemand" :
+            connectmode == C_NEVER    ? "never" :
+            connectmode == C_ALWAYS   ? "always" : "",
+          nodename,
+          hostname ? hostname : "",
+          hostname ? ":" : "",
+          hostname ? udp_port : 0
+          );
 }
 
-configuration::~configuration ()
+conf_node::~conf_node ()
 {
-  cleanup ();
+  if (rsa_key)
+    RSA_free (rsa_key);
+
+  free (nodename);
+  free (hostname);
 }
 
 void configuration::init ()
@@ -102,10 +118,13 @@ void configuration::cleanup()
   if (rsa_key)
     RSA_free (rsa_key);
 
-  free (ifname);
-
   rsa_key = 0;
-  ifname = 0;
+
+  free (ifname);     ifname     = 0;
+#if ENABLE_HTTP_PROXY
+  free (proxy_host); proxy_host = 0;
+  free (proxy_auth); proxy_auth = 0;
+#endif
 }
 
 void
@@ -274,6 +293,14 @@ retry:
             script_node_up = strdup (val);
           else if (!strcmp (var, "node-down"))
             script_node_down = strdup (val);
+#if ENABLE_HTTP_PROXY
+          else if (!strcmp (var, "http-proxy-host"))
+            proxy_host = strdup (val);
+          else if (!strcmp (var, "http-proxy-port"))
+            proxy_port = atoi (val);
+          else if (!strcmp (var, "http-proxy-auth"))
+            proxy_auth = (char *)base64_encode ((const u8 *)val, strlen (val));
+#endif
 
           /* node-specific, non-defaultable */
           else if (node != &default_node && !strcmp (var, "hostname"))
@@ -330,11 +357,9 @@ retry:
 
           // unknown or misplaced
           else
-            {
-              slog (L_WARN,
-                      _("unknown or misplaced variable `%s', at '%s' line %d"),
-                      var, fname, lineno);
-            }
+            slog (L_WARN,
+                    _("unknown or misplaced variable `%s', at '%s' line %d"),
+                    var, fname, lineno);
         }
 
       fclose (f);
@@ -415,20 +440,14 @@ configuration::print ()
   printf ("\n");
 }
 
-void
-conf_node::print ()
+configuration::configuration ()
 {
-  printf ("%4d  fe:fd:80:00:0%1x:%02x  %c  %-8.8s  %-10.10s  %s%s%d\n",
-          id,
-          id >> 8, id & 0xff,
-          compress ? 'Y' : 'N',
-          connectmode   == C_ONDEMAND ? "ondemand" :
-            connectmode == C_NEVER    ? "never" :
-            connectmode == C_ALWAYS   ? "always" : "",
-          nodename,
-          hostname ? hostname : "",
-          hostname ? ":" : "",
-          hostname ? udp_port : 0
-          );
+  init ();
 }
+
+configuration::~configuration ()
+{
+  cleanup ();
+}
+
 

@@ -188,6 +188,11 @@ AC_ARG_ENABLE(tcp,
   AC_DEFINE_UNQUOTED(ENABLE_TCP, 1, [TCP protocol support.])
 )
 
+AC_ARG_ENABLE(http-proxy,
+  [AC_HELP_STRING(--enable-http-proxy, [enable http proxy connect support.])],
+  AC_DEFINE_UNQUOTED(ENABLE_HTTP_PROXY, 1, [http proxy connect support.])
+)
+
 HMAC=16    dnl see also the AC_HELP_STRING
 AC_ARG_ENABLE(hmac-length,
   [AC_HELP_STRING(--enable-hmac-length=BYTES, [use a hmac of length BYTES bytes (default 16). Allowed values are 4, 8, 12, 16.])],

@@ -33,19 +33,16 @@ void sockinfo::set (const sockaddr_in *sa, u8 prot_)
   prot = prot_;
 }
 
-void
-sockinfo::set (const conf_node *conf, u8 prot_)
+void sockinfo::set (const char *hostname, u16 port_, u8 prot_)
 {
   prot = prot_;
   host = 0;
-  port = prot == PROT_UDPv4 ? htons (conf->udp_port)
-       : prot == PROT_TCPv4 ? htons (conf->tcp_port)
-       : 0;
+  port = htons (port_);
 
   if (prot & (PROT_UDPv4 | PROT_TCPv4 | PROT_IPv4)
-      && conf->hostname)
+      && hostname)
     {
-      struct hostent *he = gethostbyname (conf->hostname);
+      struct hostent *he = gethostbyname (hostname);
 
       if (he
           && he->h_addrtype == AF_INET && he->h_length == 4 && he->h_addr_list[0])
@@ -54,10 +51,19 @@ sockinfo::set (const conf_node *conf, u8 prot_)
           memcpy (&host, he->h_addr_list[0], 4);
         }
       else
-        slog (L_NOTICE, _("unable to resolve host '%s'"), conf->hostname);
+        slog (L_NOTICE, _("unable to resolve host '%s'"), hostname);
     }
 }
 
+void
+sockinfo::set (const conf_node *conf, u8 prot_)
+{
+ set (conf->hostname,
+        prot_ == PROT_UDPv4 ? conf->udp_port
+      : prot_ == PROT_TCPv4 ? conf->tcp_port
+      : 0,
+      prot_);
+}
 
 const sockaddr *
 sockinfo::sav4() const
@@ -71,7 +77,7 @@ sockinfo::sav4() const
   return (const sockaddr *)&sa;
 }
 
-static char hostport[10 + 15 + 1 + 5 + 1]; // protype / IPv4 : port
+static char hostport[10 + 15 + 1 + 5 + 1]; // proto / IPv4 : port
 
 const char *
 sockinfo::ntoa () const

@@ -233,6 +233,43 @@ mapping in some dns zone:
 
 Same as C<node-up>, but gets called whenever a connection is lost.
 
+=item http-proxy-host = hostname/ip
+
+The C<http-proxy>-family of options are only available if vpe was
+compiled with the C<--enable-http-proxy> option and enable tunneling of
+tcp connections through a http proxy server.
+
+C<http-proxy-host> and C<http-proxy-port> should specify the hostname and
+port number of the proxy server. See C<http-proxy-loginpw> if your proxy
+requires authentication.
+
+Please note that vpe will still try to resolve all hostnames in the
+configuration file, so if you are behind a proxy without access to a dns
+server better use numerical IP addresses.
+
+To make best use of this option disable all protocols except tcp in your
+config file and make sure your routers (or all other hosts) are listening
+on a port that the proxy allows (443, https, is a common choice).
+
+If you have a router, connecting to it will suffice. Otherwise tcp must be
+enabled on all hosts.
+
+Example:
+
+   http-proxy-host = proxy.example.com
+   http-proxy-port = 3128	# 8080 is another common choice
+   http-proxy-auth = schmorp:grumbeere
+
+=item http-proxy-port = proxy-tcp-port
+
+The port where your proxy server listens.
+
+=item http-proxy-auth = login:password
+
+The optional login and password used to authenticate to the proxy server,
+seperated by a literal colon (C<:>). Only basic authentication is
+currently supported.
+
 =back
 
 =head2 NODE SPECIFIC SETTINGS

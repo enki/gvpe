@@ -59,14 +59,7 @@ struct conf_node {
 
   void print ();
 
-  ~conf_node ()
-    {
-      if (rsa_key)
-        RSA_free (rsa_key);
-
-      free (nodename);
-      free (hostname);
-    }
+  ~conf_node ();
 };
 
 struct configuration {
@@ -87,6 +80,12 @@ struct configuration {
   char *script_if_up;
   char *script_node_up;
   char *script_node_down;
+
+#if ENABLE_HTTP_PROXY
+  char *proxy_auth;	// login:password
+  char *proxy_host;	// the proxy hostname, e.g. proxy1.example.net
+  u16 proxy_port;	// the proxy port, e.g. 3128
+#endif
 
   void init ();
   void cleanup ();
