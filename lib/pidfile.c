@@ -93,7 +93,7 @@ int write_pid (char *pidfile)
 
   if ( ((fd = open(pidfile, O_RDWR|O_CREAT, 0644)) == -1)
        || ((f = fdopen(fd, "r+")) == NULL) ) {
-      fprintf(stderr, "Can't open or create %s.\n", pidfile);
+      fprintf(stderr, "Can't open or create %s.\n", pidfile ? pidfile : "(null)");
       return 0;
   }
   
