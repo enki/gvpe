@@ -33,7 +33,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <netinet/icmp.h>
+#include <netinet/ip_icmp.h>
 
 #include "pidfile.h"
 

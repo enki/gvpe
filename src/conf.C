@@ -34,7 +34,7 @@
 #include <unistd.h>
 
 #include <netinet/in.h>
-#include <netinet/icmp.h>
+#include <netinet/ip_icmp.h>
 
 #include <openssl/err.h>
 #include <openssl/pem.h>
