@@ -228,6 +228,12 @@ if test "x$openssl_include" != x; then
 fi
 dnl tinc_ZLIB
 
+AC_ARG_ENABLE(static-daemon,
+  [AS_HELP_STRING(--enable-static-daemon,enable statically linked daemon.)],
+  [LDFLAGS_DAEMON=-static]
+)
+AC_SUBST(LDFLAGS_DAEMON)
+
 AC_ARG_ENABLE(rohc,
   [AS_HELP_STRING(--enable-rohc,enable robust header compression (rfc3095).)],
   [
@@ -265,21 +271,23 @@ AC_ARG_ENABLE(http-proxy,
   AC_DEFINE_UNQUOTED(ENABLE_HTTP_PROXY, 1, [http proxy connect support.])
 )
 
-HMAC=12    dnl see also the AS_HELP_STRING()
+HMAC=12
 AC_ARG_ENABLE(hmac-length,
-  [AS_HELP_STRING(--enable-hmac-length=BYTES,use a hmac of length BYTES bytes (default 12). Allowed values are 4, 8, 12, 16.)],
+  [AS_HELP_STRING(--enable-hmac-length=BYTES,[
+      use a hmac of length BYTES bytes (default 12). Allowed values are 4, 8, 12, 16.])],
   HMAC=$enableval
 )
 AC_DEFINE_UNQUOTED(HMACLENGTH, $HMAC, [Size of HMAC in each packet in bytes.])
 
-RAND=8   dnl see also the AS_HELP_STRING()
+RAND=8
 AC_ARG_ENABLE(rand-length,
-  [AS_HELP_STRING(--enable-rand-length=BYTES,use BYTES bytes of extra randomness (default 8). Allowed values are 0, 4, 8.)],
+  [AS_HELP_STRING(--enable-rand-length=BYTES,
+      [use BYTES bytes of extra randomness (default 8). Allowed values are 0, 4, 8.])],
   RAND=$enableval
 )
 AC_DEFINE_UNQUOTED(RAND_SIZE, $RAND, [Add this many bytes of randomness to each packet.])
 
-MTU=1500   dnl see also the AS_HELP_STRING()
+MTU=1500
 AC_ARG_ENABLE(mtu,
   [AS_HELP_STRING(--enable-max-mtu=BYTES,enable mtu sizes upto BYTES bytes (default 1500). Use 9100 for jumbogram support.)],
   MTU=$enableval
@@ -297,9 +305,9 @@ AC_DEFINE_UNQUOTED(ENABLE_COMPRESSION, $COMPRESS, [Enable compression support.])
 
 CIPHER=bf_cbc
 AC_ARG_ENABLE(cipher,
-  [AS_HELP_STRING(--enable-cipher,
-     Select the symmetric cipher (default "bf"). Must be one of
-     "bf" (blowfish), "aes-128" (rijndael), "aes-192" or "aes-256".)],
+  [AS_HELP_STRING(--enable-cipher,[
+      Select the symmetric cipher (default "bf").
+      Must be one of "bf" (blowfish), "aes-128" (rijndael), "aes-192" or "aes-256".])],
   if test "x$enableval" = xbf     ; then CIPHER=bf_cbc     ; fi
   if test "x$enableval" = xaes-128; then CIPHER=aes_128_cbc; fi
   if test "x$enableval" = xaes-192; then CIPHER=aes_192_cbc; fi
@@ -309,9 +317,9 @@ AC_DEFINE_UNQUOTED(ENABLE_CIPHER, EVP_${CIPHER}, [Select the symmetric cipher to
 
 DIGEST=sha1
 AC_ARG_ENABLE(digest,
-  [AS_HELP_STRING(--enable-digest,
-     Select the digets algorithm to use (default "sha1"). Must be one of
-     "sha1", "ripemd160", "md5" or "md4" (insecure).)],
+  [AS_HELP_STRING(--enable-digest,[
+      Select the digets algorithm to use (default "sha1"). Must be one of
+      "sha1", "ripemd160", "md5" or "md4" (insecure).])],
   if test "x$enableval" = xsha1     ; then DIGEST=sha1     ; fi
   if test "x$enableval" = xripemd160; then DIGEST=ripemd160; fi
   if test "x$enableval" = xmd5      ; then DIGEST=md5      ; fi

@@ -31,6 +31,8 @@ vped_SOURCES = vped.C hash_map.h vpn.h vpn.C vpn_tcp.C vpn_dns.C \
                connection.h connection.C callback.h device.h device.C \
                $(COMMON)
 vped_LDADD = $(top_builddir)/lib/libvpe.a $(ROHCLIB)
+vped_LDFLAGS = @LDFLAGS_DAEMON@
+
 vpectrl_SOURCES = vpectrl.C \
                   $(COMMON)
 vpectrl_LDADD = $(top_builddir)/lib/libvpe.a
