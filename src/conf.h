@@ -47,7 +47,7 @@ struct conf_node {
   char *hostname; // hostname, if known, or NULL.
   u16 port;       // the port to bind to
 
-  enum { C_ONDEMAND, C_NEVER, C_ALWAYS } connectmode;
+  enum connectmode { C_ONDEMAND, C_NEVER, C_ALWAYS } connectmode;
   bool compress;
 
   u32 routerprio;

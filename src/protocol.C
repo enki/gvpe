@@ -561,7 +561,7 @@ connection::send_auth (auth_subtype subtype, SOCKADDR *sa, rsachallenge *k)
 void
 connection::establish_connection ()
 {
-  if (!ictx && conf != THISNODE && conf->connectmode != conf_node::C_NEVER)
+  if (!ictx && conf != THISNODE && connectmode != conf_node::C_NEVER)
     {
       if (now >= next_retry)
         {
@@ -570,7 +570,7 @@ connection::establish_connection ()
           if (retry_cnt < (17 << 2) | 3)
             retry_cnt++;
 
-          if (conf->connectmode == conf_node::C_ONDEMAND
+          if (connectmode == conf_node::C_ONDEMAND
               && retry_int > ::conf.keepalive)
             retry_int = ::conf.keepalive;
 
@@ -694,7 +694,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
 
         config_packet *p = (config_packet *) pkt;
         if (p->chk_config ())
-          if (conf->connectmode == conf_node::C_ALWAYS)
+          if (connectmode == conf_node::C_ALWAYS)
             establish_connection ();
 
         //D slog the protocol mismatch?
@@ -783,6 +783,8 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
                         send_data_packet (p);
                         delete p;
                       }
+
+                    connectmode = conf->connectmode;
 
                     slog (L_INFO, _("connection to %d (%s %s) established"),
                           conf->id, conf->nodename, (const char *)sockinfo (ssa));
@@ -951,7 +953,7 @@ void connection::timer ()
 {
   if (conf != THISNODE)
     {
-      if (now >= next_retry && conf->connectmode == conf_node::C_ALWAYS)
+      if (now >= next_retry && connectmode == conf_node::C_ALWAYS)
         establish_connection ();
 
       if (ictx && octx)
@@ -1123,8 +1125,7 @@ vpn::reconnect_all ()
       conn->conf = *i;
       conns.push_back (conn);
 
-      if (conn->conf->connectmode == conf_node::C_ALWAYS)
-        conn->establish_connection ();
+      conn->establish_connection ();
     }
 }
 
@@ -1138,7 +1139,7 @@ connection *vpn::find_router ()
       connection *c = *i;
 
       if (c->conf->routerprio > prio
-          && c->conf->connectmode == conf_node::C_ALWAYS
+          && c->connectmode == conf_node::C_ALWAYS
           && c->conf != THISNODE
           && c->ictx && c->octx)
         {

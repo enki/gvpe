@@ -65,6 +65,8 @@ struct connection
 
     crypto_ctx *octx, *ictx;
 
+    enum conf_node::connectmode connectmode;
+
     void reset_dstaddr ();
 
     void shutdown ();
@@ -88,6 +90,7 @@ struct connection
     {
       octx = ictx = 0;
       retry_cnt = 0;
+      connectmode = conf_node::C_ALWAYS; // initial setting
       reset_connection ();
     }
 

@@ -74,9 +74,8 @@ tap_device::tap_device ()
       exit (1);
     }
 
-  if (conf.ifpersist)
-    if (ioctl (fd, TUNSETPERSIST, 1))
-      slog (L_WARN, _("cannot set persistent mode for device %s: %s"), ifrname, strerror (errno));
+  if (ioctl (fd, TUNSETPERSIST, conf.ifpersist ? 1 : 0))
+    slog (L_WARN, _("cannot set persistency mode for device %s: %s"), ifrname, strerror (errno));
 
   slog (L_DEBUG, _("%s is a %s"), device, info ());
 }
