@@ -29,17 +29,14 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/poll.h>
 #include <sys/wait.h>
 #include <sys/uio.h>
 #include <errno.h>
 #include <time.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include <map>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/poll.h>
 
 #include "netcompat.h"
 
