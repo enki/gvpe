@@ -97,7 +97,8 @@ const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME hw ether $MAC
 
 #elif IF_freebsd
 # include "tincd/freebsd/device.c"
-const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME ether $MAC mtu $MTU up"; }
+// 5.2.1' ifconfig _first_ sets the if up then changes mtu, which can be deadly due to ipv6 kicking in
+const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME ether $MAC mtu $MTU && /sbin/ifconfig $IFNAME up"; }
 
 #elif IF_netbsd
 # define IF_istun 1
