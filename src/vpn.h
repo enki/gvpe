@@ -19,14 +19,14 @@
 #ifndef VPE_VPN_H__
 #define VPE_VPN_H__
 
+#include "global.h"
 #include "conf.h"
 #include "device.h"
 #include "connection.h"
 
 struct vpn
   {
-    int udpv4_fd;
-    int ipv4_fd;
+    int udpv4_fd, tcpv4_fd, ipv4_fd;
 
     int events;
 
@@ -48,13 +48,20 @@ struct vpn
     void shutdown_all ();
     void connect_request (int id);
 
-    void tap_ev (short revents); io_watcher tap_ev_watcher;
-    void ipv4_ev (short revents); io_watcher ipv4_ev_watcher;
-    void udpv4_ev (short revents); io_watcher udpv4_ev_watcher;
-
     void recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi);
 
+    void tap_ev (int fd, short revents); io_watcher tap_ev_watcher;
+
+#if ENABLE_TCP
+    void tcpv4_ev (int fd, short revents);
+    void tcpv4_accept (int fd, short revents); io_watcher tcpv4_accept_watcher;
+    void send_tcpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos = IPTOS_RELIABILITY);
+#endif
+
+    void udpv4_ev (int fd, short revents); io_watcher udpv4_ev_watcher;
     void send_udpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos = IPTOS_RELIABILITY);
+
+    void ipv4_ev (int fd, short revents); io_watcher ipv4_ev_watcher;
     void send_ipv4_packet (vpn_packet *pkt, const sockinfo &si, int tos = IPTOS_RELIABILITY);
 
     vpn ();
@@ -64,7 +71,7 @@ struct vpn
 
     void dump_status ();
 
-    const char *script_if_up (int);
+    const char *script_if_up ();
   };
 
 #endif

@@ -36,27 +36,23 @@ struct sockinfo
     u8 pad1;
 
     void set (const sockaddr_in *sa, u8 prot_ = PROT_UDPv4);
-    void set (const conf_node *conf);
+    void set (const conf_node *conf, u8 prot_ = PROT_UDPv4);
 
     operator const char *() const;
 
     const sockaddr *sav4 () const;
     const socklen_t salenv4 () const
-      {
-        return sizeof (sockaddr_in);
-      }
+      { return sizeof (sockaddr_in); }
 
     const char *ntoa () const;
 
-    sockinfo()
-      {
-        prot = 0;
-      }
+    sockinfo() { prot = 0; }
 
     sockinfo(const sockaddr_in &sa, u8 prot_ = PROT_UDPv4)
-      {
-        set (&sa, prot_);
-      }
+      { set (&sa, prot_); }
+
+    sockinfo(const conf_node *conf, u8 prot_ = PROT_UDPv4)
+      { set (conf, prot_); }
   };
 
 inline bool

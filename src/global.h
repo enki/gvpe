@@ -30,6 +30,8 @@
 #define PROTOCOL_MAJOR 0
 #define PROTOCOL_MINOR 0
 
+#define ENABLE_TCP 1
+
 #define RSA_KEYBITS	1280		// must be >= 1280 and divisible by 8
 #define RSA_KEYLEN	((RSA_KEYBITS) >> 3)
 #define RSA_OVERHEAD	(41 + 1)	// well, no define for OAEP in openssl

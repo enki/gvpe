@@ -172,11 +172,11 @@ void io_manager::loop ()
 
       set_now ();
 
-      for (unsigned int i = iow.size (); fds > 0 && i--; )
+      for (unsigned int i = 0; fds > 0 && i < iow.size (); ++i)
         if (pfs[i].revents)
           {
             --fds;
-            iow[i]->call (pfs[i].revents);
+            iow[i]->call (pfs[i].fd, pfs[i].revents);
           }
     }
 }

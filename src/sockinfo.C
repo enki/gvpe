@@ -34,10 +34,13 @@ void sockinfo::set (const sockaddr_in *sa, u8 prot_)
 }
 
 void
-sockinfo::set (const conf_node *conf)
+sockinfo::set (const conf_node *conf, u8 prot_)
 {
+  prot = prot_;
   host = 0;
-  port = htons (conf->udp_port);
+  port = prot_ == PROT_UDPv4 ? htons (conf->udp_port)
+       : prot_ == PROT_TCPv4 ? htons (conf->tcp_port)
+       : 0;
 
   if (conf->hostname)
     {
@@ -49,7 +52,6 @@ sockinfo::set (const conf_node *conf)
           //sa->sin_family = he->h_addrtype;
           memcpy (&host, he->h_addr_list[0], 4);
 
-          prot = PROT_UDPv4 | PROT_IPv4;
         }
       else
         slog (L_NOTICE, _("unable to resolve host '%s'"), conf->hostname);

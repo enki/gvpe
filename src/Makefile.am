@@ -3,7 +3,7 @@
 sbin_PROGRAMS = vped
 bin_PROGRAMS = vpectrl
 
-EXTRA_DIST = device-linux.C device-cygwin.C
+EXTRA_DIST = device-linux.C device-cygwin.C callback.pl
 
 INCLUDES = @INCLUDES@ -I$(top_builddir) -I$(top_srcdir)/lib
 

@@ -55,10 +55,11 @@ struct configuration conf;
 
 u8 best_protocol (u8 protset)
 {
-  if (protset & PROT_IPv4)
-    return PROT_IPv4;
+  if (protset & PROT_IPv4 ) return PROT_IPv4;
+  if (protset & PROT_UDPv4) return PROT_UDPv4;
+  if (protset & PROT_TCPv4) return PROT_TCPv4;
 
-  return PROT_UDPv4;
+  return 0;
 }
 
 const char *strprotocol (u8 protocol)

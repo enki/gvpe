@@ -57,10 +57,10 @@ public:
 
 extern io_manager iom;
 
-struct io_watcher : callback<void, short> {
+struct io_watcher : callback2<void, int, short> {
   template<class O1, class O2>
-  io_watcher (O1 *object, void (O2::*method)(short revents))
-    : callback<void, short>(object,method)
+  io_watcher (O1 *object, void (O2::*method)(int fd, short revents))
+    : callback2<void, int, short>(object,method)
     { }
 
   ~io_watcher ()
@@ -81,13 +81,13 @@ struct io_watcher : callback<void, short> {
 
 #define TSTAMP_CANCEL -1.
 
-struct time_watcher : callback<void, tstamp &> {
+struct time_watcher : callback1<void, tstamp &> {
   bool registered; // already registered?
   tstamp at;
 
   template<class O1, class O2>
   time_watcher (O1 *object, void (O2::*method)(tstamp &))
-    : callback<void, tstamp &>(object,method)
+    : callback1<void, tstamp &>(object,method)
     , registered(false)
     { }
 

@@ -115,7 +115,7 @@ struct sliding_window {
     }
 };
 
-typedef callback<const char *, int> run_script_cb;
+typedef callback0<const char *> run_script_cb;
 
 // run a shell script (or actually an external program).
 void run_script (const run_script_cb &cb, bool wait);

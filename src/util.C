@@ -146,7 +146,7 @@ void run_script (const run_script_cb &cb, bool wait)
   if ((pid = fork ()) == 0)
     {
       char *filename;
-      asprintf (&filename, "%s/%s", confbase, cb(0));
+      asprintf (&filename, "%s/%s", confbase, cb());
       execl (filename, filename, (char *) 0);
       exit (255);
     }

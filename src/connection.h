@@ -155,8 +155,8 @@ struct connection
     void recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi);
 
     void script_node ();
-    const char *script_node_up (int);
-    const char *script_node_down (int);
+    const char *script_node_up ();
+    const char *script_node_down ();
 
     void dump_status ();
 
