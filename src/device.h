@@ -31,6 +31,7 @@ struct net_packet {
   u32 len; // actually u16, but padding...
 
   u8 &operator[] (u16 offset) const;
+  u8 *at (u16 offset) const;
 
   void unshift_hdr (u16 hdrsize)
     {
@@ -86,6 +87,12 @@ inline
 u8 &net_packet::operator[] (u16 offset) const
 {
   return ((data_packet *)this)->data_[offset];
+}
+
+inline 
+u8 *net_packet::at (u16 offset) const
+{
+  return &((*this)[offset]);
 }
 
 struct tap_packet : net_packet {

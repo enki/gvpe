@@ -95,7 +95,10 @@ conf_node::~conf_node ()
 
   free (nodename);
   free (hostname);
+#if ENABLE_DNS
   free (domain);
+  free (dns_hostname);
+#endif
 }
 
 void configuration::init ()
@@ -117,6 +120,11 @@ void configuration::init ()
   default_node.compress    = true;
   default_node.protocols   = 0;
   default_node.max_retry   = DEFAULT_MAX_RETRY;
+
+#if ENABLE_DNS
+  default_node.dns_port    = 53;
+  dns_forw_port            = 53;
+#endif
 
   conf.pidfilename = strdup (LOCALSTATEDIR "/run/gvpe.pid");
 }
@@ -313,18 +321,12 @@ retry:
             free (script_node_down), script_node_down = strdup (val);
           else if (!strcmp (var, "pid-file"))
             free (pidfilename), pidfilename = strdup (val);
+#if ENABLE_DNS
           else if (!strcmp (var, "dns-forw-host"))
-            {
-#if ENABLE_DNS
-              free (dns_forw_host), dns_forw_host = strdup (val);
-#endif
-            }
+            free (dns_forw_host), dns_forw_host = strdup (val);
           else if (!strcmp (var, "dns-forw-port"))
-            {
-#if ENABLE_DNS
-              dns_forw_port = atoi (val);
+            dns_forw_port = atoi (val);
 #endif
-            }
           else if (!strcmp (var, "http-proxy-host"))
             {
 #if ENABLE_HTTP_PROXY
@@ -353,12 +355,12 @@ retry:
             node->udp_port = atoi (val);
           else if (!strcmp (var, "tcp-port"))
             node->tcp_port = atoi (val);
-          else if (!strcmp (var, "dns-port"))
-            {
 #if ENABLE_DNS
-              node->dns_port = atoi (val);
+          else if (!strcmp (var, "dns-hostname"))
+            free (node->dns_hostname), node->dns_hostname = strdup (val);
+          else if (!strcmp (var, "dns-port"))
+            node->dns_port = atoi (val);
 #endif
-            }
           else if (!strcmp (var, "dns-domain"))
             {
 #if ENABLE_DNS

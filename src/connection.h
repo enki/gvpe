@@ -138,13 +138,16 @@ struct connection
     crypto_ctx *octx, *ictx;
 
 #if ENABLE_DNS
-    sockinfo dns_si;
+    sockinfo dns_si; // forwarder
 
-    struct byte_stream *dns_rcvdq; int dns_rcvseq;
-    struct byte_stream *dns_snddq; int dns_sndseq;
+    vector<struct dns_rcv *> dns_rcvpq; int dns_rcvseq; // received packets
+
+    struct byte_stream *dns_rcvdq;
+    struct byte_stream *dns_snddq; int dns_sndseq; //D
 
     void dnsv4_cb (time_watcher &w); time_watcher dnsv4_tw;
     bool send_dnsv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
+    void dnsv4_receive_rep (struct dns_rcv *r);
 #endif
 
     enum conf_node::connectmode connectmode;

@@ -53,8 +53,9 @@ struct conf_node {
   char *hostname; // hostname, if known, or NULL.
 #if ENABLE_DNS
   char *domain;   // dns tunnel domain
-  u16 dns_port;
 #endif
+  char *dns_hostname;
+  u16 dns_port;
 
   u8 protocols;   // protocols this host can send & receive
   u16 udp_port, tcp_port;   // the port to bind to
@@ -100,8 +101,10 @@ struct configuration {
   u16 proxy_port;	// the proxy port, e.g. 3128
 #endif
 
+#if ENABLE_DNS
   char *dns_forw_host;
   u16 dns_forw_port;
+#endif
 
   void init ();
   void cleanup ();

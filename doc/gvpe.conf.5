@@ -129,13 +129,12 @@
 .\" ========================================================================
 .\"
 .IX Title "GVPE.CONF 5"
-.TH GVPE.CONF 5 "2005-02-22" "1.7" "GNU Virtual Private Ethernet"
+.TH GVPE.CONF 5 "2005-03-01" "1.7" "GNU Virtual Private Ethernet"
 .SH "NAME"
 gvpe.conf \- configuration file for the GNU VPE daemon
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-.Vb 4
-\&   enable-udp = yes
+.Vb 3
 \&   udp-port = 407
 \&   mtu = 1492
 \&   ifname = vpn0
@@ -422,12 +421,14 @@ Enable the \s-1RAW\s0 IPv4 transport using the \f(CW\*(C`ip\-proto\*(C'\fR proto
 is only 38 bytes, as opposed to \s-1UDP\s0's 58 (or \s-1TCP\s0's 60+).
 .IP "enable-udp = yes|true|on | no|false|off" 4
 .IX Item "enable-udp = yes|true|on | no|false|off"
-Enable the UDPv4 transport using the \f(CW\*(C`udp\-port\*(C'\fR port (default: \f(CW\*(C`yes\*(C'\fR,
-but this will change!). This is a good general choice since \s-1UDP\s0 tunnels
-well through many firewalls.
+Enable the UDPv4 transport using the \f(CW\*(C`udp\-port\*(C'\fR port (default: \f(CW\*(C`no\*(C'\fR,
+unless no other protocol is enabled for a node, in which case this
+protocol is enabled automatically). This is a good general choice since
+\&\s-1UDP\s0 tunnels well through many firewalls.
 .Sp
-\&\s-1NOTE:\s0 Please specify \f(CW\*(C`enable\-udp = yes\*(C'\fR even though it is the default, as
-some future version will have all protocols disabled by default.
+\&\s-1NOTE:\s0 Please specify \f(CW\*(C`enable\-udp = yes\*(C'\fR if you want t use it even though
+it might get switched on automatically, as some future version might
+default to another default protocol.
 .IP "enable-tcp = yes|true|on | no|false|off" 4
 .IX Item "enable-tcp = yes|true|on | no|false|off"
 Enable the TCPv4 transport using the \f(CW\*(C`tcp\-port\*(C'\fR port

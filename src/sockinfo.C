@@ -61,13 +61,15 @@ void sockinfo::set (const char *hostname, u16 port_, u8 prot_)
 void
 sockinfo::set (const conf_node *conf, u8 prot_)
 {
-  set (prot_ == PROT_DNSv4 ? ::conf.dns_forw_host
-                           : conf->hostname,
-       prot_ == PROT_UDPv4   ? conf->udp_port
-       : prot_ == PROT_TCPv4 ? conf->tcp_port
-       : prot_ == PROT_DNSv4 ? conf->dns_port
-       : 0,
-       prot_);
+  if (prot_ == PROT_DNSv4)
+    set (conf->dns_hostname, conf->dns_hostname ? conf->dns_port : 0, prot_);
+  else
+    set (conf->hostname,
+         prot_ == PROT_UDPv4   ? conf->udp_port
+         : prot_ == PROT_TCPv4 ? conf->tcp_port
+         : prot_ == PROT_DNSv4 ? conf->dns_port
+         : 0,
+         prot_);
 }
 
 const sockaddr *
@@ -168,6 +170,7 @@ sockinfo::upgrade_protocol (u8 prot_, conf_node *conf)
           return true;
         }
 
+#if ENABLE_DNS
       if (conf
           && prot_ & PROT_DNSv4
           && conf->protocols & PROT_DNSv4
@@ -176,6 +179,7 @@ sockinfo::upgrade_protocol (u8 prot_, conf_node *conf)
           set (::conf.dns_forw_host, ::conf.dns_forw_port, prot_);
           return true;
         }
+#endif
     }
 
   return false;

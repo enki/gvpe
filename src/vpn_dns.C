@@ -44,10 +44,16 @@
 #define MIN_RETRY 1.
 #define MAX_RETRY 60.
 
-#define MAX_OUTSTANDING 10 // max. outstanding requests
+#define MAX_OUTSTANDING 40 // max. outstanding requests
 #define MAX_WINDOW      100 // max. for MAX_OUTSTANDING
-#define MAX_RATE        1 // requests/s
-#define MAX_BACKLOG     (10*1024) // size of protocol backlog
+#define MAX_RATE        1000 // requests/s
+#define MAX_BACKLOG     (10*1024) // size of protocol backlog, must be > MAXSIZE
+
+#define MAX_DOMAIN_SIZE 220 // 255 is legal limit, but bind doesn't compress well
+// 240 leaves about 4 bytes of server reply data
+// every two request byte sless give room for one reply byte
+
+#define SEQNO_MASK 0xffff
 
 /*
 
@@ -86,7 +92,7 @@ struct dns64
   dns64 ();
 } dns64;
 
-const char dns64::encode_chars[64 + 1] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-";
+const char dns64::encode_chars[64 + 1] = "_4B9dLphHzrqQmGjkTbJt5svlZX8xSaReEYfwKgF1DP2W6NyVOU70IouACcMn3i-";
 s8 dns64::decode_chars[256];
 
 dns64::dns64 ()
@@ -131,7 +137,7 @@ int dns64::decode (u8 *dst, char *src, int len)
       s8 chr = decode_chars [(u8)*src++];
 
       if (!chr)
-        break;
+        continue;
 
       accum <<= 6;
       accum  |= chr - 1;
@@ -161,6 +167,7 @@ struct byte_stream
   bool empty () { return !fill; }
   int size () { return fill; }
 
+  bool put (u8 *data, unsigned int datalen);
   bool put (vpn_packet *pkt);
   vpn_packet *get ();
 
@@ -187,6 +194,16 @@ void byte_stream::remove (int count)
   memmove (data, data + count, fill -= count);
 }
 
+bool byte_stream::put (u8 *data, unsigned int datalen)
+{
+  if (maxsize - fill < datalen)
+    return false;
+
+  memcpy (this->data + fill, data, datalen); fill += datalen;
+
+  return true;
+}
+
 bool byte_stream::put (vpn_packet *pkt)
 {
   if (maxsize - fill < pkt->len + 2)
@@ -204,10 +221,17 @@ vpn_packet *byte_stream::get ()
 {
   int len = (data [0] << 8) | data [1];
 
+  printf ("get len %d, fill %d\n", len, fill);//D
+
+  if (len > MAXSIZE && fill >= 2)
+    abort (); // TODO handle this gracefully, connection reset
+
   if (fill < len + 2)
     return 0;
 
   vpn_packet *pkt = new vpn_packet;
+
+  pkt->len = len;
   memcpy (&((*pkt)[0]), data + 2, len);
   remove (len + 2);
 
@@ -224,6 +248,7 @@ vpn_packet *byte_stream::get ()
 #define FLAG_TC       ( 1 <<  9)
 #define FLAG_RD       ( 1 <<  8)
 #define FLAG_RA       ( 1 <<  7)
+#define FLAG_AUTH     ( 1 <<  5)
 #define FLAG_RCODE_MASK     (15 << 0)
 #define FLAG_RCODE_OK       ( 0 << 0)
 #define FLAG_RCODE_FORMERR  ( 1 << 0)
@@ -232,7 +257,7 @@ vpn_packet *byte_stream::get ()
 #define FLAG_RCODE_REFUSED  ( 5 << 0)
 
 #define DEFAULT_CLIENT_FLAGS (FLAG_QUERY | FLAG_OP_QUERY | FLAG_RD)
-#define DEFAULT_SERVER_FLAGS (FLAG_RESPONSE | FLAG_OP_QUERY | FLAG_AA | FLAG_RD)
+#define DEFAULT_SERVER_FLAGS (FLAG_RESPONSE | FLAG_OP_QUERY | FLAG_AA | FLAG_RD | FLAG_RA)
 
 struct dns_packet : net_packet
 {
@@ -287,17 +312,27 @@ struct dns_req
   tstamp next;
   int retry;
   connection *conn;
+  int seqno;
 
-  dns_req (connection *c, int seqno, byte_stream *stream);
+  dns_req (connection *c);
+  void gen_stream_req (int seqno, byte_stream *stream);
 };
 
-struct dns_rep
+static u16 dns_id = 12098; // TODO: should be per-vpn
+
+static u16 next_id ()
 {
-};
+  // the simplest lsfr with periodicity 65535 i could find
+  dns_id = (dns_id << 1)
+           | (((dns_id >> 1)
+               ^ (dns_id >> 2)
+               ^ (dns_id >> 4)
+               ^ (dns_id >> 15)) & 1);
 
-static u16 dns_id; // TODO: should be per-vpn
+  return dns_id;
+}
 
-dns_req::dns_req (connection *c, int seqno, byte_stream *stream)
+dns_req::dns_req (connection *c)
 : conn (c)
 {
   next = 0;
@@ -305,49 +340,49 @@ dns_req::dns_req (connection *c, int seqno, byte_stream *stream)
 
   pkt = new dns_packet;
 
-  pkt->id = dns_id++;
-  pkt->flags = DEFAULT_CLIENT_FLAGS;
+  pkt->id = next_id ();
+}
+
+void dns_req::gen_stream_req (int seqno, byte_stream *stream)
+{
+  this->seqno = seqno;
+
+  pkt->flags = htons (DEFAULT_CLIENT_FLAGS);
   pkt->qdcount = htons (1);
-  pkt->ancount = 0;
-  pkt->nscount = 0;
-  pkt->arcount = 0;
 
   int offs = 6*2;
-  int dlen = 255 - strlen (THISNODE->domain) - 1; // here we always have room for the max. label length
+  int dlen = MAX_DOMAIN_SIZE - strlen (THISNODE->domain) - 2;
+  // MAX_DOMAIN_SIZE is technically 255, but bind doesn't compress responses well,
+  // so we need to have space for 2*MAX_DOMAIN_SIZE + header + extra
 
-  u8 lbl[64]; //D
-  char enc[65];
-  int lbllen = 3;
-  lbl[0] = c->conf->id; //D
-  lbl[1] = seqno >> 8; //D
-  lbl[2] = seqno; //D
+  u8 data[256]; //TODO
 
-  while (dlen > 0)
+  data[0] = THISNODE->id; //TODO
+  data[1] = seqno >> 8; //TODO
+  data[2] = seqno; //TODO
+
+  int datalen = dns64::decode_len (dlen - (dlen + MAX_LBL_SIZE - 1) / MAX_LBL_SIZE) - 3;
+
+  if (datalen > stream->size ())
+    datalen = stream->size ();
+
+  char enc[256], *encp = enc;
+  
+  memcpy (data + 3, stream->begin (), datalen);
+  int enclen = dns64::encode (enc, data, datalen + 3);
+  stream->remove (datalen);
+
+  while (enclen)
     {
-      int sndlen = dlen;
+      int lbllen = enclen < MAX_LBL_SIZE ? enclen : MAX_LBL_SIZE;
 
-      if (sndlen + lbllen > dns64::decode_len (MAX_LBL_SIZE))
-        sndlen = dns64::decode_len (MAX_LBL_SIZE) - lbllen;
+      (*pkt)[offs++] = lbllen;
+      memcpy (pkt->at (offs), encp, lbllen);
 
-      if (sndlen > stream->size ())
-        sndlen = stream->size ();
+      offs += lbllen;
+      encp += lbllen;
 
-      if (sndlen + lbllen == 0)
-        break;
-
-      memcpy (lbl + lbllen, stream->begin (), sndlen);
-      stream->remove (sndlen);
-      lbllen += sndlen;
-
-      dns64::encode (enc, lbl, lbllen);
-
-      int elen = dns64::encode_len (lbllen);
-      (*pkt)[offs++] = elen;
-      memcpy (&((*pkt)[offs]), enc, elen);
-      offs += elen;
-      dlen -= elen + 1;
-
-      lbllen = 0;
+      enclen -= lbllen;
     }
 
   const char *suffix = THISNODE->domain;
@@ -377,8 +412,30 @@ dns_req::dns_req (connection *c, int seqno, byte_stream *stream)
   (*pkt)[offs++] = RR_CLASS_IN >> 8; (*pkt)[offs++] = RR_CLASS_IN;
 
   pkt->len = offs;
+}
 
-  c->vpn->dns_sndpq.push_back (this);
+struct dns_rcv
+{
+  int seqno;
+  dns_packet *pkt; // reply packet
+  u8 data [MAXSIZE]; // actually part of the reply packet...
+  int datalen;
+
+  dns_rcv (int seqno, dns_packet *req, u8 *data, int datalen);
+  ~dns_rcv ();
+};
+
+dns_rcv::dns_rcv (int seqno, dns_packet *req, u8 *data, int datalen)
+: seqno (seqno), pkt (new dns_packet), datalen (datalen)
+{
+  memcpy (this->data, data, datalen);
+  pkt->len = req->len;
+  memcpy (pkt->at (0), req->at (0), req->len);
+}
+
+dns_rcv::~dns_rcv ()
+{
+  delete pkt;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -391,6 +448,47 @@ struct dns_cfg
   u16 max_size;
   u8 flags1, flags2;
 };
+
+void connection::dnsv4_receive_rep (struct dns_rcv *r)
+{
+  dns_rcvpq.push_back (r);
+
+  redo:
+
+  for (vector<dns_rcv *>::iterator i = dns_rcvpq.begin ();
+       i != dns_rcvpq.end ();
+       ++i)
+    if (dns_rcvseq == (*i)->seqno)
+      {
+        dns_rcv *r = *i;
+
+        dns_rcvseq = (dns_rcvseq + 1) & SEQNO_MASK;
+
+        if (!dns_snddq && !dns_rcvdq)
+          {
+            dns_rcvdq = new byte_stream (MAX_BACKLOG * 2);
+            dns_snddq = new byte_stream (MAX_BACKLOG);
+
+            dns_si.set (::conf.dns_forw_host, ::conf.dns_forw_port, PROT_DNSv4);
+          }
+
+        if (!dns_rcvdq->put (r->data, r->datalen))
+          abort (); // MUST never overflow, can be caused by data corruption, TODO
+
+        while (vpn_packet *pkt = dns_rcvdq->get ())
+          {
+            sockinfo si;
+            si.host = 0; si.port = 0; si.prot = PROT_DNSv4;
+
+            vpn->recv_vpn_packet (pkt, si);
+          }
+      }
+    else if ((u32)dns_rcvseq - MAX_WINDOW - (u32)(*i)->seqno < MAX_WINDOW * 2)
+      {
+        dns_rcvpq.erase (i);
+        goto redo;
+      }
+}
 
 dns_packet *
 vpn::dnsv4_server (dns_packet *pkt)
@@ -407,9 +505,6 @@ vpn::dnsv4_server (dns_packet *pkt)
     {
       char qname[MAXSIZE];
       int qlen = pkt->decode_label ((char *)qname, MAXSIZE - offs, offs);
-
-      printf ("rcvd packet len %d, id%04x flags%04x q%04x a%04x n%04x a%04x <%s>\n", pkt->len,
-          pkt->id, flags, pkt->qdcount, pkt->ancount, pkt->nscount, pkt->arcount, qname);//D
 
       u16 qtype  = (*pkt) [offs++] << 8; qtype  |= (*pkt) [offs++];
       u16 qclass = (*pkt) [offs++] << 8; qclass |= (*pkt) [offs++];
@@ -428,66 +523,87 @@ vpn::dnsv4_server (dns_packet *pkt)
           && qlen > dlen + 1
           && !memcmp (qname + qlen - dlen - 1, THISNODE->domain, dlen))
         {
-          // correct class, domain, parse
+          // correct class, domain: parse
           u8 data[MAXSIZE];
           int datalen = dns64::decode (data, qname, qlen - dlen - 1);
 
-          for (int i = 0; i < datalen; i++)
-            printf ("%02x ", data[i]);
-          printf ("\n");
+          int client = data[0];
+          int seqno  = ((data[1] << 8) | data[2]) & SEQNO_MASK;
 
-          
-
-
-#if 0
-          // now generate reply
-          rep->ancount = htons (1); // one answer RR
-          rep->flags = htons (DEFAULT_SERVER_FLAGS | FLAG_RCODE_OK);
-
-          (*rep) [offs++] = 0xc0;
-          (*rep) [offs++] = 6 * 2; // same as in query section
-
-          (*rep) [offs++] = RR_TYPE_TXT >> 8; (*rep) [offs++] = RR_TYPE_TXT;
-          (*rep) [offs++] = RR_CLASS_IN >> 8; (*rep) [offs++] = RR_CLASS_IN;
-
-          (*rep) [offs++] = 0; (*rep) [offs++] = 0;
-          (*rep) [offs++] = 0; (*rep) [offs++] = 0; // TTL
-
-          int dlen = MAX_PKT_SIZE - offs - 2;
-
-          printf ("we have room for %d bytes\n", dlen);
-
-          int rdlen_offs = offs += 2;
-
-          u8 txt[255];
-          txt[0] = 0;
-          txt[1] = 0;
-
-          int txtlen = 2;
-
-          while (dlen > 1)
+          if (0 < client && client <= conns.size ())
             {
-              int sndlen = --dlen;
+              connection *c = conns [client - 1];
 
-              if (sndlen + txtlen > 255)
-                sndlen = 255 - txtlen;
+              for (vector<dns_rcv *>::iterator i = c->dns_rcvpq.begin ();
+                   i != c->dns_rcvpq.end ();
+                   ++i)
+                if ((*i)->seqno == seqno)
+                  {
+                    // already seen that request, just reply with the original reply
+                    dns_rcv *r = *i;
 
-              sndlen = 0;
+                    offs = r->pkt->len;
+                    memcpy (pkt->at (0), r->pkt->at (0), offs);
+                    goto duplicate_request;
+                  }
 
-              (*rep)[offs++] = sndlen + txtlen;
-              memcpy (&((*rep)[offs]), txt, txtlen);
-              offs += txtlen;
+              // new packet, queue
+              c->dnsv4_receive_rep (new dns_rcv (seqno, pkt, data + 3, datalen - 3));
 
-              //if (sndlen + txtlen > dns_snddq.
+              // now generate reply
+              pkt->ancount = htons (1); // one answer RR
+              pkt->flags = htons (DEFAULT_SERVER_FLAGS | FLAG_RCODE_OK);
+
+              (*pkt) [offs++] = 0xc0;
+              (*pkt) [offs++] = 6 * 2; // same as in query section
+
+              (*pkt) [offs++] = RR_TYPE_TXT >> 8; (*pkt) [offs++] = RR_TYPE_TXT;
+              (*pkt) [offs++] = RR_CLASS_IN >> 8; (*pkt) [offs++] = RR_CLASS_IN;
+
+              (*pkt) [offs++] = 0; (*pkt) [offs++] = 0;
+              (*pkt) [offs++] = 0; (*pkt) [offs++] = 0; // TTL
+
+              int dlen = MAX_PKT_SIZE - offs - 2;
+
+              // bind doesn't compress well, so reduce further by one label length
+              dlen -= qlen;
+
+              int rdlen_offs = offs += 2;
+
+              while (c->dns_snddq
+                     && !c->dns_snddq->empty ()
+                     && dlen > 1)
+                {
+                  int txtlen = dlen <= 255 ? dlen - 1 : 255;
+
+                  if (txtlen > c->dns_snddq->size ())
+                    txtlen = c->dns_snddq->size ();
+
+                  (*pkt)[offs++] = txtlen;
+                  memcpy (pkt->at (offs), c->dns_snddq->begin (), txtlen);
+                  offs += txtlen;
+                  c->dns_snddq->remove (txtlen);
+
+                  dlen -= txtlen + 1;
+                }
+
+              // avoid empty TXT rdata
+              if (offs == rdlen_offs)
+                (*pkt)[offs++] = 0;
+
+              int rdlen = offs - rdlen_offs;
+
+              (*pkt) [rdlen_offs - 2] = rdlen >> 8;
+              (*pkt) [rdlen_offs - 1] = rdlen;
+
+              duplicate_request: ;
             }
-
-          int rdlen = offs - rdlen_offs;
-
-          (*rep) [rdlen_offs - 2] = rdlen >> 8;
-          (*rep) [rdlen_offs - 1] = rdlen;
-#endif
+          else
+            pkt->flags = htons (DEFAULT_SERVER_FLAGS | FLAG_RCODE_FORMERR);
         }
     }
+  else
+    offs = pkt->len;
 
   pkt->len = offs;
   return pkt;
@@ -502,13 +618,16 @@ vpn::dnsv4_client (dns_packet *pkt)
   pkt->qdcount = ntohs (pkt->qdcount);
   pkt->ancount = ntohs (pkt->ancount);
 
+  // go through our request list and find the corresponding request
   for (vector<dns_req *>::iterator i = dns_sndpq.begin ();
        i != dns_sndpq.end ();
        ++i)
     if ((*i)->pkt->id == pkt->id)
       {
         connection *c = (*i)->conn;
-        printf ("GOT RESPONSE id %x %p\n", pkt->id, c);//D
+        int seqno = (*i)->seqno;
+        u8 data[MAXSIZE], *datap = data;
+
         delete *i;
         dns_sndpq.erase (i);
 
@@ -535,19 +654,41 @@ vpn::dnsv4_client (dns_packet *pkt)
 
                 u16 rdlen = (*pkt) [offs++] << 8; rdlen |= (*pkt) [offs++];
 
-                printf ("REPLY %d:%d TTL %d RD %d\n", qtype, qclass, ttl, rdlen);
-
-                offs += rdlen;
-
-                if (MAXSIZE - offs < rdlen)
+                if (rdlen <= MAXSIZE - offs)
                   {
                     // decode bytes, finally
+
+                    while (rdlen)
+                      {
+                        int txtlen = (*pkt) [offs++];
+
+                        assert (txtlen + offs < MAXSIZE - 1);
+
+                        memcpy (datap, pkt->at (offs), txtlen);
+                        datap += txtlen; offs += txtlen;
+
+                        rdlen -= txtlen + 1;
+                      }
+
                   }
+
               }
           }
 
+        if (datap != data)
+          printf ("%02x %02x %02x %02x\n",
+              data[0],
+              data[1],
+              data[2],
+              data[3]);
+
+        printf ("recv %d,%d\n", pkt->id, seqno, datap - data);//D
+        c->dnsv4_receive_rep (new dns_rcv (seqno, pkt, data, datap - data));
+
         break;
       }
+
+  delete pkt;
 }
 
 void
@@ -562,13 +703,21 @@ vpn::dnsv4_ev (io_watcher &w, short revents)
       pkt->len = recvfrom (w.fd, &((*pkt)[0]), MAXSIZE, 0, (sockaddr *)&sa, &sa_len);
 
       if (pkt->len > 0)
-        if (THISNODE->dns_port)
-          {
-            pkt = dnsv4_server (pkt);
-            sendto (w.fd, &((*pkt)[0]), pkt->len, 0, (sockaddr *)&sa, sa_len);
-          }
-        else
-          dnsv4_client (pkt);
+        {
+          if (pkt->flags & htons (FLAG_TC))
+            {
+              slog (L_WARN, _("DNS request/response truncated, check protocol settings."));
+              //TODO connection reset
+            }
+
+          if (THISNODE->dns_port)
+            {
+              pkt = dnsv4_server (pkt);
+              sendto (w.fd, &((*pkt)[0]), pkt->len, 0, (sockaddr *)&sa, sa_len);
+            }
+          else
+            dnsv4_client (pkt);
+        }
     }
 }
 
@@ -581,7 +730,7 @@ connection::send_dnsv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
       dns_rcvdq = new byte_stream (MAX_BACKLOG * 2);
       dns_snddq = new byte_stream (MAX_BACKLOG);
 
-      dns_rcvseq = dns_sndseq = 0;
+      //dns_rcvseq = dns_sndseq = 0;
 
       dns_si.set (::conf.dns_forw_host, ::conf.dns_forw_port, PROT_DNSv4);
     }
@@ -590,7 +739,7 @@ connection::send_dnsv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
     return false;
 
   // start timer if neccessary
-  if (!dnsv4_tw.active)
+  if (!THISNODE->dns_port && !dnsv4_tw.active)
     dnsv4_cb (dnsv4_tw);
 
   return true;
@@ -603,8 +752,6 @@ connection::dnsv4_cb (time_watcher &w)
   tstamp next = NOW + 60;
   dns_req *send = 0;
   
-  slog (L_NOISE, _("dnsv4, %d packets in send queue\n"), vpn->dns_sndpq.size ());
-
   for (vector<dns_req *>::iterator i = vpn->dns_sndpq.begin ();
        i != vpn->dns_sndpq.end ();
        ++i)
@@ -617,7 +764,8 @@ connection::dnsv4_cb (time_watcher &w)
             {
               send = r;
 
-              slog (L_NOISE, _("dnsv4, send req %d\n"), r->pkt->id);
+              if (r->retry)//D
+                printf ("req %d, retry %d\n", r->pkt->id, r->retry);
               r->retry++;
               r->next = NOW + r->retry;
             }
@@ -629,7 +777,13 @@ connection::dnsv4_cb (time_watcher &w)
 
   if (!send
       && vpn->dns_sndpq.size () < MAX_OUTSTANDING)
-    send = new dns_req (this, dns_sndseq++, dns_snddq);
+    {
+      send = new dns_req (this);
+      send->gen_stream_req (dns_sndseq, dns_snddq);
+      vpn->dns_sndpq.push_back (send);
+
+      dns_sndseq = (dns_sndseq + 1) & SEQNO_MASK;
+    }
 
   tstamp min_next = NOW + (1. / (tstamp)MAX_RATE);
 

@@ -67,7 +67,6 @@ struct vpn
 #endif
 
 #if ENABLE_DNS
-    vector<struct dns_rep *> dns_rcvpq;
     vector<struct dns_req *> dns_sndpq;
 
     void dnsv4_ev (io_watcher &w, short revents); io_watcher dnsv4_ev_watcher;
