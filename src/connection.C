@@ -629,6 +629,7 @@ connection::reset_si ()
   // mask out protocols we cannot establish
   if (!conf->udp_port) protocol &= ~PROT_UDPv4;
   if (!conf->tcp_port) protocol &= ~PROT_TCPv4;
+  if (!conf->dns_port) protocol &= ~PROT_DNSv4;
 
   si.set (conf, protocol);
 }
@@ -658,7 +659,33 @@ connection::forward_si (const sockinfo &si) const
 void
 connection::send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
-  if (!vpn->send_vpn_packet (pkt, si, tos))
+  bool ok;
+
+  switch (si.prot)
+    {
+      case PROT_IPv4:
+        ok = vpn->send_ipv4_packet (pkt, si, tos); break;
+      case PROT_UDPv4:
+        ok = vpn->send_udpv4_packet (pkt, si, tos); break;
+#if ENABLE_TCP 
+      case PROT_TCPv4:
+        ok = vpn->send_tcpv4_packet (pkt, si, tos); break;
+#endif
+#if ENABLE_ICMP
+      case PROT_ICMPv4:
+        ok = vpn->send_icmpv4_packet (pkt, si, tos); break;
+#endif
+#if ENABLE_DNS
+      case PROT_DNSv4:
+        ok = send_dnsv4_packet (pkt, si, tos); break;
+#endif
+
+      default:
+        slog (L_CRIT, _("%s: FATAL: trying to send packet with unsupported protocol"), (const char *)si);
+        ok = false;
+    }
+
+  if (!ok)
     reset_connection ();
 }
 
@@ -1191,14 +1218,20 @@ const char *connection::script_node_down ()
   return ::conf.script_node_up ? ::conf.script_node_down : "node-down";
 }
 
-connection::connection(struct vpn *vpn_)
-: vpn(vpn_)
+connection::connection (struct vpn *vpn, conf_node *conf)
+: vpn(vpn), conf(conf)
 , rekey (this, &connection::rekey_cb)
 , keepalive (this, &connection::keepalive_cb)
 , establish_connection (this, &connection::establish_connection_cb)
+#if ENABLE_DNS
+, dnsv4_tw (this, &connection::dnsv4_cb)
+#endif
 {
   octx = ictx = 0;
   retry_cnt = 0;
+
+  if (!conf->protocols) // make sure some protocol is enabled
+    conf->protocols = PROT_UDPv4;
 
   connectmode = conf_node::C_ALWAYS; // initial setting
   reset_connection ();

@@ -55,7 +55,6 @@ struct vpn
     void send_connect_request (int id);
 
     void recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi);
-    bool send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos);
 
 #if ENABLE_TCP
     void tcpv4_ev (io_watcher &w, short revents); io_watcher tcpv4_ev_watcher;
@@ -69,7 +68,6 @@ struct vpn
 
 #if ENABLE_DNS
     void dnsv4_ev (io_watcher &w, short revents); io_watcher dnsv4_ev_watcher;
-    bool send_dnsv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
 #endif
 
     void udpv4_ev (io_watcher &w, short revents); io_watcher udpv4_ev_watcher;

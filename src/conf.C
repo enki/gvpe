@@ -115,7 +115,7 @@ void configuration::init ()
   default_node.tcp_port    = DEFAULT_UDPPORT; // ehrm
   default_node.connectmode = conf_node::C_ALWAYS;
   default_node.compress    = true;
-  default_node.protocols   = PROT_UDPv4;
+  default_node.protocols   = 0;
   default_node.max_retry   = DEFAULT_MAX_RETRY;
 
   conf.pidfilename = strdup (LOCALSTATEDIR "/run/gvpe.pid");
@@ -313,13 +313,13 @@ retry:
             free (script_node_down), script_node_down = strdup (val);
           else if (!strcmp (var, "pid-file"))
             free (pidfilename), pidfilename = strdup (val);
-          else if (!strcmp (var, "dns-forwarder-host"))
+          else if (!strcmp (var, "dns-forw-host"))
             {
 #if ENABLE_DNS
               free (dns_forw_host), dns_forw_host = strdup (val);
 #endif
             }
-          else if (!strcmp (var, "dns-forwarder-port"))
+          else if (!strcmp (var, "dns-forw-port"))
             {
 #if ENABLE_DNS
               dns_forw_port = atoi (val);

@@ -137,6 +137,14 @@ struct connection
 
     crypto_ctx *octx, *ictx;
 
+#if ENABLE_DNS
+    vector<struct dns_rep *> dns_rcvq;
+    vector<struct dns_req *> dns_sndq;
+
+    void dnsv4_cb (time_watcher &w); time_watcher dnsv4_tw;
+    bool send_dnsv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
+#endif
+
     enum conf_node::connectmode connectmode;
     u8 prot_minor; // minor number of other side
 
@@ -171,7 +179,7 @@ struct connection
 
     void dump_status ();
 
-    connection(struct vpn *vpn_);
+    connection (struct vpn *vpn, conf_node *conf);
     ~connection ();
   };
 

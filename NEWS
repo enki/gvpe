@@ -1,3 +1,7 @@
+
+	- enable-udp = yes is now default only when no other protocols
+          are enabled. otherwise it is disabled unless explicitly enabled.
+
 1.7 Tue Feb 22 23:58:59 CET 2005
 	- protocol version 0.1, compatible with older releases.
 	- first gnu release.

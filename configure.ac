@@ -19,19 +19,24 @@ AH_TOP([
 ])
 
 AH_BOTTOM([
+typedef unsigned char u8;
+typedef signed char s8;
+
 #if __CYGWIN__
 
-typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
+typedef signed short s16;
+typedef signed int s32;
 
 #else
 #include <inttypes.h>
 
 /* old modula-2 habits */
-typedef unsigned char u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
+typedef int16_t s16;
+typedef int32_t s32;
 #endif
 
 #endif

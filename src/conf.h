@@ -99,10 +99,9 @@ struct configuration {
   char *proxy_host;	// the proxy hostname, e.g. proxy1.example.net
   u16 proxy_port;	// the proxy port, e.g. 3128
 #endif
-#if ENABLE_DNS
+
   char *dns_forw_host;
   u16 dns_forw_port;
-#endif
 
   void init ();
   void cleanup ();

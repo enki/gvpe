@@ -41,14 +41,10 @@
 
 #include "vpn.h"
 
-#if ENABLE_HTTP_PROXY
-# include "conf.h"
-#endif
-
 #define MIN_RETRY 1.
 #define MAX_RETRY 60.
 
-#define SERVER conf.dns_port
+#define MAX_OUTSTANDING 10 // max. outstanding requests
 
 /*
 
@@ -143,6 +139,8 @@ void dns64::decode (u8 *dst, char *src, int len)
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////
+
 #define FLAG_QUERY    ( 0 << 15)
 #define FLAG_RESPONSE ( 1 << 15)
 #define FLAG_OP_MASK  (15 << 14)
@@ -205,6 +203,44 @@ int dns_packet::decode_label (char *data, int size, int &offs)
 
   return data - orig;
 }
+
+/////////////////////////////////////////////////////////////////////////////
+
+struct dns_req
+{
+  dns_packet *pkt;
+  tstamp next;
+  int retry;
+
+  dns_req (connection *c, vpn_packet *p, int &offs);
+};
+
+struct dns_rep
+{
+};
+
+static u16 dns_id; // TODO: should be per-vpn
+
+dns_req::dns_req (connection *c, vpn_packet *p, int &offs)
+{
+  next = 0;
+  retry = 0;
+
+  pkt = new dns_packet;
+
+  pkt->id = dns_id++;
+  pkt->flags = DEFAULT_CLIENT_FLAGS;
+  pkt->qdcount = htons (1 * 0);
+  pkt->ancount = 0;
+  pkt->nscount = 0;
+  pkt->arcount = 0;
+
+  offs += 10000;
+
+  c->dns_sndq.push_back (this);
+}
+
+/////////////////////////////////////////////////////////////////////////////
 
 struct dns_cfg
 {
@@ -305,9 +341,54 @@ vpn::dnsv4_ev (io_watcher &w, short revents)
 }
 
 bool
-vpn::send_dnsv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
+connection::send_dnsv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
-  //return i->send_packet (pkt, tos);
+  if (dns_sndq.size () >= MAX_OUTSTANDING)
+    return false;
+
+  // split vpn packet into dns packets, add to sndq
+  for (int offs = 0; offs < pkt->len; )
+    new dns_req (this, pkt, offs);
+
+  // force transmit
+  dnsv4_cb (dnsv4_tw);
+
+  return true;
+}
+
+void
+connection::dnsv4_cb (time_watcher &w)
+{
+  // check for timeouts and (re)transmit
+  tstamp next = NOW + 60;
+  
+  slog (L_NOISE, _("dnsv4, %d packets in send queue\n"), dns_sndq.size ());
+
+  if (dns_sndq.empty ())
+    {
+      next = NOW + 1;
+      // push poll packet
+    }
+
+  for (vector<dns_req *>::iterator i = dns_sndq.begin ();
+       i != dns_sndq.end ();
+       ++i)
+    {
+      dns_req *r = *i;
+
+      if (r->next <= NOW)
+        {
+          slog (L_NOISE, _("dnsv4, send req %d\n"), r->pkt->id);
+          r->retry++;
+          r->next = NOW + r->retry;
+        }
+
+      if (r->next < next)
+        next = r->next;
+    }
+
+  printf ("%f next\n", next);
+  w.start (next);
 }
 
 #endif

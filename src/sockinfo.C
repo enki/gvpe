@@ -27,7 +27,7 @@
 #include "slog.h"
 
 // all ipv4-based protocols
-#define PROTv4 (PROT_UDPv4 | PROT_TCPv4 | PROT_ICMPv4 | PROT_IPv4)
+#define PROTv4 (PROT_UDPv4 | PROT_TCPv4 | PROT_ICMPv4 | PROT_IPv4 | PROT_DNSv4)
 
 void sockinfo::set (const sockaddr_in *sa, u8 prot_)
 {
@@ -61,12 +61,13 @@ void sockinfo::set (const char *hostname, u16 port_, u8 prot_)
 void
 sockinfo::set (const conf_node *conf, u8 prot_)
 {
- set (conf->hostname,
-        prot_ == PROT_UDPv4 ? conf->udp_port
-      : prot_ == PROT_TCPv4 ? conf->tcp_port
-      : prot_ == PROT_DNSv4 ? conf->dns_port
-      : 0,
-      prot_);
+  set (prot_ == PROT_DNSv4 ? ::conf.dns_forw_host
+                           : conf->hostname,
+       prot_ == PROT_UDPv4   ? conf->udp_port
+       : prot_ == PROT_TCPv4 ? conf->tcp_port
+       : prot_ == PROT_DNSv4 ? conf->dns_port
+       : 0,
+       prot_);
 }
 
 const sockaddr *
@@ -124,7 +125,8 @@ sockinfo::supported_protocols (conf_node *conf)
 
   if (conf
       && prot & PROTv4
-      && conf->protocols & PROT_DNSv4)
+      && conf->protocols & PROT_DNSv4
+      && conf->dns_port)
     protocols |= PROT_DNSv4;
 
   return protocols;
@@ -163,6 +165,15 @@ sockinfo::upgrade_protocol (u8 prot_, conf_node *conf)
         {
           prot = prot_;
           port = htons (conf->tcp_port);
+          return true;
+        }
+
+      if (conf
+          && prot_ & PROT_DNSv4
+          && conf->protocols & PROT_DNSv4
+          && conf->dns_port)
+        {
+          set (::conf.dns_forw_host, ::conf.dns_forw_port, prot_);
           return true;
         }
     }

@@ -267,39 +267,6 @@ vpn::setup ()
   return 0;
 }
 
-// send a vpn packet out to other hosts
-bool
-vpn::send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos)
-{
-  switch (si.prot)
-    {
-      case PROT_IPv4:
-        return send_ipv4_packet (pkt, si, tos);
-
-      case PROT_UDPv4:
-        return send_udpv4_packet (pkt, si, tos);
-
-#if ENABLE_TCP
-      case PROT_TCPv4:
-        return send_tcpv4_packet (pkt, si, tos);
-#endif
-
-#if ENABLE_ICMP
-      case PROT_ICMPv4:
-        return send_icmpv4_packet (pkt, si, tos);
-#endif
-
-#if ENABLE_DNS
-      case PROT_DNSv4:
-        return send_dnsv4_packet (pkt, si, tos);
-#endif
-
-      default:
-        slog (L_CRIT, _("%s: FATAL: trying to send packet with unsupported protocol"), (const char *)si);
-        return false;
-    }
-}
-
 bool
 vpn::send_ipv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
@@ -641,18 +608,15 @@ vpn::reconnect_all ()
   for (configuration::node_vector::iterator i = conf.nodes.begin ();
        i != conf.nodes.end (); ++i)
     {
-      connection *conn = new connection (this);
-
-      conn->conf = *i;
+      connection *conn = new connection (this, *i);
       conns.push_back (conn);
-
       conn->establish_connection ();
     }
 }
 
 connection *vpn::find_router ()
 {
-  u32 prio = 0;
+  u32 prio = 1;
   connection *router = 0;
 
   for (conns_vector::iterator i = conns.begin (); i != conns.end (); ++i)
