@@ -76,6 +76,11 @@ the interface, use this command:
 
   ifconfig $IFNAME ether $MAC mtu $MTU up
 
+These commands might be helpful examples:
+
+  ifconfig $IFNAME 10.0.0.$NODEID
+  route add -net 10.0.0.0 -netmask 255.255.255.0 -interface $IFNAME 10.0.0.$NODEID
+
 =head2 tincd/netbsd
 
 TUN-device; The interface is a point to point-device. To initialize it,
@@ -100,7 +105,17 @@ The necessary kernel extension can be found here:
   http://www-user.rhrk.uni-kl.de/~nissler/tuntap/
 
 There are two drivers, the one to use is the "tap" driver. It driver must
-be loaded before use, using C<kmodload>.
+be loaded before use, read the docs on how to install it as a startup
+item.
+
+To initialize the interface, use this command:
+
+  ifconfig $IFNAME ether $MAC mtu $MTU up
+
+These commands might be helpful examples:
+
+  ifconfig $IFNAME 10.0.0.$NODEID
+  route add -net 10.0.0.0 -interface $IFNAME 255.255.255.0
 
 =head2 tincd/darwin
 
@@ -117,7 +132,7 @@ The driver must be loaded before use:
 
 =head2 tincd/solaris
 
-TUN-device; already part of the kernel, or available here:
+TUN-device; already part of the kernel(?), or available here:
 
   http://vtun.sourceforge.net/tun/
 

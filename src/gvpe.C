@@ -257,7 +257,7 @@ main (int argc, char **argv, char **envp)
 
   if (!THISNODE)
     {
-      slog (L_ERR, _("current node not set, or node '%s' not found in configfile, specify the nodename when starting vped."),
+      slog (L_ERR, _("current node not set, or node '%s' not found in configfile, specify the nodename when starting gvpe."),
             thisnode ? thisnode : "<unset>");
       exit (EXIT_FAILURE);
     }

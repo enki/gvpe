@@ -63,10 +63,9 @@ struct tcp_si_map : public map<const sockinfo *, tcp_connection *, lt_sockinfo> 
   void cleaner_cb (time_watcher &w); time_watcher cleaner;
 
   tcp_si_map ()
-    : cleaner(this, &tcp_si_map::cleaner_cb)
-    {
-      cleaner.start (0);
-    }
+  : cleaner(this, &tcp_si_map::cleaner_cb)
+  { }
+
 } tcp_si;
 
 struct tcp_connection : io_watcher {
@@ -95,9 +94,9 @@ struct tcp_connection : io_watcher {
   void error (); // abort conenction && cleanup
 
   operator tcp_si_map::value_type()
-    {
-      return tcp_si_map::value_type (&si, this);
-    }
+  {
+    return tcp_si_map::value_type (&si, this);
+  }
 
   tcp_connection (int fd_, const sockinfo &si_, vpn &v_);
   ~tcp_connection ();
@@ -450,6 +449,9 @@ void tcp_connection::error ()
 tcp_connection::tcp_connection (int fd_, const sockinfo &si_, vpn &v_)
 : v(v_), si(si_), io_watcher(this, &tcp_connection::tcpv4_ev)
 {
+  if (!tcp_si.cleaner.active)
+    tcp_si.cleaner.start (0);
+
   last_activity = NOW;
   r_pkt = 0;
   w_pkt = 0;

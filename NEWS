@@ -3,6 +3,9 @@
         - new low-level device native/darwin, which supports the tap
           driver available for darwin (thanks to matthew mead who tested
           it out with me in a long session).
+        - fixed a bug in relying on the order of global construction
+          when tcp transport was enabled. The fix makes it use no
+          cpu time unless it is in use, too.
 	- skip unparsable config lines instead of stopping parsing and
           continuing with a surely unusable config.
 

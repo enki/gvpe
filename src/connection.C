@@ -97,44 +97,44 @@ struct rsa_cache : list<rsa_entry>
   void cleaner_cb (time_watcher &w); time_watcher cleaner;
   
   bool find (const rsaid &id, rsachallenge &chg)
-    {
-      for (iterator i = begin (); i != end (); ++i)
-        {
-          if (!memcmp (&id, &i->id, sizeof id) && i->expire > NOW)
-            {
-              memcpy (&chg, &i->chg, sizeof chg);
+  {
+    for (iterator i = begin (); i != end (); ++i)
+      {
+        if (!memcmp (&id, &i->id, sizeof id) && i->expire > NOW)
+          {
+            memcpy (&chg, &i->chg, sizeof chg);
 
-              erase (i);
-              return true;
-            }
-        }
+            erase (i);
+            return true;
+          }
+      }
 
-      if (cleaner.at < NOW)
-        cleaner.start (NOW + RSA_TTL);
+    if (cleaner.at < NOW)
+      cleaner.start (NOW + RSA_TTL);
 
-      return false;
-    }
+    return false;
+  }
 
   void gen (rsaid &id, rsachallenge &chg)
-    {
-      rsa_entry e;
+  {
+    rsa_entry e;
 
-      RAND_bytes ((unsigned char *)&id,  sizeof id);
-      RAND_bytes ((unsigned char *)&chg, sizeof chg);
+    RAND_bytes ((unsigned char *)&id,  sizeof id);
+    RAND_bytes ((unsigned char *)&chg, sizeof chg);
 
-      e.expire = NOW + RSA_TTL;
-      e.id = id;
-      memcpy (&e.chg, &chg, sizeof chg);
+    e.expire = NOW + RSA_TTL;
+    e.id = id;
+    memcpy (&e.chg, &chg, sizeof chg);
 
-      push_back (e);
+    push_back (e);
 
-      if (cleaner.at < NOW)
-        cleaner.start (NOW + RSA_TTL);
-    }
+    if (cleaner.at < NOW)
+      cleaner.start (NOW + RSA_TTL);
+  }
 
   rsa_cache ()
-    : cleaner (this, &rsa_cache::cleaner_cb)
-    { }
+  : cleaner (this, &rsa_cache::cleaner_cb)
+  { }
 
 } rsa_cache;
 
