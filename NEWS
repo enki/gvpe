@@ -1,0 +1,6 @@
+1.0
+   - tweaked various timeouts to help very slow (486) class
+     machines or nets with many hosts.
+   - tweaked rate-limiting to be more forgiving for hosts
+     connecting through routers (not a fix)
+

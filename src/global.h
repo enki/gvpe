@@ -39,7 +39,7 @@
 #define RSA_RESLEN	RSA_HASHLEN
 
 #define RSA_IDLEN	16		// how many bytes are used to identify the challenge
-#define RSA_TTL		20		// challenge bytes timeout after n seconds
+#define RSA_TTL		120		// challenge bytes timeout after n seconds
 
 #define CIPHER		ENABLE_CIPHER ()
 #define CIPHER_KEYLEN	(EVP_CIPHER_key_length (CIPHER))

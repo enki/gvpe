@@ -956,7 +956,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 
               if (!rsa_cache.find (p->id, chg))
                 {
-                  slog (L_ERR, _("%s(%s): unrequested auth response"),
+                  slog (L_ERR, _("%s(%s): unrequested auth response ignored"),
                         conf->nodename, (const char *)rsi);
                   break;
                 }
@@ -965,9 +965,12 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                   crypto_ctx *cctx = new crypto_ctx (chg, 0);
 
                   if (!p->hmac_chk (cctx))
-                    slog (L_ERR, _("%s(%s): hmac authentication error on auth response, received invalid packet\n"
-                                   "could be an attack, or just corruption or an synchronization error"),
-                          conf->nodename, (const char *)rsi);
+                    {
+                      slog (L_ERR, _("%s(%s): hmac authentication error on auth response, received invalid packet\n"
+                                     "could be an attack, or just corruption or an synchronization error"),
+                            conf->nodename, (const char *)rsi);
+                      break;
+                    }
                   else
                     {
                       rsaresponse h;
