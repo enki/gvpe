@@ -32,12 +32,12 @@
 #include "iom.h"
 
 /*
- * check for an existing vped for this net, and write pid to pidfile
+ * check for an existing gvpe for this net, and write pid to pidfile
  */
 extern int write_pidfile (void);
 
 /*
- * kill older vped
+ * kill older gvpe
  */
 extern int kill_other (int signal);
 

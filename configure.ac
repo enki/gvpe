@@ -79,16 +79,16 @@ AC_PROG_RANLIB
 AC_ARG_ENABLE(iftype,
   [AS_HELP_STRING(--enable-iftype=TYPE/SUBTYPE,
      Use kernel/net device interface TYPE/SUBTYPE.
-     Working combinations are:
+     Working combinations are (see doc/gvpe.osdep.5.pod):
         "native/linux"
         "tincd/linux"
+        "tincd/netbsd"
         "tincd/freebsd"
         "tincd/openbsd"
+        "native/darwin"
         "tincd/darwin"
         "native/cygwin";
      Untested combinations are:
-        "native/darwin"
-        "tincd/netbsd"
         "tincd/solaris"
         "tincd/mingw"
         "tincd/raw_socket"

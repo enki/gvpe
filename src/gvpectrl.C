@@ -1,5 +1,5 @@
 /*
-    vpectrl.C -- the main file for gvpectrl
+    gvpectrl.C -- the main file for gvpectrl
     Copyright (C) 1998-2002 Ivo Timmermans <ivo@o2w.nl>
                   2000-2002 Guus Sliepen <guus@sliepen.eu.org>
                   2003-2005 Marc Lehmann <gvpe@schmorp.de>
@@ -54,10 +54,10 @@ static int show_help;
 /* If nonzero, print the version on standard output and exit.  */
 static int show_version;
 
-/* If nonzero, it will attempt to kill a running vped and exit. */
-static int kill_vped;
+/* If nonzero, it will attempt to kill a running gvpe and exit. */
+static int kill_gvpe;
 
-/* If nonzero, it will attempt to kill a running vped and exit. */
+/* If nonzero, it will attempt to kill a running gvpe and exit. */
 static int show_config;
 
 /* If nonzero, generate public/private keypair for this net. */
@@ -84,7 +84,7 @@ usage (int status)
       printf (_("Usage: %s [option]...\n\n"), get_identity ());
       printf (_
               ("  -c, --config=DIR           Read configuration options from DIR.\n"
-               "  -k, --kill[=SIGNAL]        Attempt to kill a running vped and exit.\n"
+               "  -k, --kill[=SIGNAL]        Attempt to kill a running gvpe and exit.\n"
                "  -g, --generate-keys        Generate public/private RSA keypair.\n"
                "  -s, --show-config          Display the configuration information.\n"
                "      --help                 Display this help and exit.\n"
@@ -114,28 +114,28 @@ parse_options (int argc, char **argv, char **envp)
           confbase = strdup (optarg);
           break;
 
-        case 'k':		/* kill old vpeds */
+        case 'k':		/* kill old gvpes */
           if (optarg)
             {
               if (!strcasecmp (optarg, "HUP"))
-                kill_vped = SIGHUP;
+                kill_gvpe = SIGHUP;
               else if (!strcasecmp (optarg, "TERM"))
-                kill_vped = SIGTERM;
+                kill_gvpe = SIGTERM;
               else if (!strcasecmp (optarg, "KILL"))
-                kill_vped = SIGKILL;
+                kill_gvpe = SIGKILL;
               else if (!strcasecmp (optarg, "USR1"))
-                kill_vped = SIGUSR1;
+                kill_gvpe = SIGUSR1;
               else if (!strcasecmp (optarg, "USR2"))
-                kill_vped = SIGUSR2;
+                kill_gvpe = SIGUSR2;
               else if (!strcasecmp (optarg, "INT"))
-                kill_vped = SIGINT;
+                kill_gvpe = SIGINT;
               else if (!strcasecmp (optarg, "ALRM"))
-                kill_vped = SIGALRM;
+                kill_gvpe = SIGALRM;
               else
                 {
-                  kill_vped = atoi (optarg);
+                  kill_gvpe = atoi (optarg);
 
-                  if (!kill_vped)
+                  if (!kill_gvpe)
                     {
                       fprintf (stderr,
                                _
@@ -146,7 +146,7 @@ parse_options (int argc, char **argv, char **envp)
                 }
             }
           else
-            kill_vped = SIGTERM;
+            kill_gvpe = SIGTERM;
 
           break;
 
@@ -320,8 +320,8 @@ main (int argc, char **argv, char **envp)
       exit (keygen (generate_keys));
     }
 
-  if (kill_vped)
-    exit (kill_other (kill_vped));
+  if (kill_gvpe)
+    exit (kill_other (kill_gvpe));
 
   if (show_config)
     {

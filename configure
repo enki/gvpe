@@ -870,13 +870,14 @@ Optional Features:
   --disable-nls           do not use Native Language Support
   --enable-iftype=TYPE/SUBTYPE
                           Use kernel/net device interface TYPE/SUBTYPE.
-                          Working combinations are: "native/linux"
-                          "tincd/linux" "tincd/freebsd" "tincd/openbsd"
+                          Working combinations are (see doc/gvpe.osdep.5.pod):
+                          "native/linux" "tincd/linux" "tincd/netbsd"
+                          "tincd/freebsd" "tincd/openbsd" "native/darwin"
                           "tincd/darwin" "native/cygwin"; Untested
-                          combinations are: "native/darwin" "tincd/netbsd"
-                          "tincd/solaris" "tincd/mingw" "tincd/raw_socket"
-                          "tincd/uml_socket"; Broken combinations are:
-                          "tincd/cygwin"; The default is to autodetect.
+                          combinations are: "tincd/solaris" "tincd/mingw"
+                          "tincd/raw_socket" "tincd/uml_socket"; Broken
+                          combinations are: "tincd/cygwin"; The default is to
+                          autodetect.
   --enable-static-daemon  enable statically linked daemon.
   --enable-rohc           enable robust header compression (rfc3095).
   --enable-icmp           enable icmp protocol support (default disabled).
