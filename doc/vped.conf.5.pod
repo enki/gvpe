@@ -7,7 +7,7 @@ vped.conf - vpe daemon configuration file
    udp-port = 407
    mtu = 1492
    ifname = vpn0
-   
+
    node = branch1
    hostname = 1.2.3.4
 
