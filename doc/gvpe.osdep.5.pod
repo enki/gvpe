@@ -60,7 +60,7 @@ tested). See C<native/linux> for more info.
 =head2 native/cygwin
 
 TAP-device. The MAC need not be set (and in fact I<cannot> be set). The
-MAC address is dynamically beign patched into packets and ARP-requests, so
+MAC address is dynamically being patched into packets and ARP-requests, so
 only IPv4 works with ARP on this platform.
 
 The TAP device to be used must either be the CIPE driver

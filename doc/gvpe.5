@@ -191,22 +191,27 @@ network members. It should be run on the gateway machine.
 Please have a look at the \f(CW\*(C`gvpe.osdep(5)\*(C'\fR manpage for platform-specific
 information.
 .PP
-Here are a few recipes for compiling your gvpe:
+Here are a few recipes for compiling your gvpe, showing the extremes
+(fast, small, insecure \s-1OR\s0 slow, large, more secure), between you should
+choose:
 .Sh "\s-1AS\s0 \s-1LOW\s0 \s-1PACKET\s0 \s-1OVERHEAD\s0 \s-1AS\s0 \s-1POSSIBLE\s0"
 .IX Subsection "AS LOW PACKET OVERHEAD AS POSSIBLE"
 .Vb 1
 \&   ./configure --enable-hmac-length=4 --enable-rand-length=0
 .Ve
 .PP
-Minimize the header overhead of \s-1VPN\s0 packets (the above will result in only
-4 bytes of overhead over the raw ethernet frame).
+Minimize the header overhead of \s-1VPN\s0 packets (the above will result in
+only 4 bytes of overhead over the raw ethernet frame). This is a insecure
+configuration because a \s-1HMAC\s0 length of 4 makes collision attacks based on
+the birthday paradox easy, though.
 .Sh "\s-1MINIMIZE\s0 \s-1CPU\s0 \s-1TIME\s0 \s-1REQUIRED\s0"
 .IX Subsection "MINIMIZE CPU TIME REQUIRED"
 .Vb 1
 \&   ./configure --enable-cipher=bf --enable-digest=md4
 .Ve
 .PP
-Use the fastest cipher and digest algorithms currently available in gvpe.
+Use the fastest cipher and digest algorithms currently available in
+gvpe. \s-1MD4\s0 has been broken and is quite insecure, though.
 .Sh "\s-1MAXIMIZE\s0 \s-1SECURITY\s0"
 .IX Subsection "MAXIMIZE SECURITY"
 .Vb 1

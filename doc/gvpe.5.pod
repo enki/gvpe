@@ -83,20 +83,25 @@ network members. It should be run on the gateway machine.
 Please have a look at the C<gvpe.osdep(5)> manpage for platform-specific
 information.
 
-Here are a few recipes for compiling your gvpe:
+Here are a few recipes for compiling your gvpe, showing the extremes
+(fast, small, insecure OR slow, large, more secure), between you should
+choose:
 
 =head2 AS LOW PACKET OVERHEAD AS POSSIBLE
 
    ./configure --enable-hmac-length=4 --enable-rand-length=0
 
-Minimize the header overhead of VPN packets (the above will result in only
-4 bytes of overhead over the raw ethernet frame).
+Minimize the header overhead of VPN packets (the above will result in
+only 4 bytes of overhead over the raw ethernet frame). This is a insecure
+configuration because a HMAC length of 4 makes collision attacks based on
+the birthday paradox easy, though.
 
 =head2 MINIMIZE CPU TIME REQUIRED
 
    ./configure --enable-cipher=bf --enable-digest=md4
 
-Use the fastest cipher and digest algorithms currently available in gvpe.
+Use the fastest cipher and digest algorithms currently available in
+gvpe. MD4 has been broken and is quite insecure, though.
 
 =head2 MAXIMIZE SECURITY
 
