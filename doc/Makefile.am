@@ -1,16 +1,17 @@
 ## Process this file with automake to get Makefile.in
 
 # commented out, no use to distribute yet
-#info_TEXINFOS = vpe.texi
+info_TEXINFOS = vpe.texi
 
-man_MANS = vpe.5 vped.8 vpectrl.8 vped.conf.5 $(dyn_MANS)
+man_MANS = vpe.5 vped.8 vpectrl.8 vped.conf.5
 
 PERL = @PERL@
 HELP2MAN = help2man
-MAINTAINERCLEANFILES = $(dyn_MANS)
+MAINTAINERCLEANFILES = vpe.texi vpe.5 vped.8 vpectrl.8 vped.conf.5
 
-EXTRA_DIST = $(man_MANS) $(HELP2MAN) $(man_aux) \
-  Makefile.maint GNUmakefile Makefile.summ vped.conf.pod
+EXTRA_DIST = $(man_MANS) vpe.texi $(HELP2MAN) \
+  Makefile.maint GNUmakefile Makefile.summ \
+  vpe.texi.in vpe.5.pod vped.8.pod vpectrl.8.pod vped.conf.5.pod
 
 # Use `ginstall' in the definition of man_MANS to avoid
 # confusion with the `install' target.  The install rule transforms `ginstall'
