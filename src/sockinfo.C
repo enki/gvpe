@@ -42,7 +42,8 @@ sockinfo::set (const conf_node *conf, u8 prot_)
        : prot == PROT_TCPv4 ? htons (conf->tcp_port)
        : 0;
 
-  if (prot && conf->hostname)
+  if (prot & (PROT_UDPv4 | PROT_TCPv4 | PROT_IPv4)
+      && conf->hostname)
     {
       struct hostent *he = gethostbyname (conf->hostname);
 
@@ -51,7 +52,6 @@ sockinfo::set (const conf_node *conf, u8 prot_)
         {
           //sa->sin_family = he->h_addrtype;
           memcpy (&host, he->h_addr_list[0], 4);
-
         }
       else
         slog (L_NOTICE, _("unable to resolve host '%s'"), conf->hostname);

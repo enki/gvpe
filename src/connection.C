@@ -199,9 +199,9 @@ struct net_rateinfo {
 // but low on resources.
 struct net_rate_limiter : list<net_rateinfo>
 {
-  static const double ALPHA  = 1. - 1. / 90.; // allow bursts
-  static const double CUTOFF = 20.;           // one event every CUTOFF seconds
-  static const double EXPIRE = CUTOFF * 30.;  // expire entries after this time
+  static const double ALPHA  = 1. - 1. / 180.; // allow bursts
+  static const double CUTOFF = 10.;            // one event every CUTOFF seconds
+  static const double EXPIRE = CUTOFF * 30.;   // expire entries after this time
 
   bool can (const sockinfo &si) { return can((u32)si.host);             }
   bool can (u32 host);
@@ -623,7 +623,6 @@ connection::send_auth_request (const sockinfo &si, bool initiate)
   slog (L_TRACE, ">>%d PT_AUTH_REQ [%s]", conf->id, (const char *)si);
 
   vpn->send_vpn_packet (pkt, si, IPTOS_RELIABILITY | IPTOS_LOWDELAY); // rsa is very very costly
-
 
   delete pkt;
 }
