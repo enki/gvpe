@@ -1030,7 +1030,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 
                     if (si != rsi)
                       {
-                        // fast re-sync on conneciton changes, useful especially for tcp/ip
+                        // fast re-sync on connection changes, useful especially for tcp/ip
                         si = rsi;
 
                         slog (L_INFO, _("%s(%s): socket address changed to %s"),
