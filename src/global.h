@@ -47,8 +47,6 @@
 #define ETH_OVERHEAD 14			// the size of an ethernet header
 #define MAXSIZE (MAX_MTU + VPE_OVERHEAD)// slightly too large, but who cares
 
-#define TIMER_GRANULARITY 5		// check for events at least every 5 seconds
-
 #define PKTCACHESIZE 4			// the size of the memory pool for packets
 
 #define QUEUEDEPTH 16			// the number of packets that will be queued (should be low)
@@ -58,8 +56,6 @@
 extern char *confbase;		// directory in which all config files are
 extern char *thisnode;		// config for current node (TODO: remove)
 extern char *pidfilename;	// pid file location
-
-extern time_t now;		// globale now variable
 
 #endif
 

@@ -9,7 +9,7 @@ LIBS = @LIBS@ @LIBINTL@
 
 COMMON = global.h conf.h conf.C util.h util.C device.h device.C slog.h slog.C
 
-vped_SOURCES = vped.C hash_map.h protocol.h protocol.C lzf/lzf.h lzf/lzfP.h lzf/lzf_c.c lzf/lzf_d.c $(COMMON)
+vped_SOURCES = vped.C hash_map.h protocol.h protocol.C lzf/lzf.h lzf/lzfP.h lzf/lzf_c.c lzf/lzf_d.c iom.h iom.C $(COMMON)
 vped_LDADD = $(top_builddir)/lib/libvpe.a
 vpectrl_SOURCES = vpectrl.C $(COMMON)
 vpectrl_LDADD = $(top_builddir)/lib/libvpe.a

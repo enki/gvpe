@@ -37,6 +37,8 @@ class io_manager {
   vector<pollfd> pfs;
   vector<io_watcher *> iow;
   vector<time_watcher *> tw; // actually a heap
+
+  void idle_cb (tstamp &ts); time_watcher *idle;
 public:
 
   // register a watcher
@@ -90,9 +92,9 @@ public:
       return prxy->call (obj, meth, arg);
     }
 
-  void stop ()
+  R operator ()(A arg)
     {
-      iom.unreg (this);
+      return call (arg);
     }
 };
 
@@ -107,7 +109,13 @@ struct io_watcher : callback<void, short> {
       iom.reg (fd, events, this);
     }
 
+  void stop ()
+    {
+      iom.unreg (this);
+    }
 };
+
+#define TSTAMP_CANCEL -1.
 
 struct time_watcher : callback<void, tstamp &> {
   tstamp at;
@@ -118,15 +126,28 @@ struct time_watcher : callback<void, tstamp &> {
     { }
 
   void set (tstamp when);
+  void trigger ();
 
-  void trigger ()
+  void operator ()()
     {
-      call (at);
+      trigger ();
     }
 
-  void start (tstamp when = NOW)
+  void start ();
+  void start (tstamp when)
     {
       set (when);
+    }
+
+  void stop ()
+    {
+      iom.unreg (this);
+    }
+
+  void reset (tstamp when = TSTAMP_CANCEL)
+    {
+      stop ();
+      at = when;
     }
 };
 

@@ -76,14 +76,14 @@ struct configuration {
   node_vector nodes;
   conf_node default_node;
   conf_node *thisnode;
-  int mtu;       // the mtu used for outgoing tunnel packets
-  int rekey;     // rekey interval
-  int keepalive; // keepalive probes interval
-  char *ifname;  // the interface name (tap0 ...)
-  bool ifpersist; // should the interface be persistent
+  int mtu;          // the mtu used for outgoing tunnel packets
+  double rekey;     // rekey interval
+  double keepalive; // keepalive probes interval
+  char *ifname;     // the interface name (tap0 ...)
+  bool ifpersist;   // should the interface be persistent
   char *prikeyfile;
   loglevel llevel;
-  RSA *rsa_key;  // our private rsa key
+  RSA *rsa_key;     // our private rsa key
 
   char *script_if_up;
   char *script_node_up;

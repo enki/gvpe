@@ -48,8 +48,6 @@
 #include "slog.h"
 #include "protocol.h"
 
-time_t now;
-
 int
 write_pidfile (void)
 {
@@ -144,45 +142,6 @@ make_names (void)
     asprintf (&confbase, "%s/vpe", CONFDIR);
 }
 
-void pkt_queue::put (tap_packet *p)
-{
-  if (queue[i])
-    {
-      delete queue[i];
-      j = (j + 1) % QUEUEDEPTH;
-    }
-
-  queue[i] = p;
-
-  i = (i + 1) % QUEUEDEPTH;
-}
-
-tap_packet *pkt_queue::get ()
-{
-  tap_packet *p = queue[j];
-
-  if (p)
-    {
-      queue[j] = 0;
-      j = (j + 1) % QUEUEDEPTH;
-    }
-
-  return p;
-}
-
-pkt_queue::pkt_queue ()
-{
-  memset (queue, 0, sizeof (queue));
-  i = 0;
-  j = 0;
-}
-
-pkt_queue::~pkt_queue ()
-{
-  for (i = QUEUEDEPTH; --i > 0; )
-    delete queue[i];
-}
-
 sockinfo::operator const char *()
 {
   static char hostport[15 + 1 + 5 + 1];
@@ -191,28 +150,5 @@ sockinfo::operator const char *()
   sprintf (hostport, "%.15s:%d", inet_ntoa (ia), ntohs (port) & 0xffff);
 
   return hostport;
-}
-
-bool u32_rate_limiter::can (u32 host)
-{
-  iterator i;
-
-  for (i = begin (); i != end (); )
-    if (i->second <= now)
-      {
-        erase (i);
-        i = begin ();
-      }
-    else
-      ++i;
-
-  i = find (host);
-
-  if (i != end ())
-    return false;
-
-  insert (value_type (host, now + every));
-
-  return true;
 }
 

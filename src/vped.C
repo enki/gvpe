@@ -44,6 +44,7 @@
 #include "slog.h"
 #include "util.h"
 #include "protocol.h"
+#include "iom.h"
 
 vpn network;
 
@@ -168,12 +169,14 @@ RETSIGTYPE
 sigterm_handler (int a)
 {
   network.events |= vpn::EVENT_SHUTDOWN;
+  network.event.start (0);
 }
 
 RETSIGTYPE
 sighup_handler (int a)
 {
   network.events |= vpn::EVENT_RECONNECT;
+  network.event.start (0);
 }
 
 RETSIGTYPE
@@ -250,7 +253,7 @@ main (int argc, char **argv, char **envp)
 
   RAND_load_file ("/dev/urandom", 1024);
 
-  if (!thisnode)
+  if (!THISNODE)
     {
       slog (L_ERR, _("current node not set, or node '%s' not found in configfile, use the -n switch when starting vped."),
             thisnode ? thisnode : "<unset>");
@@ -264,7 +267,7 @@ main (int argc, char **argv, char **envp)
 
   if (!network.setup ())
     {
-      network.main_loop ();
+      iom.loop ();
       cleanup_and_exit (1);
     }
 

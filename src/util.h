@@ -27,6 +27,7 @@
 
 #include <map>
 
+#include "iom.h"
 #include "device.h"
 
 #define SOCKADDR	sockaddr_in	// this is lame, I know
@@ -70,21 +71,6 @@ id2mac (unsigned int id, void *m)
 }
 
 #define mac2id(p) (p[0] & 0x01 ? 0 : (p[4] << 8) | p[5])
-
-// a very simple fifo pkt-queue
-class pkt_queue
-  {
-    tap_packet *queue[QUEUEDEPTH];
-    int i, j;
-
-  public:
-
-    void put (tap_packet *p);
-    tap_packet *get ();
-
-    pkt_queue ();
-    ~pkt_queue ();
-  };
 
 struct sockinfo
   {
@@ -138,29 +124,6 @@ operator < (const sockinfo &a, const sockinfo &b)
   return a.host < b.host 
          || (a.host == b.host && a.port < b.port);
 }
-
-// only do action once every x seconds per host.
-// currently this is quite a slow implementation,
-// but suffices for normal operation.
-struct u32_rate_limiter : private map<u32, time_t>
- {
-   int every;
-
-   bool can (u32 host);
-
-   u32_rate_limiter (time_t every = 1)
-   {
-     this->every = every;
-   }
- };
-
-struct net_rate_limiter : u32_rate_limiter
-  {
-    bool can (SOCKADDR *sa) { return u32_rate_limiter::can((u32)sa->sin_addr.s_addr); }
-    bool can (sockinfo &si) { return u32_rate_limiter::can((u32)si.host); }
-
-    net_rate_limiter (time_t every) : u32_rate_limiter (every) {}
-  };
 
 struct sliding_window {
   u32 v[(WINDOWSIZE + 31) / 32];

@@ -42,6 +42,19 @@ void time_watcher::set (tstamp when)
   iom.reg (this);
 }
 
+void time_watcher::trigger ()
+{
+  iom.unreg (this);
+  call (at);
+  iom.reg (this);
+}
+
+void time_watcher::start ()
+{
+  iom.unreg (this);
+  iom.reg (this);
+}
+
 void io_manager::reg (int fd, short events, io_watcher *w)
 {
   pollfd pfd;
@@ -91,16 +104,11 @@ void io_manager::unreg (time_watcher *w)
 
   if (i != sz)
     {
-      if (sz == 1)
-        tw.clear ();
-      else 
-        {
-          if (i != sz - 1)
-            tw[i] = tw[sz - 1];
+      if (i != sz - 1)
+        tw[i] = tw[sz - 1];
 
-          tw.pop_back ();
-          make_heap (tw.begin (), tw.end (), lowest_first);
-        }
+      tw.pop_back ();
+      make_heap (tw.begin (), tw.end (), lowest_first);
     }
 }
 
@@ -117,40 +125,47 @@ void io_manager::loop ()
 {
   set_now ();
 
-  while (!(iow.empty () && tw.empty ()))
+  for (;;)
     {
-      int timeout = tw.empty ()
-                    ? 3600 * 1000 // wake up at least every hour
-                    : (int) ((tw[0]->at - NOW) * 1000);
-
-      printf ("s%d t%d #%d\n", pfs.size (), timeout, tw.size ());
-
-      if (timeout >= 0)
-        {
-          int fds = poll (&pfs[0], pfs.size (), timeout);
-
-          set_now ();
-
-          for (unsigned int i = iow.size (); fds && i--; )
-            if (pfs[i].revents)
-              {
-                --fds;
-                iow[i]->call (pfs[i].revents);
-              }
-        }
-
-      while (!tw.empty () && tw[0]->at <= NOW)
+      while (tw[0]->at <= NOW)
         {
           pop_heap (tw.begin (), tw.end (), lowest_first);
-          (*(tw.end () - 1))->trigger ();
-          push_heap (tw.begin (), tw.end (), lowest_first);
+          time_watcher *w = *(tw.end () - 1);
+
+          if (w->at >= 0)
+            {
+              w->call (w->at);
+              push_heap (tw.begin (), tw.end (), lowest_first);
+            }
+          else
+            tw.pop_back ();
         }
+
+      int timeout = (int) ((tw[0]->at - NOW) * 1000);
+
+      int fds = poll (&pfs[0], pfs.size (), timeout);
+
+      set_now ();
+
+      for (unsigned int i = iow.size (); fds > 0 && i--; )
+        if (pfs[i].revents)
+          {
+            --fds;
+            iow[i]->call (pfs[i].revents);
+          }
     }
+}
+
+void io_manager::idle_cb (tstamp &ts)
+{
+  ts = NOW + 86400; // wake up every day, for no good reason
 }
 
 io_manager::io_manager ()
 {
   set_now ();
+  idle = new time_watcher (this, &io_manager::idle_cb);
+  idle->start (0);
 }
 
 io_manager::~io_manager ()

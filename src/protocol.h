@@ -26,6 +26,7 @@
 #include <openssl/rsa.h>
 
 #include "conf.h"
+#include "iom.h"
 #include "util.h"
 #include "device.h"
 
@@ -44,6 +45,21 @@ typedef u8 rsaencrdata[RSA_KEYLEN]; // encrypted challenge
 
 struct crypto_ctx;
 
+// a very simple fifo pkt-queue
+class pkt_queue
+  {
+    tap_packet *queue[QUEUEDEPTH];
+    int i, j;
+
+  public:
+
+    void put (tap_packet *p);
+    tap_packet *get ();
+
+    pkt_queue ();
+    ~pkt_queue ();
+  };
+
 enum auth_subtype { AUTH_INIT, AUTH_INITREPLY, AUTH_REPLY };
 
 struct connection
@@ -54,9 +70,7 @@ struct connection
     SOCKADDR sa;
     int retry_cnt;
 
-    time_t next_retry;		// next connection retry
-    time_t next_rekey;		// next rekying (actually current reset + reestablishing)
-    time_t last_activity;	// time of last packet received
+    tstamp last_activity;	// time of last packet received
 
     u32 oseqno;
     sliding_window iseqno;
@@ -71,8 +85,9 @@ struct connection
 
     void shutdown ();
     void reset_connection ();
-    void establish_connection ();
-    void rekey ();
+    void establish_connection_cb (tstamp &ts); time_watcher establish_connection;
+    void rekey_cb (tstamp &ts); time_watcher rekey; // next rekying (actually current reset + reestablishing)
+    void keepalive_cb (tstamp &ts); time_watcher keepalive; // next keepalive probe
 
     void send_auth (auth_subtype subtype, SOCKADDR *sa, rsachallenge *k = 0);
     void send_reset (SOCKADDR *dsa);
@@ -83,25 +98,12 @@ struct connection
 
     void recv_vpn_packet (vpn_packet *pkt, SOCKADDR *rsa);
 
-    void timer ();
-
-    connection(struct vpn *vpn_)
-        : vpn(vpn_)
-    {
-      octx = ictx = 0;
-      retry_cnt = 0;
-      connectmode = conf_node::C_ALWAYS; // initial setting
-      reset_connection ();
-    }
-
-    ~connection ()
-    {
-      shutdown ();
-    }
-
     void script_node ();
     const char *script_node_up ();
     const char *script_node_down ();
+
+    connection(struct vpn *vpn_);
+    ~connection ();
   };
 
 struct vpn
@@ -109,12 +111,14 @@ struct vpn
     int socket_fd;
     int events;
 
-    tap_device *tap;
-
     enum {
       EVENT_RECONNECT = 1,
       EVENT_SHUTDOWN  = 2,
     };
+
+    void event_cb (tstamp &ts); time_watcher event;
+
+    tap_device *tap;
 
     typedef vector<connection *> conns_vector;
     conns_vector conns;
@@ -126,11 +130,13 @@ struct vpn
     void shutdown_all ();
     void connect_request (int id);
 
+    void vpn_ev (short revents); io_watcher vpn_ev_watcher;
+    void udp_ev (short revents); io_watcher udp_ev_watcher;
+
     vpn ();
     ~vpn ();
 
     int setup ();
-    void main_loop ();
 
     const char *script_if_up ();
   };
