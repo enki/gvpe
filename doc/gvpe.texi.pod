@@ -1,0 +1,177 @@
+=begin texinfo header
+
+\input texinfo   @c -*-texinfo-*-
+@c GENERATED FILE, gvpe.texi.pod is the source, not gvpe.texi!
+@c GENERATED FILE, gvpe.texi.pod is the source, not gvpe.texi!
+@c GENERATED FILE, gvpe.texi.pod is the source, not gvpe.texi!
+@c GENERATED FILE, gvpe.texi.pod is the source, not gvpe.texi!
+@c GENERATED FILE, gvpe.texi.pod is the source, not gvpe.texi!
+@c GENERATED FILE, gvpe.texi.pod is the source, not gvpe.texi!
+@c %**start of header
+@finalout
+@setfilename gvpe.info
+@settitle GNU Virtual Private Ethernet Manual
+@setchapternewpage odd
+@c %**end of header
+
+@ifinfo
+@dircategory Networking tools
+@direntry
+* gvpe: (gvpe).              The GNU VPE Manual.
+@end direntry
+
+This is the info manual for vpe, the Virtual Private Ethernet daemon.
+
+Copyright @copyright{} 2003,2004 Marc Lehmann <gvpe@@plan9.de>.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+@end ifinfo
+
+@titlepage
+@title gvpe Manual
+@author Marc Lehmann, Ivo Timmermans and Guus Sliepen
+
+@page
+@vskip 0pt plus 1filll
+@cindex copyright
+
+Copyright @copyright{} 2003,2004 Marc Lehmann <gvpe@@plan9.de>.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+@end titlepage
+
+@contents
+
+=end texinfo
+
+This is the documentation for the GNU Virtual Private Ethernet suite.
+
+The GNU Virtual Private Ethernet suite implements a virtual (uses udp,
+tcp, rawip and other protocols for tunneling), private (encrypted,
+authenticated) ethernet (mac-based, broadcast-based network) that is
+shared among multiple nodes, in effect implementing an ethernet bus over
+public networks.
+
+=for texinfo menu-begin
+
+
+=for texinfo menu-item Overview:: Introduction to and Tutorial for GVPE (gvpe(5))
+
+=for texinfo include pod gvpe.5.pod
+
+
+=for texinfo menu-item OS Dependencies:: OS-Dependent Installation and Configuration Notes (gvpe.osdep(5))
+
+=for texinfo include pod gvpe.osdep.5.pod
+
+
+=for texinfo menu-item gvpe.conf:: The main configuration file (gvpe.conf(5))
+
+=for texinfo include pod gvpe.conf.5.pod
+
+
+=for texinfo menu-item gvpectrl:: Configuration/Control Program Reference (gvpectrl(8))
+
+=for texinfo include pod gvpectrl.8.pod
+
+
+=for texinfo menu-item gvpe:: The GVPE Daemon (gvpe(8))
+
+=for texinfo include pod gvpe.8.pod
+
+
+=for texinfo menu-item gvpe.protocol:: The GVPE Protocol (gvpe.protocol(7))
+
+=for texinfo include pod gvpe.protocol.7.pod
+
+
+=for texinfo menu-item Simple Example:: A simple yet realistic Example
+
+In this example, gvpe is used to implement a simple, UDP-based ethernet
+on three hosts.
+
+The config file (C<gvpe.conf>) is the same on all hosts:
+
+   enable-udp = yes     # use UDP
+   udp-port = 407       # use this UDP port
+   mtu = 1492           # handy for TDSL
+   ifname = vpn0        # I prefer vpn0 over e.g. tap0
+
+   node = huffy         # arbitrary node name
+   hostname = 1.2.3.4   # ip address if this host
+
+   node = welshy
+   hostname = www.example.net # resolve at connection time
+
+   node = wheelery
+   # no hostname, will be determinded dynamically using router1 or router2
+ 
+C<gvpe> will execute the C<if-up> script on every hosts, which, for linux,
+could look like this for all three hosts:
+
+   ifconfig $IFNAME hw ether $MAC mtu $MTU
+   ifconfig $IFNAME 10.0.0.$NODE
+   route add -net 10.0.0.0 netmask 255.0.0.0 dev $IFNAME
+
+The C<10.0.0.$NODE> resolves to C<10.0.0.1> on C<huffy>, C<10.0.0.2> on
+C<welshy> and so on. Other schemes, such as C<10.$NODE.0.1> might be
+useful, too.
+
+After generating the keys (L<gvpectrl>) and starting the daemon (C<gvpe -D
+-l info >I<NODENAME> for test purposes) the three hosts should be able to
+ping each other.
+
+If you have an internal C<10.x.x.x> network (with a tighter netmask then
+C<255.0.0.0>, e.g. C<10.1.0.0> on C<huffy>, C<10.2.0.0> on C<welshy> and
+so on), you can now enable ip-forwarding and proxy-arp (or set the hosts
+as default gateway), and your three hosts should forward traffic from eahc
+network to each other.
+
+
+=for texinfo menu-item Complex Example:: A non-trivial Example
+
+=for texinfo include text complex-example/README
+
+
+=for texinfo menu-begin
+
+=for texinfo menu-item complex/gvpe.conf:: An example gvpe configuration
+
+=for texinfo include example complex-example/gvpe.conf
+
+=for texinfo menu-item complex/if-up:: A fully-routing if-up config
+
+=for texinfo include example complex-example/if-up
+
+=for texinfo menu-item complex/node-up:: A node-up/node-down script utilizing dynds
+
+=for texinfo include example complex-example/node-up
+
+=for texinfo menu-end
+
+
+
+=for texinfo menu-end
+
+=begin texinfo footer
+
+@bye
+
+=end texinfo
+
