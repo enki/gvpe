@@ -84,13 +84,14 @@ crypto_ctx::~crypto_ctx ()
 }
 
 static void
-rsa_hash (const rsachallenge &chg, rsaresponse &h)
+rsa_hash (const rsaid &id, const rsachallenge &chg, rsaresponse &h)
 {
   EVP_MD_CTX ctx;
 
   EVP_MD_CTX_init (&ctx);
   EVP_DigestInit (&ctx, RSA_HASH);
   EVP_DigestUpdate(&ctx, &chg, sizeof chg);
+  EVP_DigestUpdate(&ctx, &id, sizeof id);
   EVP_DigestFinal (&ctx, (unsigned char *)&h, 0);
   EVP_MD_CTX_cleanup (&ctx);
 }
@@ -502,7 +503,10 @@ vpndata_packet::unpack (connection *conn, u32 &seqno)
   if (type == PT_DATA_COMPRESSED)
     {
       u32 cl = (d[DATAHDR] << 8) | d[DATAHDR + 1];
-      p->len = lzf_decompress (d + DATAHDR + 2, cl, &(*p)[6 + 6], MAX_MTU) + 6 + 6;
+
+      p->len = lzf_decompress (d + DATAHDR + 2, cl < MAX_MTU ? cl : 0,
+                               &(*p)[6 + 6], MAX_MTU)
+               + 6 + 6;
     }
   else
     p->len = outl + (6 + 6 - DATAHDR);
@@ -585,6 +589,8 @@ struct auth_req_packet : config_packet
 struct auth_res_packet : config_packet
 {
   rsaid id;
+  u8 pad1, pad2, pad3;
+  u8 response_len; // encrypted length
   rsaresponse response;
 
   auth_res_packet (int dst)
@@ -680,7 +686,7 @@ connection::send_reset (SOCKADDR *dsa)
 void
 connection::send_auth_request (SOCKADDR *sa, bool initiate)
 {
-  if (auth_rate_limiter.can (sa))
+  if (!initiate || auth_rate_limiter.can (sa))
     {
       auth_req_packet *pkt = new auth_req_packet (conf->id, initiate);
 
@@ -704,19 +710,19 @@ connection::send_auth_request (SOCKADDR *sa, bool initiate)
 void
 connection::send_auth_response (SOCKADDR *sa, const rsaid &id, const rsachallenge &chg)
 {
-  if (auth_rate_limiter.can (sa))
-    {
-      auth_res_packet *pkt = new auth_res_packet (conf->id);
+  auth_res_packet *pkt = new auth_res_packet (conf->id);
 
-      pkt->id = id;
-      rsa_hash (chg, pkt->response);
+  pkt->id = id;
 
-      slog (L_TRACE, ">>%d PT_AUTH_RES [%s]", conf->id, (const char *)sockinfo (sa));
+  rsa_hash (id, chg, pkt->response);
 
-      vpn->send_vpn_packet (pkt, sa, IPTOS_RELIABILITY); // rsa is very very costly
+  pkt->hmac_set (octx);
 
-      delete pkt;
-    }
+  slog (L_TRACE, ">>%d PT_AUTH_RES [%s]", conf->id, (const char *)sockinfo (sa));
+
+  vpn->send_vpn_packet (pkt, sa, IPTOS_RELIABILITY); // rsa is very very costly
+
+  delete pkt;
 }
 
 void
@@ -754,7 +760,8 @@ connection::reset_connection ()
 {
   if (ictx && octx)
     {
-      slog (L_INFO, _("connection to %d (%s) lost"), conf->id, conf->nodename);
+      slog (L_INFO, _("%s(%s): connection lost"),
+            conf->nodename, (const char *)sockinfo (sa));
 
       if (::conf.script_node_down)
         run_script (run_script_cb (this, &connection::script_node_down), false);
@@ -861,7 +868,8 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
 
         if (!p->chk_config ())
           {
-            slog (L_WARN, _("protocol mismatch, disabling node '%s'"), conf->nodename);
+            slog (L_WARN, _("%s(%s): protocol mismatch, disabling node"),
+                  conf->nodename, (const char *)sockinfo (ssa));
             connectmode = conf_node::C_DISABLED;
           }
         else if (connectmode == conf_node::C_ALWAYS)
@@ -870,50 +878,53 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
       break;
 
     case vpn_packet::PT_AUTH_REQ:
-      {
-        auth_req_packet *p = (auth_req_packet *) pkt;
+      if (auth_rate_limiter.can (ssa))
+        {
+          auth_req_packet *p = (auth_req_packet *) pkt;
 
-        slog (L_TRACE, "<<%d PT_AUTH_REQ(%d)", conf->id, p->initiate);
+          slog (L_TRACE, "<<%d PT_AUTH_REQ(%d)", conf->id, p->initiate);
 
-        if (p->chk_config () && !strncmp (p->magic, MAGIC, 8))
-          {
-            if (p->prot_minor != PROTOCOL_MINOR)
-              slog (L_INFO, _("protocol minor version mismatch: ours is %d, %s's is %d."),
-                    PROTOCOL_MINOR, conf->nodename, p->prot_minor);
+          if (p->chk_config () && !strncmp (p->magic, MAGIC, 8))
+            {
+              if (p->prot_minor != PROTOCOL_MINOR)
+                slog (L_INFO, _("%s(%s): protocol minor version mismatch: ours is %d, %s's is %d."),
+                      conf->nodename, (const char *)sockinfo (ssa),
+                      PROTOCOL_MINOR, conf->nodename, p->prot_minor);
 
-            if (p->initiate)
-              send_auth_request (ssa, false);
+              if (p->initiate)
+                send_auth_request (ssa, false);
 
-            rsachallenge k;
+              rsachallenge k;
 
-            if (0 > RSA_private_decrypt (sizeof (p->encr),
-                                         (unsigned char *)&p->encr, (unsigned char *)&k,
-                                         ::conf.rsa_key, RSA_PKCS1_OAEP_PADDING))
-              slog (L_ERR, _("challenge from %s (%s) illegal or corrupted"),
-                    conf->nodename, (const char *)sockinfo (ssa));
-            else
-              {
-                retry_cnt = 0;
-                establish_connection.set (NOW + 8); //? ;)
-                keepalive.reset ();
-                rekey.reset ();
+              if (0 > RSA_private_decrypt (sizeof (p->encr),
+                                           (unsigned char *)&p->encr, (unsigned char *)&k,
+                                           ::conf.rsa_key, RSA_PKCS1_OAEP_PADDING))
+                slog (L_ERR, _("%s(%s): challenge illegal or corrupted"),
+                      conf->nodename, (const char *)sockinfo (ssa));
+              else
+                {
+                  retry_cnt = 0;
+                  establish_connection.set (NOW + 8); //? ;)
+                  keepalive.reset ();
+                  rekey.reset ();
 
-                delete ictx;
-                ictx = 0;
+                  delete ictx;
+                  ictx = 0;
 
-                delete octx;
+                  delete octx;
 
-                octx   = new crypto_ctx (k, 1);
-                oseqno = ntohl (*(u32 *)&k[CHG_SEQNO]) & 0x7fffffff;
+                  octx   = new crypto_ctx (k, 1);
+                  oseqno = ntohl (*(u32 *)&k[CHG_SEQNO]) & 0x7fffffff;
 
-                send_auth_response (ssa, p->id, k);
+                  send_auth_response (ssa, p->id, k);
 
-                break;
-              }
-          }
-      }
+                  break;
+                }
+            }
 
-      send_reset (ssa);
+          send_reset (ssa);
+        }
+
       break;
 
     case vpn_packet::PT_AUTH_RES:
@@ -925,52 +936,66 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
         if (p->chk_config ())
           {
             if (p->prot_minor != PROTOCOL_MINOR)
-              slog (L_INFO, _("protocol minor version mismatch: ours is %d, %s's is %d."),
+              slog (L_INFO, _("%s(%s): protocol minor version mismatch: ours is %d, %s's is %d."),
+                    conf->nodename, (const char *)sockinfo (ssa),
                     PROTOCOL_MINOR, conf->nodename, p->prot_minor);
 
             rsachallenge chg;
 
             if (!rsa_cache.find (p->id, chg))
-              slog (L_ERR, _("unrequested auth response from %s (%s)"),
+              slog (L_ERR, _("%s(%s): unrequested auth response"),
                     conf->nodename, (const char *)sockinfo (ssa));
             else
               {
-                rsaresponse h;
+                crypto_ctx *cctx = new crypto_ctx (chg, 0);
 
-                rsa_hash (chg, h);
-
-                if (!memcmp ((u8 *)&h, (u8 *)p->response, sizeof h))
-                  {
-                    delete ictx;
-
-                    ictx = new crypto_ctx (chg, 0);
-                    iseqno.reset (ntohl (*(u32 *)&chg[CHG_SEQNO]) & 0x7fffffff); // at least 2**31 sequence numbers are valid
-
-                    sa = *ssa;
-
-                    rekey.set (NOW + ::conf.rekey);
-                    keepalive.set (NOW + ::conf.keepalive);
-
-                    // send queued packets
-                    while (tap_packet *p = queue.get ())
-                      {
-                        send_data_packet (p);
-                        delete p;
-                      }
-
-                    connectmode = conf->connectmode;
-
-                    slog (L_INFO, _("connection to %d (%s %s) established"),
-                          conf->id, conf->nodename, (const char *)sockinfo (ssa));
-
-                    if (::conf.script_node_up)
-                      run_script (run_script_cb (this, &connection::script_node_up), false);
-
-                    break;
-                  }
-                else
-                  slog (L_ERR, _("sent and received challenge do not match with (%s %s))"),
+                if (!p->hmac_chk (cctx))
+                  slog (L_ERR, _("%s(%s): hmac authentication error on auth response, received invalid packet\n"
+                                 "could be an attack, or just corruption or an synchronization error"),
                         conf->nodename, (const char *)sockinfo (ssa));
+                else
+                  {
+                    rsaresponse h;
+
+                    rsa_hash (p->id, chg, h);
+
+                    if (!memcmp ((u8 *)&h, (u8 *)p->response, sizeof h))
+                      {
+                        prot_minor = p->prot_minor;
+
+                        delete ictx; ictx = cctx;
+
+                        iseqno.reset (ntohl (*(u32 *)&chg[CHG_SEQNO]) & 0x7fffffff); // at least 2**31 sequence numbers are valid
+
+                        sa = *ssa;
+
+                        rekey.set (NOW + ::conf.rekey);
+                        keepalive.set (NOW + ::conf.keepalive);
+
+                        // send queued packets
+                        while (tap_packet *p = queue.get ())
+                          {
+                            send_data_packet (p);
+                            delete p;
+                          }
+
+                        connectmode = conf->connectmode;
+
+                        slog (L_INFO, _("%s(%s): connection established, protocol version %d:%d"),
+                              conf->nodename, (const char *)sockinfo (ssa),
+                              p->prot_major, p->prot_minor);
+
+                        if (::conf.script_node_up)
+                          run_script (run_script_cb (this, &connection::script_node_up), false);
+
+                        break;
+                      }
+                    else
+                      slog (L_ERR, _("%s(%s): sent and received challenge do not match"),
+                            conf->nodename, (const char *)sockinfo (ssa));
+                  }
+
+                delete cctx;
               }
           }
       }
@@ -993,8 +1018,9 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
           if (*ssa == sa)
             {
               if (!p->hmac_chk (ictx))
-                slog (L_ERR, _("hmac authentication error, received invalid packet\n"
-                               "could be an attack, or just corruption or an synchronization error"));
+                slog (L_ERR, _("%s(%s): hmac authentication error, received invalid packet\n"
+                               "could be an attack, or just corruption or an synchronization error"),
+                      conf->nodename, (const char *)sockinfo (ssa));
               else
                 {
                   u32 seqno;

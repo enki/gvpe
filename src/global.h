@@ -30,6 +30,7 @@
 
 #define RSA_HASH	EVP_ripemd160 ()// speed don't matter, boy, safety does.. I need sha256 :(
 #define RSA_HASHLEN	(160 >> 3)
+#define RSA_RESLEN	RSA_HASHLEN
 
 #define RSA_IDLEN	16		// how many bytes are used to identify the challenge
 #define RSA_TTL		20		// challenge bytes timeout after n seconds

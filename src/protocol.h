@@ -30,11 +30,11 @@
 #include "util.h"
 #include "device.h"
 
-/* Protocol version. Different versions are incompatible,
-   incompatible version have different protocols.
+/* Protocol version. Different major versions are incompatible,
+ * different minor versions probably are compatible ;)
  */
 
-#define PROTOCOL_MAJOR 1
+#define PROTOCOL_MAJOR 0
 #define PROTOCOL_MINOR 0
 
 struct vpn;
@@ -46,7 +46,7 @@ struct rsaid {
 
 typedef u8 rsachallenge[RSA_KEYLEN - RSA_OVERHEAD]; // challenge data;
 typedef u8 rsaencrdata[RSA_KEYLEN]; // encrypted challenge
-typedef u8 rsaresponse[RSA_HASHLEN]; // the ripemd160(!) hash of the challenge
+typedef u8 rsaresponse[RSA_RESLEN]; // the encrypted ripemd160 hash
 
 struct crypto_ctx;
 
@@ -83,6 +83,7 @@ struct connection
     crypto_ctx *octx, *ictx;
 
     enum conf_node::connectmode connectmode;
+    u8 prot_minor; // minor number of other side
 
     void reset_dstaddr ();
 
