@@ -129,39 +129,60 @@
 .\" ========================================================================
 .\"
 .IX Title "GVPE 5"
-.TH GVPE 5 "2005-01-27" "1.7" "GNU Virtual Private Ethernet"
+.TH GVPE 5 "2005-02-22" "1.7" "GNU Virtual Private Ethernet"
 .SH "NAME"
 GNU\-VPE \- Overview of the GNU Virtual Private Ethernet suite.
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
 \&\s-1GVPE\s0 is a suite designed to provide a virtual private network for multiple
-nodes over an untrusted network.
+nodes over an untrusted network. This document first gives an introduction
+to VPNs in general and then describes the specific implementation of \s-1GVPE\s0.
+.Sh "\s-1WHAT\s0 \s-1IS\s0 A \s-1VPN\s0?"
+.IX Subsection "WHAT IS A VPN?"
+\&\s-1VPN\s0 is an acronym, it stands for:
 .IP "\(bu" 4
 .IX Xref "Virtual"
-Virtual means that no physical network is created (of course), but an
-ethernet is emulated by creating multiple tunnels between the member
-nodes.
+Virtual means that no physical network is created (of course), but a
+network is \fIemulated\fR by creating multiple tunnels between the member
+nodes by encapsulating and sending data over another transport network.
+.Sp
+Usually the emulated network is a normal \s-1IP\s0 or Ethernet, and the transport
+network is the Internet. However, using a \s-1VPN\s0 system like \s-1GVPE\s0 to connect
+nodes over other untrusted networks such as Wireless \s-1LAN\s0 is not uncommon.
 .IP "\(bu" 4
 .IX Xref "Private"
 Private means that non-participating nodes cannot decode (\*(L"sniff)\*(R" nor
-inject (\*(L"spoof\*(R") packets.
+inject (\*(L"spoof\*(R") packets. This means that nodes can be connected over
+untrusted networks such as the public Internet without fear of being
+eavesdropped while at the same time being able to trust data sent by other
+nodes.
 .Sp
-In the case of gvpe, even participating nodes cannot sniff packets send to
-other nodes or spoof packets as if sent from other nodes.
+In the case of \s-1GVPE\s0, even participating nodes cannot sniff packets
+send to other nodes or spoof packets as if sent from other nodes, so
+communications between any two nodes is private to those two nodes.
 .IP "\(bu" 4
 .IX Xref "Network"
 Network means that more than two parties can participate in the network,
 so for instance it's possible to connect multiple branches of a company
 into a single network. Many so-called \*(L"vpn\*(R" solutions only create
-point-to-point tunnels.
-.Sh "\s-1DESIGN\s0 \s-1GOALS\s0"
-.IX Subsection "DESIGN GOALS"
+point-to-point tunnels, which in turn can be used to build larger
+networks.
+.Sp
+\&\s-1GVPE\s0 provides a true multi-point network in wich any number of nodes (at
+least a few dozen in practise, the theoretical limit is 4095 nodes) can
+participate.
+.Sh "\s-1GVPE\s0 \s-1DESIGN\s0 \s-1GOALS\s0"
+.IX Subsection "GVPE DESIGN GOALS"
 .IP "\s-1SIMPLE\s0 \s-1DESIGN\s0" 4
 .IX Item "SIMPLE DESIGN"
 Cipher, \s-1HMAC\s0 algorithms and other key parameters must be selected
 at compile time \- this makes it possible to only link in algorithms
 you actually need. It also makes the crypto part of the source very
-transparent and easy to inspect.
+transparent and easy to inspect, and last not least this makes it possible
+to hardcode the layout of all packets into the binary. \s-1GVPE\s0 goes a step
+further and internally reserves blocks of the same length for all packets,
+which virtually removes all possibilities of buffer overflows, as there is
+only a single type of buffer and it's always of fixed length.
 .IP "\s-1EASY\s0 \s-1TO\s0 \s-1SETUP\s0" 4
 .IX Item "EASY TO SETUP"
 A few lines of config (the config file is shared unmodified between all

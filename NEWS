@@ -1,4 +1,4 @@
-1.7
+1.7 Tue Feb 22 23:58:59 CET 2005
 	- protocol version 0.1, compatible with older releases.
 	- first gnu release.
         - documented the special value 1 for router-priority.

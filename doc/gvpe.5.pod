@@ -5,34 +5,52 @@ GNU-VPE - Overview of the GNU Virtual Private Ethernet suite.
 =head1 DESCRIPTION
 
 GVPE is a suite designed to provide a virtual private network for multiple
-nodes over an untrusted network.
+nodes over an untrusted network. This document first gives an introduction
+to VPNs in general and then describes the specific implementation of GVPE.
+
+=head2 WHAT IS A VPN?
+
+VPN is an acronym, it stands for:
 
 =over 4
 
 =item X<Virtual>
 
-Virtual means that no physical network is created (of course), but an
-ethernet is emulated by creating multiple tunnels between the member
-nodes.
+Virtual means that no physical network is created (of course), but a
+network is I<emulated> by creating multiple tunnels between the member
+nodes by encapsulating and sending data over another transport network.
+
+Usually the emulated network is a normal IP or Ethernet, and the transport
+network is the Internet. However, using a VPN system like GVPE to connect
+nodes over other untrusted networks such as Wireless LAN is not uncommon.
 
 =item X<Private>
 
 Private means that non-participating nodes cannot decode ("sniff)" nor
-inject ("spoof") packets.
+inject ("spoof") packets. This means that nodes can be connected over
+untrusted networks such as the public Internet without fear of being
+eavesdropped while at the same time being able to trust data sent by other
+nodes.
 
-In the case of gvpe, even participating nodes cannot sniff packets send to
-other nodes or spoof packets as if sent from other nodes.
+In the case of GVPE, even participating nodes cannot sniff packets
+send to other nodes or spoof packets as if sent from other nodes, so
+communications between any two nodes is private to those two nodes.
 
 =item X<Network>
 
 Network means that more than two parties can participate in the network,
 so for instance it's possible to connect multiple branches of a company
 into a single network. Many so-called "vpn" solutions only create
-point-to-point tunnels.
+point-to-point tunnels, which in turn can be used to build larger
+networks.
+
+GVPE provides a true multi-point network in wich any number of nodes (at
+least a few dozen in practise, the theoretical limit is 4095 nodes) can
+participate.
 
 =back
 
-=head2 DESIGN GOALS
+=head2 GVPE DESIGN GOALS
 
 =over 4 
 
@@ -41,7 +59,11 @@ point-to-point tunnels.
 Cipher, HMAC algorithms and other key parameters must be selected
 at compile time - this makes it possible to only link in algorithms
 you actually need. It also makes the crypto part of the source very
-transparent and easy to inspect.
+transparent and easy to inspect, and last not least this makes it possible
+to hardcode the layout of all packets into the binary. GVPE goes a step
+further and internally reserves blocks of the same length for all packets,
+which virtually removes all possibilities of buffer overflows, as there is
+only a single type of buffer and it's always of fixed length.
 
 =item EASY TO SETUP
 
