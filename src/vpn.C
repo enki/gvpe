@@ -73,9 +73,39 @@ const char *vpn::script_if_up ()
 int
 vpn::setup ()
 {
+  ipv4_fd = -1;
+
+  if (THISNODE->protocols & PROT_IPv4 && ::conf.ip_proto)
+    {
+      ipv4_fd = socket (PF_INET, SOCK_RAW, ::conf.ip_proto);
+
+      if (ipv4_fd < 0)
+        return -1;
+
+      sockinfo si (THISNODE, PROT_IPv4);
+
+      if (bind (ipv4_fd, si.sav4 (), si.salenv4 ()))
+        {
+          slog (L_ERR, _("can't bind ipv4 socket on %s: %s"), (const char *)si, strerror (errno));
+          exit (1);
+        }
+
+#ifdef IP_MTU_DISCOVER
+      // this I really consider a linux bug. I am neither connected
+      // nor do I fragment myself. Linux still sets DF and doesn't
+      // fragment for me sometimes.
+      {
+        int oval = IP_PMTUDISC_DONT;
+        setsockopt (ipv4_fd, SOL_IP, IP_MTU_DISCOVER, &oval, sizeof oval);
+      }
+#endif
+
+      ipv4_ev_watcher.start (ipv4_fd, POLLIN);
+    }
+
   udpv4_fd = -1;
 
-  if (THISNODE->protocols & PROT_UDPv4)
+  if (THISNODE->protocols & PROT_UDPv4 && THISNODE->udp_port)
     {
       udpv4_fd = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
@@ -109,37 +139,10 @@ vpn::setup ()
       udpv4_ev_watcher.start (udpv4_fd, POLLIN);
     }
 
-  ipv4_fd = -1;
-  if (THISNODE->protocols & PROT_IPv4)
-    {
-      ipv4_fd = socket (PF_INET, SOCK_RAW, ::conf.ip_proto);
-
-      if (ipv4_fd < 0)
-        return -1;
-
-      sockinfo si (THISNODE, PROT_IPv4);
-
-      if (bind (ipv4_fd, si.sav4 (), si.salenv4 ()))
-        {
-          slog (L_ERR, _("can't bind ipv4 socket on %s: %s"), (const char *)si, strerror (errno));
-          exit (1);
-        }
-
-#ifdef IP_MTU_DISCOVER
-      // this I really consider a linux bug. I am neither connected
-      // nor do I fragment myself. Linux still sets DF and doesn't
-      // fragment for me sometimes.
-      {
-        int oval = IP_PMTUDISC_DONT;
-        setsockopt (ipv4_fd, SOL_IP, IP_MTU_DISCOVER, &oval, sizeof oval);
-      }
-#endif
-
-      ipv4_ev_watcher.start (ipv4_fd, POLLIN);
-    }
+  tcpv4_fd = -1;
 
 #if ENABLE_TCP
-  if (THISNODE->protocols & PROT_TCPv4)
+  if (THISNODE->protocols & PROT_TCPv4 && THISNODE->tcp_port)
     {
       tcpv4_fd = socket (PF_INET, SOCK_STREAM, IPPROTO_TCP);
 
