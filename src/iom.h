@@ -35,7 +35,7 @@ struct time_watcher;
 
 class io_manager {
   vector<pollfd> pfs;
-  vector<io_watcher *> iow;
+  vector<const io_watcher *> iow;
   vector<time_watcher *> tw; // actually a heap
 
   void idle_cb (tstamp &ts); time_watcher *idle;
@@ -43,9 +43,9 @@ public:
 
   // register a watcher
   void reg (int fd, short events, io_watcher *w);
-  void unreg (io_watcher *w);
+  void unreg (const io_watcher *w);
   void reg (time_watcher *w);
-  void unreg (time_watcher *w);
+  void unreg (const time_watcher *w);
   
   void loop ();
 
@@ -64,13 +64,13 @@ class callback {
 
   // a proxy is a kind of recipe on how to call a specific class method
   struct proxy_base {
-    virtual R call (void *obj, void (object::*meth)(A), A arg) = 0;
+    virtual R call (void *obj, R (object::*meth)(A), A arg) = 0;
   };
   template<class O1, class O2>
   struct proxy : proxy_base {
-    virtual R call (void *obj, void (object::*meth)(A), A arg)
+    virtual R call (void *obj, R (object::*meth)(A), A arg)
       {
-        ((reinterpret_cast<O1 *>(obj)) ->* (reinterpret_cast<void (O2::*)(A)>(meth)))
+        ((reinterpret_cast<O1 *>(obj)) ->* (reinterpret_cast<R (O2::*)(A)>(meth)))
           (arg);
       }
   };
@@ -79,20 +79,20 @@ class callback {
 
 public:
   template<class O1, class O2>
-  callback (O1 *object, void (O2::*method)(A))
+  callback (O1 *object, R (O2::*method)(A))
     {
       static proxy<O1,O2> p;
       obj  = reinterpret_cast<void *>(object);
-      meth = reinterpret_cast<void (object::*)(A)>(method);
+      meth = reinterpret_cast<R (object::*)(A)>(method);
       prxy = &p;
     }
 
-  R call(A arg)
+  R call(A arg) const
     {
       return prxy->call (obj, meth, arg);
     }
 
-  R operator ()(A arg)
+  R operator ()(A arg) const
     {
       return call (arg);
     }
@@ -109,7 +109,7 @@ struct io_watcher : callback<void, short> {
       iom.reg (fd, events, this);
     }
 
-  void stop ()
+  void stop () const
     {
       iom.unreg (this);
     }
@@ -139,7 +139,7 @@ struct time_watcher : callback<void, tstamp &> {
       set (when);
     }
 
-  void stop ()
+  void stop () const
     {
       iom.unreg (this);
     }

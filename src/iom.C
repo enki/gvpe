@@ -66,7 +66,7 @@ void io_manager::reg (int fd, short events, io_watcher *w)
   iow.push_back (w);
 }
 
-void io_manager::unreg (io_watcher *w)
+void io_manager::unreg (const io_watcher *w)
 {
   unsigned int sz = iow.size ();
   unsigned int i = find (iow.begin (), iow.end (), w) - iow.begin ();
@@ -97,7 +97,7 @@ void io_manager::reg (time_watcher *w)
   push_heap (tw.begin (), tw.end (), lowest_first);
 }
 
-void io_manager::unreg (time_watcher *w)
+void io_manager::unreg (const time_watcher *w)
 {
   unsigned int sz = tw.size ();
   unsigned int i = find (tw.begin (), tw.end (), w) - tw.begin ();

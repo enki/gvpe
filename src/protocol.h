@@ -34,14 +34,19 @@
    incompatible version have different protocols.
  */
 
-#define PROTOCOL_MAJOR 3
+#define PROTOCOL_MAJOR 1
 #define PROTOCOL_MINOR 0
 
 struct vpn;
 struct vpn_packet;
 
-typedef u8 rsachallenge[RSA_KEYLEN - RSA_OVERHEAD]; // challenge data
+struct rsaid {
+  u8 id[RSA_IDLEN]; // the challenge id
+};
+
+typedef u8 rsachallenge[RSA_KEYLEN - RSA_OVERHEAD]; // challenge data;
 typedef u8 rsaencrdata[RSA_KEYLEN]; // encrypted challenge
+typedef u8 rsaresponse[RSA_HASHLEN]; // the ripemd160(!) hash of the challenge
 
 struct crypto_ctx;
 
@@ -60,17 +65,12 @@ class pkt_queue
     ~pkt_queue ();
   };
 
-enum auth_subtype { AUTH_INIT, AUTH_INITREPLY, AUTH_REPLY };
-
-struct auth_packet;
-
 struct connection
   {
     conf_node *conf;
     struct vpn *vpn;
-    u32 seqrand;
 
-    SOCKADDR sa;
+    SOCKADDR sa; // the current(!) destination ip to send packets to
     int retry_cnt;
 
     tstamp last_activity;	// time of last packet received
@@ -92,7 +92,8 @@ struct connection
     void rekey_cb (tstamp &ts); time_watcher rekey; // next rekying (actually current reset + reestablishing)
     void keepalive_cb (tstamp &ts); time_watcher keepalive; // next keepalive probe
 
-    void send_auth (auth_subtype subtype, SOCKADDR *sa, const rsachallenge *k = 0);
+    void send_auth_request (SOCKADDR *sa, bool initiate);
+    void send_auth_response (SOCKADDR *sa, const rsaid &id, const rsachallenge &chg);
     void send_reset (SOCKADDR *dsa);
     void send_ping (SOCKADDR *dss, u8 pong = 0);
     void send_data_packet (tap_packet *pkt, bool broadcast = false);
@@ -102,8 +103,8 @@ struct connection
     void recv_vpn_packet (vpn_packet *pkt, SOCKADDR *rsa);
 
     void script_node ();
-    const char *script_node_up ();
-    const char *script_node_down ();
+    const char *script_node_up (int);
+    const char *script_node_down (int);
 
     connection(struct vpn *vpn_);
     ~connection ();
@@ -141,7 +142,7 @@ struct vpn
 
     int setup ();
 
-    const char *script_if_up ();
+    const char *script_if_up (int);
   };
 
 #endif

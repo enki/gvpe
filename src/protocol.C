@@ -60,148 +60,6 @@ static time_t next_timecheck;
 
 #define MAGIC "vped\xbd\xc6\xdb\x82"	// 8 bytes of magic
 
-static const rsachallenge &
-challenge_bytes ()
-{
-  static rsachallenge challenge;
-  static tstamp challenge_ttl;	// time this challenge needs to be recreated
-
-  if (NOW > challenge_ttl)
-    {
-      RAND_bytes ((unsigned char *)&challenge, sizeof (challenge));
-      challenge_ttl = NOW + CHALLENGE_TTL;
-    }
-
-  return challenge;
-}
-
-// caching of rsa operations really helps slow computers
-struct rsa_entry {
-  tstamp expire;
-  rsachallenge chg;
-  RSA *key; // which key
-  rsaencrdata encr;
-
-  rsa_entry ()
-    {
-      expire = NOW + CHALLENGE_TTL;
-    }
-};
-
-struct rsa_cache : list<rsa_entry>
-{
-  void cleaner_cb (tstamp &ts); time_watcher cleaner;
-  
-  const rsaencrdata *public_encrypt (RSA *key, const rsachallenge &chg)
-    {
-      for (iterator i = begin (); i != end (); ++i)
-       {
-        if (i->key == key && !memcmp (&chg, &i->chg, sizeof chg))
-          return &i->encr;
-       }
-
-      if (cleaner.at < NOW)
-        cleaner.start (NOW + CHALLENGE_TTL);
-
-      resize (size () + 1);
-      rsa_entry *e = &(*rbegin ());
-
-      e->key = key;
-      memcpy (&e->chg, &chg, sizeof chg);
-
-      if (0 > RSA_public_encrypt (sizeof chg,
-                                  (unsigned char *)&chg, (unsigned char *)&e->encr,
-                                  key, RSA_PKCS1_OAEP_PADDING))
-        fatal ("RSA_public_encrypt error");
-
-      return &e->encr;
-    }
-
-  const rsachallenge *private_decrypt (RSA *key, const rsaencrdata &encr)
-    {
-      for (iterator i = begin (); i != end (); ++i)
-        if (i->key == key && !memcmp (&encr, &i->encr, sizeof encr))
-          return &i->chg;
-
-      if (cleaner.at < NOW)
-        cleaner.start (NOW + CHALLENGE_TTL);
-
-      resize (size () + 1);
-      rsa_entry *e = &(*rbegin ());
-
-      e->key = key;
-      memcpy (&e->encr, &encr, sizeof encr);
-
-      if (0 > RSA_private_decrypt (sizeof encr,
-                                   (unsigned char *)&encr, (unsigned char *)&e->chg,
-                                   key, RSA_PKCS1_OAEP_PADDING))
-        {
-          pop_back ();
-          return 0;
-        }
-
-      return &e->chg;
-    }
-
-  rsa_cache ()
-    : cleaner (this, &rsa_cache::cleaner_cb)
-    { }
-
-} rsa_cache;
-
-void rsa_cache::cleaner_cb (tstamp &ts)
-{
-  if (empty ())
-    ts = TSTAMP_CANCEL;
-  else
-    {
-      ts = NOW + 3;
-      for (iterator i = begin (); i != end (); )
-        {
-          if (i->expire >= NOW)
-            i = erase (i);
-          else
-            ++i;
-        }
-    }
-}
-
-// run a script. yes, it's a template function. yes, c++
-// is not a functional language. yes, this suxx.
-template<class owner>
-static void
-run_script (owner *obj, const char *(owner::*setup)(), bool wait)
-{
-  int pid;
-
-  if ((pid = fork ()) == 0)
-    {
-      char *filename;
-      asprintf (&filename, "%s/%s", confbase, (obj->*setup) ());
-      execl (filename, filename, (char *) 0);
-      exit (255);
-    }
-  else if (pid > 0)
-    {
-      if (wait)
-        {
-          waitpid (pid, 0, 0);
-          /* TODO: check status */
-        }
-    }
-}
-
-// xor the socket address into the challenge to ensure different challenges
-// per host. we could rely on the OAEP padding, but this doesn't hurt.
-void
-xor_sa (rsachallenge &k, SOCKADDR *sa)
-{
-  ((u32 *) k)[(CHG_CIPHER_KEY + 0) / 4] ^= sa->sin_addr.s_addr;
-  ((u16 *) k)[(CHG_CIPHER_KEY + 4) / 2] ^= sa->sin_port;
-  ((u32 *) k)[(CHG_HMAC_KEY   + 0) / 4] ^= sa->sin_addr.s_addr;
-  ((u16 *) k)[(CHG_HMAC_KEY   + 4) / 2] ^= sa->sin_port;
-}
-
 struct crypto_ctx
   {
     EVP_CIPHER_CTX cctx;
@@ -223,6 +81,111 @@ crypto_ctx::~crypto_ctx ()
 {
   EVP_CIPHER_CTX_cleanup (&cctx);
   HMAC_CTX_cleanup (&hctx);
+}
+
+static void
+rsa_hash (const rsachallenge &chg, rsaresponse &h)
+{
+  EVP_MD_CTX ctx;
+
+  EVP_MD_CTX_init (&ctx);
+  EVP_DigestInit (&ctx, RSA_HASH);
+  EVP_DigestUpdate(&ctx, &chg, sizeof chg);
+  EVP_DigestFinal (&ctx, (unsigned char *)&h, 0);
+  EVP_MD_CTX_cleanup (&ctx);
+}
+
+struct rsa_entry {
+  tstamp expire;
+  rsaid id;
+  rsachallenge chg;
+};
+
+struct rsa_cache : list<rsa_entry>
+{
+  void cleaner_cb (tstamp &ts); time_watcher cleaner;
+  
+  bool find (const rsaid &id, rsachallenge &chg)
+    {
+      for (iterator i = begin (); i != end (); ++i)
+        {
+          if (!memcmp (&id, &i->id, sizeof id) && i->expire > NOW)
+            {
+              memcpy (&chg, &i->chg, sizeof chg);
+
+              erase (i);
+              return true;
+            }
+        }
+
+      if (cleaner.at < NOW)
+        cleaner.start (NOW + RSA_TTL);
+
+      return false;
+    }
+
+  void gen (rsaid &id, rsachallenge &chg)
+    {
+      rsa_entry e;
+
+      RAND_bytes ((unsigned char *)&id,  sizeof id);
+      RAND_bytes ((unsigned char *)&chg, sizeof chg);
+
+      e.expire = NOW + RSA_TTL;
+      e.id = id;
+      memcpy (&e.chg, &chg, sizeof chg);
+
+      push_back (e);
+
+      if (cleaner.at < NOW)
+        cleaner.start (NOW + RSA_TTL);
+    }
+
+  rsa_cache ()
+    : cleaner (this, &rsa_cache::cleaner_cb)
+    { }
+
+} rsa_cache;
+
+void rsa_cache::cleaner_cb (tstamp &ts)
+{
+  if (empty ())
+    ts = TSTAMP_CANCEL;
+  else
+    {
+      ts = NOW + RSA_TTL;
+
+      for (iterator i = begin (); i != end (); )
+        if (i->expire <= NOW)
+          i = erase (i);
+        else
+          ++i;
+    }
+}
+
+typedef callback<const char *, int> run_script_cb;
+
+// run a shell script (or actually an external program).
+static void
+run_script (const run_script_cb &cb, bool wait)
+{
+  int pid;
+
+  if ((pid = fork ()) == 0)
+    {
+      char *filename;
+      asprintf (&filename, "%s/%s", confbase, cb(0));
+      execl (filename, filename, (char *) 0);
+      exit (255);
+    }
+  else if (pid > 0)
+    {
+      if (wait)
+        {
+          waitpid (pid, 0, 0);
+          /* TODO: check status */
+        }
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -390,10 +353,10 @@ struct vpn_packet : hmac_packet
       PT_DATA_UNCOMPRESSED,
       PT_DATA_COMPRESSED,
       PT_PING, PT_PONG,	// wasting namespace space? ;)
-      PT_AUTH,		// authentification
+      PT_AUTH_REQ,	// authentification request
+      PT_AUTH_RES,	// authentification response
       PT_CONNECT_REQ,	// want other host to contact me
       PT_CONNECT_INFO,	// request connection to some node
-      PT_REKEY,		// rekeying (not yet implemented)
       PT_MAX
     };
 
@@ -551,101 +514,115 @@ vpndata_packet::unpack (connection *conn, u32 &seqno)
 }
 
 struct ping_packet : vpn_packet
+{
+  void setup (int dst, ptype type)
   {
-    void setup (int dst, ptype type)
-    {
-      set_hdr (type, dst);
-      len = sizeof (*this) - sizeof (net_packet);
-    }
-  };
+    set_hdr (type, dst);
+    len = sizeof (*this) - sizeof (net_packet);
+  }
+};
 
 struct config_packet : vpn_packet
+{
+  // actually, hmaclen cannot be checked because the hmac
+  // field comes before this data, so peers with other
+  // hmacs simply will not work.
+  u8 prot_major, prot_minor, randsize, hmaclen;
+  u8 flags, challengelen, pad2, pad3;
+  u32 cipher_nid, digest_nid, hmac_nid;
+
+  const u8 curflags () const
   {
-    // actually, hmaclen cannot be checked because the hmac
-    // field comes before this data, so peers with other
-    // hmacs simply will not work.
-    u8 prot_major, prot_minor, randsize, hmaclen;
-    u8 flags, challengelen, pad2, pad3;
-    u32 cipher_nid;
-    u32 digest_nid;
+    return 0x80
+           | (ENABLE_COMPRESSION ? 0x01 : 0x00);
+  }
 
-    const u8 curflags () const
-    {
-      return 0x80
-             | (ENABLE_COMPRESSION ? 0x01 : 0x00);
-    }
-
-    void setup (ptype type, int dst)
-    {
-      prot_major = PROTOCOL_MAJOR;
-      prot_minor = PROTOCOL_MINOR;
-      randsize = RAND_SIZE;
-      hmaclen = HMACLENGTH;
-      flags = curflags ();
-      challengelen = sizeof (rsachallenge);
-
-      cipher_nid = htonl (EVP_CIPHER_nid (CIPHER));
-      digest_nid = htonl (EVP_MD_type (DIGEST));
-
-      len = sizeof (*this) - sizeof (net_packet);
-      set_hdr (type, dst);
-    }
-
-    bool chk_config ()
-      {
-        return prot_major == PROTOCOL_MAJOR
-               && randsize == RAND_SIZE
-               && hmaclen == HMACLENGTH
-               && flags == curflags ()
-               && challengelen == sizeof (rsachallenge)
-               && cipher_nid == htonl (EVP_CIPHER_nid (CIPHER))
-               && digest_nid == htonl (EVP_MD_type (DIGEST));
-      }
-  };
-
-struct auth_packet : config_packet
+  void setup (ptype type, int dst)
   {
-    char magic[8];
-    u8 subtype;
-    u8 pad1, pad2;
-    rsaencrdata challenge;
+    prot_major = PROTOCOL_MAJOR;
+    prot_minor = PROTOCOL_MINOR;
+    randsize = RAND_SIZE;
+    hmaclen = HMACLENGTH;
+    flags = curflags ();
+    challengelen = sizeof (rsachallenge);
 
-    auth_packet (int dst, auth_subtype stype)
+    cipher_nid = htonl (EVP_CIPHER_nid (CIPHER));
+    digest_nid = htonl (EVP_MD_type (RSA_HASH));
+    hmac_nid   = htonl (EVP_MD_type (DIGEST));
+
+    len = sizeof (*this) - sizeof (net_packet);
+    set_hdr (type, dst);
+  }
+
+  bool chk_config ()
     {
-      config_packet::setup (PT_AUTH, dst);
-      subtype = stype;
-      len = sizeof (*this) - sizeof (net_packet);
-      strncpy (magic, MAGIC, 8);
+      return prot_major == PROTOCOL_MAJOR
+             && randsize == RAND_SIZE
+             && hmaclen == HMACLENGTH
+             && flags == curflags ()
+             && challengelen == sizeof (rsachallenge)
+             && cipher_nid == htonl (EVP_CIPHER_nid (CIPHER))
+             && digest_nid == htonl (EVP_MD_type (RSA_HASH))
+             && hmac_nid   == htonl (EVP_MD_type (DIGEST));
     }
-  };
+};
+
+struct auth_req_packet : config_packet
+{
+  char magic[8];
+  u8 initiate; // false if this is just an automatic reply
+  u8 pad1, pad2, pad3;
+  rsaid id;
+  rsaencrdata encr;
+
+  auth_req_packet (int dst, bool initiate_)
+  {
+    config_packet::setup (PT_AUTH_REQ, dst);
+    initiate = !!initiate_;
+    strncpy (magic, MAGIC, 8);
+    len = sizeof (*this) - sizeof (net_packet);
+  }
+};
+
+struct auth_res_packet : config_packet
+{
+  rsaid id;
+  rsaresponse response;
+
+  auth_res_packet (int dst)
+  {
+    config_packet::setup (PT_AUTH_RES, dst);
+    len = sizeof (*this) - sizeof (net_packet);
+  }
+};
 
 struct connect_req_packet : vpn_packet
-  {
-    u8 id;
-    u8 pad1, pad2, pad3;
+{
+  u8 id;
+  u8 pad1, pad2, pad3;
 
-    connect_req_packet (int dst, int id)
-    {
-      this->id = id;
-      set_hdr (PT_CONNECT_REQ, dst);
-      len = sizeof (*this) - sizeof (net_packet);
-    }
-  };
+  connect_req_packet (int dst, int id_)
+  {
+    id = id_;
+    set_hdr (PT_CONNECT_REQ, dst);
+    len = sizeof (*this) - sizeof (net_packet);
+  }
+};
 
 struct connect_info_packet : vpn_packet
-  {
-    u8 id;
-    u8 pad1, pad2, pad3;
-    sockinfo si;
+{
+  u8 id;
+  u8 pad1, pad2, pad3;
+  sockinfo si;
 
-    connect_info_packet (int dst, int id, sockinfo &si)
-    {
-      this->id = id;
-      this->si = si;
-      set_hdr (PT_CONNECT_INFO, dst);
-      len = sizeof (*this) - sizeof (net_packet);
-    }
-  };
+  connect_info_packet (int dst, int id_, sockinfo &si_)
+  {
+    id = id_;
+    si = si_;
+    set_hdr (PT_CONNECT_INFO, dst);
+    len = sizeof (*this) - sizeof (net_packet);
+  }
+};
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -702,33 +679,43 @@ connection::send_reset (SOCKADDR *dsa)
     }
 }
 
-static rsachallenge *
-gen_challenge (u32 seqrand, SOCKADDR *sa)
+void
+connection::send_auth_request (SOCKADDR *sa, bool initiate)
 {
-  static rsachallenge k;
+  if (auth_rate_limiter.can (sa))
+    {
+      auth_req_packet *pkt = new auth_req_packet (conf->id, initiate);
 
-  memcpy (&k, &challenge_bytes (), sizeof (k));
-  *(u32 *)&k[CHG_SEQNO] ^= seqrand;
-  xor_sa (k, sa);
+      rsachallenge chg;
 
-  return &k;
+      rsa_cache.gen (pkt->id, chg);
+
+      if (0 > RSA_public_encrypt (sizeof chg,
+                                  (unsigned char *)&chg, (unsigned char *)&pkt->encr,
+                                  conf->rsa_key, RSA_PKCS1_OAEP_PADDING))
+        fatal ("RSA_public_encrypt error");
+
+      slog (L_TRACE, ">>%d PT_AUTH_REQ [%s]", conf->id, (const char *)sockinfo (sa));
+
+      vpn->send_vpn_packet (pkt, sa, IPTOS_RELIABILITY); // rsa is very very costly
+
+      delete pkt;
+    }
 }
 
 void
-connection::send_auth (auth_subtype subtype, SOCKADDR *sa, const rsachallenge *k)
+connection::send_auth_response (SOCKADDR *sa, const rsaid &id, const rsachallenge &chg)
 {
-  if (subtype == AUTH_REPLY || auth_rate_limiter.can (sa))
+  if (auth_rate_limiter.can (sa))
     {
-      if (!k)
-        k = gen_challenge (seqrand, sa);
+      auth_res_packet *pkt = new auth_res_packet (conf->id);
 
-      auth_packet *pkt = new auth_packet (conf->id, subtype);
+      pkt->id = id;
+      rsa_hash (chg, pkt->response);
 
-      memcpy (pkt->challenge, rsa_cache.public_encrypt (conf->rsa_key, *k), sizeof (rsaencrdata));
+      slog (L_TRACE, ">>%d PT_AUTH_RES [%s]", conf->id, (const char *)sockinfo (sa));
 
-      slog (L_TRACE, ">>%d PT_AUTH(%d) [%s]", conf->id, subtype, (const char *)sockinfo (sa));
-
-      vpn->send_vpn_packet (pkt, sa, IPTOS_RELIABILITY);
+      vpn->send_vpn_packet (pkt, sa, IPTOS_RELIABILITY); // rsa is very very costly
 
       delete pkt;
     }
@@ -741,7 +728,7 @@ connection::establish_connection_cb (tstamp &ts)
     ts = TSTAMP_CANCEL;
   else if (ts <= NOW)
     {
-      double retry_int = double (retry_cnt & 3 ? (retry_cnt & 3) : 1 << (retry_cnt >> 2)) * 0.25;
+      double retry_int = double (retry_cnt & 3 ? (retry_cnt & 3) : 1 << (retry_cnt >> 2)) * 0.6;
 
       if (retry_int < 3600 * 8)
         retry_cnt++;
@@ -753,7 +740,7 @@ connection::establish_connection_cb (tstamp &ts)
           reset_dstaddr ();
           if (sa.sin_addr.s_addr)
             if (retry_cnt < 4)
-              send_auth (AUTH_INIT, &sa);
+              send_auth_request (&sa, true);
             else if (auth_rate_limiter.can (&sa))
               send_ping (&sa, 0);
         }
@@ -770,13 +757,11 @@ connection::reset_connection ()
       slog (L_INFO, _("connection to %d (%s) lost"), conf->id, conf->nodename);
 
       if (::conf.script_node_down)
-        run_script (this, &connection::script_node_down, false);
+        run_script (run_script_cb (this, &connection::script_node_down), false);
     }
 
   delete ictx; ictx = 0;
   delete octx; octx = 0;
-
-  RAND_bytes ((unsigned char *)&seqrand, sizeof (u32));
 
   sa.sin_port = 0;
   sa.sin_addr.s_addr = 0;
@@ -873,6 +858,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
         reset_connection ();
 
         config_packet *p = (config_packet *) pkt;
+
         if (!p->chk_config ())
           {
             slog (L_WARN, _("protocol mismatch, disabling node '%s'"), conf->nodename);
@@ -883,60 +869,84 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
       }
       break;
 
-    case vpn_packet::PT_AUTH:
+    case vpn_packet::PT_AUTH_REQ:
       {
-        auth_packet *p = (auth_packet *) pkt;
+        auth_req_packet *p = (auth_req_packet *) pkt;
 
-        slog (L_TRACE, "<<%d PT_AUTH(%d)", conf->id, p->subtype);
+        slog (L_TRACE, "<<%d PT_AUTH_REQ(%d)", conf->id, p->initiate);
 
-        if (p->chk_config ()
-            && !strncmp (p->magic, MAGIC, 8))
+        if (p->chk_config () && !strncmp (p->magic, MAGIC, 8))
           {
             if (p->prot_minor != PROTOCOL_MINOR)
               slog (L_INFO, _("protocol minor version mismatch: ours is %d, %s's is %d."),
                     PROTOCOL_MINOR, conf->nodename, p->prot_minor);
 
-            if (p->subtype == AUTH_INIT)
-              send_auth (AUTH_INITREPLY, ssa);
+            if (p->initiate)
+              send_auth_request (ssa, false);
 
-            const rsachallenge *k = rsa_cache.private_decrypt (::conf.rsa_key, p->challenge);
+            rsachallenge k;
 
-            if (!k)
+            if (0 > RSA_private_decrypt (sizeof (p->encr),
+                                         (unsigned char *)&p->encr, (unsigned char *)&k,
+                                         ::conf.rsa_key, RSA_PKCS1_OAEP_PADDING))
+              slog (L_ERR, _("challenge from %s (%s) illegal or corrupted"),
+                    conf->nodename, (const char *)sockinfo (ssa));
+            else
               {
-                slog (L_ERR, _("challenge from %s (%s) illegal or corrupted"),
-                      conf->nodename, (const char *)sockinfo (ssa));
-                send_reset (ssa);
-                break;
-              }
+                retry_cnt = 0;
+                establish_connection.set (NOW + 8); //? ;)
+                keepalive.reset ();
+                rekey.reset ();
 
-            retry_cnt = 0;
-            establish_connection.set (NOW + 8); //? ;)
-            keepalive.reset ();
-            rekey.reset ();
-
-            switch (p->subtype)
-              {
-              case AUTH_INIT:
-              case AUTH_INITREPLY:
                 delete ictx;
                 ictx = 0;
 
                 delete octx;
 
-                octx   = new crypto_ctx (*k, 1);
+                octx   = new crypto_ctx (k, 1);
                 oseqno = ntohl (*(u32 *)&k[CHG_SEQNO]) & 0x7fffffff;
 
-                send_auth (AUTH_REPLY, ssa, k);
+                send_auth_response (ssa, p->id, k);
+
                 break;
+              }
+          }
 
-              case AUTH_REPLY:
 
-                if (!memcmp ((u8 *)gen_challenge (seqrand, ssa), (u8 *)k, sizeof (rsachallenge)))
+      }
+
+      send_reset (ssa);
+      break;
+
+    case vpn_packet::PT_AUTH_RES:
+      {
+        auth_res_packet *p = (auth_res_packet *) pkt;
+
+        slog (L_TRACE, "<<%d PT_AUTH_RES", conf->id);
+
+        if (p->chk_config ())
+          {
+            if (p->prot_minor != PROTOCOL_MINOR)
+              slog (L_INFO, _("protocol minor version mismatch: ours is %d, %s's is %d."),
+                    PROTOCOL_MINOR, conf->nodename, p->prot_minor);
+
+            rsachallenge chg;
+
+            if (!rsa_cache.find (p->id, chg))
+              slog (L_ERR, _("unrequested auth response from %s (%s)"),
+                    conf->nodename, (const char *)sockinfo (ssa));
+            else
+              {
+                rsaresponse h;
+
+                rsa_hash (chg, h);
+
+                if (!memcmp ((u8 *)&h, (u8 *)p->response, sizeof h))
                   {
                     delete ictx;
 
-                    ictx = new crypto_ctx (*k, 0);
-                    iseqno.reset (ntohl (*(u32 *)&k[CHG_SEQNO]) & 0x7fffffff);	// at least 2**31 sequence numbers are valid
+                    ictx = new crypto_ctx (chg, 0);
+                    iseqno.reset (ntohl (*(u32 *)&chg[CHG_SEQNO]) & 0x7fffffff); // at least 2**31 sequence numbers are valid
 
                     sa = *ssa;
 
@@ -956,30 +966,26 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
                           conf->id, conf->nodename, (const char *)sockinfo (ssa));
 
                     if (::conf.script_node_up)
-                      run_script (this, &connection::script_node_up, false);
+                      run_script (run_script_cb (this, &connection::script_node_up), false);
+
+                    break;
                   }
                 else
                   slog (L_ERR, _("sent and received challenge do not match with (%s %s))"),
                         conf->nodename, (const char *)sockinfo (ssa));
-
-                break;
-              default:
-                slog (L_ERR, _("authentification illegal subtype error (%s %s)"),
-                      conf->nodename, (const char *)sockinfo (ssa));
-                break;
               }
           }
-        else
-          send_reset (ssa);
-
-        break;
       }
+
+      send_reset (ssa);
+      break;
 
     case vpn_packet::PT_DATA_COMPRESSED:
 #if !ENABLE_COMPRESSION
       send_reset (ssa);
       break;
 #endif
+
     case vpn_packet::PT_DATA_UNCOMPRESSED:
 
       if (ictx && octx)
@@ -1082,13 +1088,15 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
           slog (L_TRACE, "<<%d PT_CONNECT_INFO(%d,%s) (%d)",
                          conf->id, p->id, (const char *)p->si, !c->ictx && !c->octx);
 
-          c->send_auth (AUTH_INIT, p->si.sa ());
+          c->send_auth_request (p->si.sa (), true);
         }
+
       break;
 
     default:
       send_reset (ssa);
       break;
+
     }
 }
 
@@ -1125,7 +1133,7 @@ void connection::connect_request (int id)
 
 void connection::script_node ()
 {
-  vpn->script_if_up ();
+  vpn->script_if_up (0);
 
   char *env;
   asprintf (&env, "DESTID=%d",   conf->id);
@@ -1138,7 +1146,7 @@ void connection::script_node ()
   putenv (env);
 }
 
-const char *connection::script_node_up ()
+const char *connection::script_node_up (int)
 {
   script_node ();
 
@@ -1147,7 +1155,7 @@ const char *connection::script_node_up ()
   return ::conf.script_node_up ? ::conf.script_node_up : "node-up";
 }
 
-const char *connection::script_node_down ()
+const char *connection::script_node_down (int)
 {
   script_node ();
 
@@ -1176,11 +1184,11 @@ connection::~connection ()
 
 /////////////////////////////////////////////////////////////////////////////
 
-const char *vpn::script_if_up ()
+const char *vpn::script_if_up (int)
 {
   // the tunnel device mtu should be the physical mtu - overhead
   // the tricky part is rounding to the cipher key blocksize
-  int mtu = conf.mtu - ETH_OVERHEAD - VPE_OVERHEAD - UDP_OVERHEAD;
+  int mtu = conf.mtu - ETH_OVERHEAD - VPE_OVERHEAD - MAX_OVERHEAD;
   mtu += ETH_OVERHEAD - 6 - 6; // now we have the data portion
   mtu -= mtu % EVP_CIPHER_block_size (CIPHER); // round
   mtu -= ETH_OVERHEAD - 6 - 6; // and get interface mtu again
@@ -1244,7 +1252,7 @@ vpn::setup (void)
       exit (1);
     }
   
-  run_script (this, &vpn::script_if_up, true);
+  run_script (run_script_cb (this, &vpn::script_if_up), true);
 
   vpn_ev_watcher.start (tap->fd, POLLIN);
 
@@ -1468,7 +1476,6 @@ vpn::event_cb (tstamp &ts)
   ts = TSTAMP_CANCEL;
 }
 
-#include <sys/time.h>//D
 vpn::vpn (void)
 : udp_ev_watcher (this, &vpn::udp_ev)
 , vpn_ev_watcher (this, &vpn::vpn_ev)

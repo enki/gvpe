@@ -26,16 +26,20 @@
 
 #define RSA_KEYBITS	1280		// must be >= 1280 and divisible by 8
 #define RSA_KEYLEN	((RSA_KEYBITS) >> 3)
-#define RSA_OVERHEAD	(41 + 1)	// well, no define for OAEP
+#define RSA_OVERHEAD	(41 + 1)	// well, no define for OAEP in openssl
 
-#define CHALLENGE_TTL	30		// challenge bytes timeout after n seconds
+#define RSA_HASH	EVP_ripemd160 ()// speed don't matter, boy, safety does.. I need sha256 :(
+#define RSA_HASHLEN	(160 >> 3)
+
+#define RSA_IDLEN	16		// how many bytes are used to identify the challenge
+#define RSA_TTL		20		// challenge bytes timeout after n seconds
 
 #define CIPHER		ENABLE_CIPHER ()
 #define CIPHER_KEYLEN	(EVP_CIPHER_key_length (CIPHER))
 #define DIGEST		ENABLE_DIGEST ()
 #define HMAC_KEYLEN	(256 >> 3)	// number of bits used for the HMAC key (also change CHG_HMAC_KEY)
 
-#define MAX_SEQNO	0xfffff000U
+#define MAX_SEQNO	0xfffffff0U
 
 #define CHG_SEQNO	 0	// where the seqno starts within the rsa challenge
 #define CHG_CIPHER_KEY	 4	// where the key starts within the rsa challenge
@@ -43,7 +47,9 @@
 
 //                   hdr seq len              hmac        MAC MAC
 #define VPE_OVERHEAD (4 + 4 + 4 + RAND_SIZE + HMACLENGTH - 6 - 6)
-#define UDP_OVERHEAD 40			// size of a (normal) ip + udp header
+#define IP_OVERHEAD  20			// size of a (normal) ip header
+#define UDP_OVERHEAD (IP_OVERHEAD + 20)	// size of a (normal) ip + udp header
+#define MAX_OVERHEAD UDP_OVERHEAD	// the max. overhead of any protocol
 #define ETH_OVERHEAD 14			// the size of an ethernet header
 #define MAXSIZE (MAX_MTU + VPE_OVERHEAD)// slightly too large, but who cares
 
