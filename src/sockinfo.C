@@ -23,6 +23,8 @@
 
 #include <netdb.h>
 
+#include "gettext.h"
+
 #include "sockinfo.h"
 #include "slog.h"
 

@@ -26,6 +26,8 @@
 
 #include <openssl/rsa.h>
 
+#include "gettext.h"
+
 #include "slog.h"
 #include "iom.h"
 

@@ -36,6 +36,7 @@
 
 #include "netcompat.h"
 
+#include "gettext.h"
 #include "pidfile.h"
 #include "dropin.h"
 

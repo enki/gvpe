@@ -41,13 +41,11 @@ typedef int32_t s32;
 
 #endif
 
-// include clocale first because gettext.h might overwrite setlocale
-#if defined(HAVE_CLOCALE) && defined(__cplusplus)
-# include <clocale>
+#if HAVE_CLOCALE
+# define CLOCALE <clocale>
 #else
-# include <locale.h>
+# define CLOCALE <locale.h>
 #endif
-#include "gettext.h"
 ])
 
 dnl Include the macros from the m4/ directory

@@ -42,6 +42,8 @@
 #endif
 #define DEFAULT_DEVICE "/dev/net/tun"
 
+#include "gettext.h"
+
 #include "conf.h"
 
 #if TEST_ETHEREMU

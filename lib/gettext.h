@@ -21,12 +21,17 @@
 #ifndef _LIBGETTEXT_H
 #define _LIBGETTEXT_H 1
 
+#if __cplusplus
+# include CLOCALE
+#else
+# include <locale.h>
+#endif
+
 /* NLS can be disabled through the configure --disable-nls option.  */
 #if ENABLE_NLS
 
 /* Get declarations of GNU message catalog functions.  */
 # include <libintl.h>
-# include <locale.h>
 
 /* Shorthand notation */
 
@@ -63,7 +68,7 @@
 # define bind_textdomain_codeset(Domainname, Codeset) ((const char *) (Codeset))
 
 # define _(Text) Text
-# define setlocale(Category, Locale) ((const char *) (Locale))
+//# define setlocale(Category, Locale) ((const char *) (Locale))
 
 #endif
 

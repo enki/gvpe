@@ -43,6 +43,7 @@
 #include <openssl/err.h>
 #include <openssl/rand.h>
 
+#include "gettext.h"
 #include "pidfile.h"
 
 #include "conf.h"
