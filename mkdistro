@@ -37,8 +37,8 @@ case "$1" in
    darwin )
       HOST=root@imac.laendle
       BASE=/Users/schmorp
-      CONFIGURE="$CONFIGURE --enable-icmp --with-openssl-include=$BASE/include"
-      MAKE="make LIBS='$BASE/lib/libcrypto.a -lintl'"
+      CONFIGURE="$CONFIGURE --enable-icmp --with-openssl-include=$BASE/include --with-libintl-prefix=/sw"
+      MAKE="make LIBS='$BASE/lib/libcrypto.a -L/sw/lib -lintl'"
    ;;
    cygwin )
       HOST=vm

@@ -23,6 +23,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <clocale>
 
 #include <errno.h>
 #include <fcntl.h>

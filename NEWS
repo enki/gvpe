@@ -1,16 +1,17 @@
-TODO send sha1hash of public key for better error reporting(?)
-TODO check own keypair for correctness for better error reporting
-TODO vpn::tap_ev does not handle EOF well
-TODO vpn::tcpv4_ev does not handle EOF well
-TODO tcp_connection::tcpv4_ev does not handle EOF well
+POSSIBLE TODO send sha1hash of public key for better error reporting(?)
+POSSIBLE TODO check own keypair for better error reporting
+TODO vpn::tap_ev does not handle EOF well, or does it? (CHECK)
+TODO vpn::tcpv4_ev does not handle EOF well, or does it? (CHECK)
+TODO tcp_connection::tcpv4_ev does not handle EOF well, or does it? (CHECK)
 
-1.4
+1.4 Sat Jan 17 15:49:21 CET 2004
+   - protocol version 0.1, compatible with older releases.
    - better retry behaviour on key mismatch.
    - use select-based io_manager instead of poll-based one.
-   - share io manager between rxvt-unicode and vpe
+   - share io manager between rxvt-unicode and vpe.
 
 1.2 Fri Oct 17 03:44:44 CEST 2003
-   - protocol version 0.1
+   - protocol version 0.1.
    - tincd kernel interface code imported, more supported platforms
      (native/linux (2.4), tincd/linux (2.2 and 2.4), tincd/freebsd,
      native/cygwin).
@@ -25,9 +26,9 @@ TODO tcp_connection::tcpv4_ev does not handle EOF well
    - added doc/complex-example to the distribution.
 
 1.0
-   - protocol version 0.1
+   - protocol version 0.1.
    - tweaked various timeouts to help very slow (486) class
      machines or nets with many hosts.
    - tweaked rate-limiting to be more forgiving for hosts
-     connecting through routers (not a fix)
+     connecting through routers (not a fix).
 

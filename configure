@@ -1728,7 +1728,7 @@ fi
 
 # Define the identity of the package.
  PACKAGE=vpe
- VERSION=1.2
+ VERSION=1.4
 
 
 cat >>confdefs.h <<_ACEOF

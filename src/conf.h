@@ -20,9 +20,9 @@
 #ifndef VPE_CONF_H__
 #define VPE_CONF_H__
 
-#include <openssl/rsa.h>
-
 #include <vector>
+
+#include <openssl/rsa.h>
 
 #include "slog.h"
 #include "global.h"
