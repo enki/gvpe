@@ -1720,7 +1720,7 @@ fi
 
 # Define the identity of the package.
  PACKAGE=gvpe
- VERSION=1.7
+ VERSION=1.8
 
 
 cat >>confdefs.h <<_ACEOF
