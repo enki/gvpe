@@ -1,3 +1,6 @@
+TODO: EDNS0 option to increase dns mtu?
+TODO: options-on-commandline
+
 1.9
         - WARNING: this version checks the return value of if-up etc.
           scripts and exits on failure.
