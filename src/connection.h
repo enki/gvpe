@@ -98,13 +98,13 @@ struct vpn_packet : hmac_packet
 // a very simple fifo pkt-queue
 class pkt_queue
   {
-    tap_packet *queue[QUEUEDEPTH];
+    net_packet *queue[QUEUEDEPTH];
     int i, j;
 
   public:
 
-    void put (tap_packet *p);
-    tap_packet *get ();
+    void put (net_packet *p);
+    net_packet *get ();
 
     pkt_queue ();
     ~pkt_queue ();
@@ -125,7 +125,7 @@ struct connection
 
     u8 protocol;
 
-    pkt_queue queue;
+    pkt_queue data_queue, vpn_queue;
 
     crypto_ctx *octx, *ictx;
 

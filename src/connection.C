@@ -149,7 +149,7 @@ void rsa_cache::cleaner_cb (time_watcher &w)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void pkt_queue::put (tap_packet *p)
+void pkt_queue::put (net_packet *p)
 {
   if (queue[i])
     {
@@ -162,9 +162,9 @@ void pkt_queue::put (tap_packet *p)
   i = (i + 1) % QUEUEDEPTH;
 }
 
-tap_packet *pkt_queue::get ()
+net_packet *pkt_queue::get ()
 {
-  tap_packet *p = queue[j];
+  net_packet *p = queue[j];
 
   if (p)
     {
@@ -567,11 +567,19 @@ connection::connection_established ()
 
       // send queued packets
       if (ictx && octx)
-        while (tap_packet *p = queue.get ())
-          {
-            send_data_packet (p);
-            delete p;
-          }
+        {
+          while (tap_packet *p = (tap_packet *)data_queue.get ())
+            {
+              send_data_packet (p);
+              delete p;
+            }
+
+          while (vpn_packet *p = (vpn_packet *)vpn_queue.get ())
+            {
+              send_vpn_packet (p, si, IPTOS_RELIABILITY);
+              delete p;
+            }
+        }
     }
   else
     {
@@ -785,6 +793,7 @@ connection::send_data_packet (tap_packet *pkt, bool broadcast)
   vpndata_packet *p = new vpndata_packet;
   int tos = 0;
 
+  // I am not hilarious about peeking into packets, but so be it.
   if (conf->inherit_tos
       && (*pkt)[12] == 0x08 && (*pkt)[13] == 0x00 // IP
       && ((*pkt)[14] & 0xf0) == 0x40)             // IPv4
@@ -807,7 +816,7 @@ connection::inject_data_packet (tap_packet *pkt, bool broadcast)
   else
     {
       if (!broadcast)//DDDD
-        queue.put (new tap_packet (*pkt));
+        data_queue.put (new tap_packet (*pkt));
 
       establish_connection ();
     }
@@ -818,7 +827,11 @@ void connection::inject_vpn_packet (vpn_packet *pkt, int tos)
   if (ictx && octx)
     send_vpn_packet (pkt, si, tos);
   else
-    establish_connection ();
+    {
+      vpn_queue.put (new vpn_packet (*pkt));
+
+      establish_connection ();
+    }
 }
 
 void
@@ -1101,6 +1114,10 @@ void connection::keepalive_cb (time_watcher &w)
       send_ping (si);
       w.at = NOW + 5;
     }
+  else if (NOW < last_activity + ::conf.keepalive + 10)
+    // hold ondemand connections implicitly a few seconds longer
+    // should delete octx, though, or something like that ;)
+    w.at = last_activity + ::conf.keepalive + 10;
   else
     reset_connection ();
 }

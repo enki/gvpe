@@ -45,6 +45,7 @@ struct vpn
     conns_vector conns;
 
     connection *find_router ();
+    connection *find_forwarder ();
 
     void reconnect_all ();
     void shutdown_all ();

@@ -302,6 +302,7 @@ ipv4_checksum (u16 *data, unsigned int len)
   return ~sum;
 }
 
+#if ENABLE_ICMP
 bool
 vpn::send_icmpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
@@ -319,6 +320,7 @@ vpn::send_icmpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 
   return true;
 }
+#endif
 
 bool
 vpn::send_udpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
@@ -350,8 +352,8 @@ vpn::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
     {
       connection *c = conns[src - 1];
 
-      if (dst == 0 && !THISNODE->routerprio)
-        slog (L_WARN, _("%s(%s): received broadcast, but we are no router"),
+      if (dst == 0)
+        slog (L_WARN, _("%s(%s): received broadcast (protocol violation)"),
               c->conf->nodename, (const char *)rsi);
       else if (dst != 0 && dst != THISNODE->id)
         {
@@ -416,6 +418,7 @@ vpn::ipv4_ev (io_watcher &w, short revents)
     }
 }
 
+#if ENABLE_ICMP
 void
 vpn::icmpv4_ev (io_watcher &w, short revents)
 {
@@ -468,6 +471,7 @@ vpn::icmpv4_ev (io_watcher &w, short revents)
       exit (1);
     }
 }
+#endif
 
 void
 vpn::udpv4_ev (io_watcher &w, short revents)
@@ -549,15 +553,11 @@ vpn::tap_ev (io_watcher &w, short revents)
             }
           else
             {
-              // broadcast, first check router, then self, then english
-              connection *router = find_router ();
-
-              if (router)
-                router->inject_data_packet (pkt, true);
-              else
-                for (conns_vector::iterator c = conns.begin (); c != conns.end (); ++c)
-                  if ((*c)->conf != THISNODE)
-                    (*c)->inject_data_packet (pkt);
+              // broadcast, this is ugly, but due to the security policy
+              // we have to connect to all hosts...
+              for (conns_vector::iterator c = conns.begin (); c != conns.end (); ++c)
+                if ((*c)->conf != THISNODE)
+                  (*c)->inject_data_packet (pkt);
             }
         }
 
@@ -641,12 +641,10 @@ connection *vpn::find_router ()
     {
       connection *c = *i;
 
-      if (c->conf->routerprio >= prio
+      if (c->conf->routerprio > prio
           && c->connectmode == conf_node::C_ALWAYS // so we don't drop the connection if in use
           && c->ictx && c->octx
-          && c->conf != THISNODE                   // redundant, since ictx==octx==0 always on thisnode
-          && (!THISNODE->routerprio
-              || c->conf->routerprio <= THISNODE->routerprio))
+          && c->conf != THISNODE)                  // redundant, since ictx==octx==0 always on thisnode
         {
           prio = c->conf->routerprio;
           router = c;
@@ -665,7 +663,7 @@ void vpn::send_connect_request (int id)
   else
     // no router found, aggressively connect to all routers
     for (conns_vector::iterator i = conns.begin (); i != conns.end (); ++i)
-      if ((*i)->conf->routerprio)
+      if ((*i)->conf->routerprio && (*i)->conf != THISNODE)
         (*i)->establish_connection ();
 }
 
