@@ -3,10 +3,7 @@
 # commented out, no use to distribute yet
 #info_TEXINFOS = vpe.texi
 
-dyn_MANS =
-man_aux = $(dyn_MANS:.8=.x)
-
-man_MANS = vpe.8 vped.8 vpectrl.8 vped.conf.5 $(dyn_MANS)
+man_MANS = vpe.5 vped.8 vpectrl.8 vped.conf.5 $(dyn_MANS)
 
 PERL = @PERL@
 HELP2MAN = help2man

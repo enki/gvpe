@@ -204,7 +204,7 @@ again.
 
 =head1 SEE ALSO
 
-vpe(8), vpectrl(8), vped.conf(5).
+vpe(5), vped.conf(5), vpectrl(8).
 
 =head1 AUTHOR
 

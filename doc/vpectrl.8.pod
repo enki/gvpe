@@ -1,0 +1,60 @@
+=head1 NAME
+
+C<vpectrl> - Virtual Private Ethernet Control Program
+
+=head1 SYNOPSIS
+
+C<vpectrl> [B<-ckgs>] [B<--config=>I<DIR>] [B<--generate-keys>] [B<--help>]
+[B<--kill>[B<=>I<SIGNAL>]] [B<--show-config>] [B<--version>]
+
+=head1 DESCRIPTION
+
+This is the control program for the C<vped>, the virtual private ethernet daemon.
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<-c>, B<--config=>I<DIR>
+
+Read configuration options from I<DIR>.
+
+=item B<-g>, B<--generate-keys>
+
+Generate public/private RSA keypair and exit.
+
+=item B<--help>
+
+Display short list of options.
+
+=item B<--kill>[B<=>I<SIGNAL>]
+
+Attempt to kill a running C<vpectrl> (optionally with the specified
+I<SIGNAL> instead of C<SIGTERM>) and exit.
+
+=item B<--show-config>
+
+Show a summary of the configuration, and how vped interprets it. Can also be very useful
+when designing firewall scripts.
+
+=item B<--version>
+
+Output version information and exit.
+
+=back
+
+=head1 BUGS
+
+If you find any bugs, report them to C<vpe@plan9.de>.
+
+=head1 SEE ALSO
+
+vpe(5), vpe.conf(5), vped(8).
+
+vpe comes with ABSOLUTELY NO WARRANTY.  This is free software, and you are
+welcome to redistribute it under certain conditions; see the file COPYING
+for details.
+
+=head1 AUTHORS
+
+Marc Lehmann C<< <vpe@plan9.de> >>.

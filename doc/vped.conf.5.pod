@@ -323,7 +323,7 @@ The public keys of the other nodes, one file per node.
 
 =head1 SEE ALSO
 
-vpe(8), vped(8), vpectrl(8).
+vpe(5), vped(8), vpectrl(8).
 
 =head1 AUTHOR
 
