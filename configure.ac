@@ -268,7 +268,12 @@ AC_ARG_ENABLE(tcp,
 
 AC_ARG_ENABLE(dns,
   [AS_HELP_STRING(--enable-dns,enable dns tunnel protocol support (DOES NOT WORK).)],
-  AC_DEFINE_UNQUOTED(ENABLE_DNS, 1, [DNS tunnel protocol support.])
+  [
+    AC_CHECK_HEADER(gmp.h,,[AC_MSG_ERROR([gmp.h not found, required for --enable-dns])])
+    AC_CHECK_LIB(gmp,main,,[AC_MSG_ERROR([libgmp not found, required for --enable-dns])])
+
+    AC_DEFINE_UNQUOTED(ENABLE_DNS, 1, [DNS tunnel protocol support.])
+  ]
 )
 
 AC_ARG_ENABLE(http-proxy,

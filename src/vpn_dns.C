@@ -39,6 +39,8 @@
 
 #include <map>
 
+#include <gmp.h>
+
 #include "netcompat.h"
 
 #include "vpn.h"
@@ -46,35 +48,18 @@
 #define MIN_RETRY 1.
 #define MAX_RETRY 60.
 
-#define MAX_OUTSTANDING 40 // max. outstanding requests
-#define MAX_WINDOW      100 // max. for MAX_OUTSTANDING
-#define MAX_RATE        1000 // requests/s
+#define MAX_OUTSTANDING 400 // max. outstanding requests
+#define MAX_WINDOW      1000 // max. for MAX_OUTSTANDING
+#define MAX_RATE        10000 // requests/s
 #define MAX_BACKLOG     (10*1024) // size of protocol backlog, must be > MAXSIZE
 
 #define MAX_DOMAIN_SIZE 220 // 255 is legal limit, but bind doesn't compress well
 // 240 leaves about 4 bytes of server reply data
 // every two request byte sless give room for one reply byte
 
-// seqno has 12 bits, but the lower bit is always left as zero
-// as bind caches ttl=0 records and we have to generate
-// sequence numbers that always differ case-insensitively
-#define SEQNO_MASK 0x07ff
-
-/*
-
-protocol, in shorthand :)
-
-client -> server <req>	ANY?
-server -> client <req>  TXT <rep>
-
-<req> is dns64-encoded <client-id:12><recv-seqno:10>[<send-seqno:10><data>]
-<rep> is dns64-encoded <0:12><recv-seqno:10>[<send-seqno:10><data>]
-
-if <client-id> is zero, the connection will be configured:
-
-<0:12><0:4>client-id:12><default-ttl:8><max-size:16><flags:16>
-
-*/
+// seqno has 12 bits (3 bytes a 4 bits in the header)
+#define SEQNO_MASK 0x7fff
+#define SEQNO_EQ(a,b) ( 0 == ( ((a) ^ (b)) & SEQNO_MASK) )
 
 #define MAX_LBL_SIZE 63
 #define MAX_PKT_SIZE 512
@@ -83,82 +68,213 @@ if <client-id> is zero, the connection will be configured:
 #define RR_TYPE_ANY 255
 #define RR_CLASS_IN 1
 
-// the "_" is not valid but widely accepted (all octets should be supported, but let's be conservative)
-struct dns64
+// works for cmaps up to 255 (not 256!)
+struct charmap
 {
-  static const char encode_chars[64 + 1];
-  static s8 decode_chars[256];
+  enum { INVALID = (u8)255 };
 
-  static int encode_len (int bytes) { return (bytes * 8 + 5) / 6; }
-  static int decode_len (int bytes) { return (bytes * 6) / 8; }
-  static int encode (char *dst, u8 *src, int len);
-  static int decode (u8 *dst, char *src, int len);
+  char encode [256]; // index => char
+  u8 decode [256]; // char => index
+  unsigned int size;
 
-  dns64 ();
-} dns64;
+  charmap (const char *cmap);
+};
+
+charmap::charmap (const char *cmap)
+{
+  char *enc = encode;
+  u8 *dec = decode;
+
+  memset (enc, (char)      0, 256);
+  memset (dec, (char)INVALID, 256);
+
+  for (size = 0; cmap [size]; size++)
+    {
+      enc [size] = cmap [size];
+      dec [(u8)enc [size]] = size;
+    }
+
+  assert (size < 256);
+}
+
+#define MAX_DEC_LEN 500
+#define MAX_ENC_LEN (MAX_DEC_LEN * 2)
+#define MAX_LIMBS ((MAX_DEC_LEN * 8 + GMP_NUMB_BITS - 1) / GMP_NUMB_BITS)
+
+// ugly. minimum base is 16(!)
+struct basecoder
+{
+  charmap cmap;
+  unsigned int enc_len [MAX_DEC_LEN];
+  unsigned int dec_len [MAX_ENC_LEN];
+
+  unsigned int encode_len (unsigned int len);
+  unsigned int decode_len (unsigned int len);
+
+  unsigned int encode (char *dst, u8 *src, unsigned int len);
+  unsigned int decode (u8 *dst, char *src, unsigned int len);
+
+  basecoder (const char *cmap);
+};
+
+basecoder::basecoder (const char *cmap)
+: cmap (cmap)
+{
+  for (unsigned int len = 0; len < MAX_DEC_LEN; ++len)
+    {
+      u8 src [MAX_DEC_LEN];
+      u8 dst [MAX_ENC_LEN];
+
+      memset (src, 255, len);
+
+      mp_limb_t m [MAX_LIMBS];
+      mp_size_t n;
+
+      n = mpn_set_str (m, src, len, 256);
+      n = mpn_get_str (dst, this->cmap.size, m, n);
+
+      for (int i = 0; !dst [i]; ++i)
+        n--;
+
+      enc_len [len] = n;
+      dec_len [n] = len;
+    }
+}
+
+unsigned int basecoder::encode_len (unsigned int len)
+{
+  return enc_len [len];
+}
+
+unsigned int basecoder::decode_len (unsigned int len)
+{
+  while (len && !dec_len [len])
+    --len;
+
+  return dec_len [len];
+}
+
+unsigned int basecoder::encode (char *dst, u8 *src, unsigned int len)
+{
+  if (!len)
+    return 0;
+
+  int elen = encode_len (len);
+
+  mp_limb_t m [MAX_LIMBS];
+  mp_size_t n;
+
+  u8 dst_ [MAX_ENC_LEN];
+
+  n = mpn_set_str (m, src, len, 256);
+  n = mpn_get_str (dst_, cmap.size, m, n);
+
+  int plen = elen; // for padding
+
+  while (n < plen)
+    {
+      *dst++ = cmap.encode [0];
+      plen--;
+    }
+
+  for (unsigned int i = n - plen; i < n; ++i)
+    *dst++ = cmap.encode [dst_ [i]];
+
+  return elen;
+}
+
+unsigned int basecoder::decode (u8 *dst, char *src, unsigned int len)
+{
+  if (!len)
+    return 0;
+
+  u8 src_ [MAX_ENC_LEN];
+  unsigned int elen = 0;
+
+  while (len--)
+    {
+      u8 val = cmap.decode [(u8)*src++];
+
+      if (val != charmap::INVALID)
+        src_ [elen++] = val;
+    }
+
+  int dlen = decode_len (elen);
+
+  mp_limb_t m [MAX_LIMBS];
+  mp_size_t n;
+
+  u8 dst_ [MAX_DEC_LEN];
+
+  n = mpn_set_str (m, src_, elen, cmap.size);
+  n = mpn_get_str (dst_, 256, m, n);
+
+  if (n < dlen)
+    {
+      memset (dst, 0, dlen - n);
+      memcpy (dst + dlen - n, dst_, n);
+    }
+  else
+    memcpy (dst, dst_ + n - dlen, dlen);
+
+  return dlen;
+}
+
+#if 0
+struct test { test (); } test;
+
+test::test ()
+{
+  basecoder cdc ("0123456789abcdefghijklmnopqrstuvwxyz");
+
+  u8 in[] = "0123456789abcdefghijklmnopqrstuvwxyz";
+  static char enc[200];
+  static u8 dec[200];
+
+  for (int i = 1; i < 20; i++)
+   {
+     int elen = cdc.encode (enc, in, i);
+     int dlen = cdc.decode (dec, enc, elen);
+
+     printf ("%d>%d>%d (%s>%s)\n", i, elen, dlen, enc, dec);
+   }
+  abort ();
+}
+#endif
 
 // the following sequence has been crafted to
 // a) look somewhat random
 // b) the even (and odd) indices never share the same character as upper/lowercase
-const char dns64::encode_chars[64 + 1] = "_-dDpPhHzZrR06QqMmjJkKBb34TtSsvVlL81xXaAeEFf92WwGgYyoO57UucCNniI";
-s8 dns64::decode_chars[256];
+// the "_" is not valid but widely accepted (all octets should be supported, but let's be conservative)
+// the other sequences are obviously derived
+//static basecoder cdc63 ("_dDpPhHzZrR06QqMmjJkKBb34TtSsvVlL81xXaAeEFf92WwGgYyoO57UucCNniI");
+static basecoder cdc62 ("dDpPhHzZrR06QqMmjJkKBb34TtSsvVlL81xXaAeEFf92WwGgYyoO57UucCNniI");
+//static basecoder cdc36 ("dphzr06qmjkb34tsvl81xaef92wgyo57ucni"); // unused as of yet
+static basecoder cdc26 ("dPhZrQmJkBtSvLxAeFwGyO");
 
-dns64::dns64 ()
+/////////////////////////////////////////////////////////////////////////////
+
+#define HDRSIZE 6
+
+inline void encode_header (char *data, int clientid, int seqno)
 {
-  for (int i = 0; i < 64; i++)
-    decode_chars [encode_chars [i]] = i + 1;
+  u8 hdr[3] = { clientid, seqno >> 8, seqno };
+
+  assert (clientid < 256);
+
+  cdc26.encode (data, hdr, 3);
 }
 
-int dns64::encode (char *dst, u8 *src, int len)
+inline void decode_header (char *data, int &clientid, int &seqno)
 {
-  // slow, but easy to debug
-  char *beg = dst;
-  unsigned int accum, bits = 0;
+  u8 hdr[3];
 
-  while (len--)
-    {
-      accum <<= 8;
-      accum  |= *src++;
-      bits   += 8;
+  cdc26.decode (hdr, data, HDRSIZE);
 
-      while (bits >= 6)
-        {
-          *dst++ = encode_chars [(accum >> (bits - 6)) & 63];
-          bits  -= 6;
-        }
-    }
+  printf ("DEC %02x %02x %02x %02x\n", hdr[0], hdr[1], hdr[2], hdr[3]);
 
-  if (bits)
-    *dst++ = encode_chars [(accum << (6 - bits)) & 63];
-
-  return dst - beg;
-}
-
-int dns64::decode (u8 *dst, char *src, int len)
-{
-  // slow, but easy to debug
-  u8 *beg = dst;
-  unsigned int accum, bits = 0;
-
-  while (len--)
-    {
-      s8 chr = decode_chars [(u8)*src++];
-
-      if (!chr)
-        continue;
-
-      accum <<= 6;
-      accum  |= chr - 1;
-      bits   += 6;
-
-      while (bits >= 8)
-        {
-          *dst++ = accum >> (bits - 8);
-          bits  -= 8;
-        }
-    }
-
-  return dst - beg;
+  clientid = hdr[0];
+  seqno = (hdr[1] << 8) | hdr[2];
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -357,25 +473,26 @@ void dns_req::gen_stream_req (int seqno, byte_stream *stream)
   pkt->qdcount = htons (1);
 
   int offs = 6*2;
-  int dlen = MAX_DOMAIN_SIZE - strlen (THISNODE->domain) - 2;
+  int dlen = MAX_DOMAIN_SIZE - (strlen (THISNODE->domain) + 2);
   // MAX_DOMAIN_SIZE is technically 255, but bind doesn't compress responses well,
   // so we need to have space for 2*MAX_DOMAIN_SIZE + header + extra
 
-  u8 data[256]; //TODO
+  char enc[256], *encp = enc;
+  encode_header (enc, THISNODE->id, seqno);
 
-  data[0] = THISNODE->id; //TODO
-  data[1] = seqno >> 7; //TODO
-  data[2] = seqno << 1; //TODO
-
-  int datalen = dns64::decode_len (dlen - (dlen + MAX_LBL_SIZE - 1) / MAX_LBL_SIZE) - 3;
+  int datalen = cdc62.decode_len (dlen - (dlen + MAX_LBL_SIZE - 1) / MAX_LBL_SIZE - HDRSIZE);
 
   if (datalen > stream->size ())
     datalen = stream->size ();
 
-  char enc[256], *encp = enc;
+  int enclen = cdc62.encode (enc + HDRSIZE, stream->begin (), datalen) + HDRSIZE;
+
+  printf ("cdc62.encode %d->%d:%02x %02x %02x %02x\n", datalen, enclen,
+      stream->begin ()[0],
+      stream->begin ()[1],
+      stream->begin ()[2],
+      stream->begin ()[3]);
   
-  memcpy (data + 3, stream->begin (), datalen);
-  int enclen = dns64::encode (enc, data, datalen + 3);
   stream->remove (datalen);
 
   while (enclen)
@@ -457,14 +574,31 @@ void connection::dnsv4_receive_rep (struct dns_rcv *r)
 {
   dns_rcvpq.push_back (r);
 
+  printf ("%d got inketc %d (%02x %02x %02x %02x)\n", THISNODE->id, r->seqno
+      ,r->data[0]
+      ,r->data[1]
+      ,r->data[2]
+      ,r->data[3]
+      );
   redo:
 
-  for (vector<dns_rcv *>::iterator i = dns_rcvpq.begin ();
-       i != dns_rcvpq.end ();
-       ++i)
-    if (dns_rcvseq == (*i)->seqno)
+  // find next packet
+  for (vector<dns_rcv *>::iterator i = dns_rcvpq.end (); i-- != dns_rcvpq.begin (); )
+    if (SEQNO_EQ (dns_rcvseq, (*i)->seqno))
       {
-        dns_rcv *r = *i;
+        // enter the packet into our input stream
+        r = *i;
+
+        printf ("%d checking for older packet %d\n", THISNODE->id, dns_rcvseq);
+        // remove the oldest packet, look forward, as it's oldest first
+        for (vector<dns_rcv *>::iterator j = dns_rcvpq.begin (); j != dns_rcvpq.end (); ++j)
+          if (SEQNO_EQ ((*j)->seqno, dns_rcvseq - MAX_WINDOW))
+            {
+              printf ("%d removing %d\n", THISNODE->id, (*j)->seqno);
+              delete *j;
+              dns_rcvpq.erase (j);
+              break;
+            }
 
         dns_rcvseq = (dns_rcvseq + 1) & SEQNO_MASK;
 
@@ -486,13 +620,8 @@ void connection::dnsv4_receive_rep (struct dns_rcv *r)
 
             vpn->recv_vpn_packet (pkt, si);
           }
-      }
-    else if ((u32)(*i)->seqno - (u32)dns_rcvseq + MAX_WINDOW > MAX_WINDOW * 2)
-      {
-       //D
-       //abort();
-       printf ("%d erasing %d (%d)\n", THISNODE->id, (u32)(*i)->seqno, dns_rcvseq);
-        dns_rcvpq.erase (i);
+
+        // check for further packets
         goto redo;
       }
 }
@@ -527,39 +656,45 @@ vpn::dnsv4_server (dns_packet *pkt)
 
       if (qclass == RR_CLASS_IN
           && (qtype == RR_TYPE_ANY || qtype == RR_TYPE_TXT)
-          && qlen > dlen + 1
+          && qlen > dlen + 1 + HDRSIZE
           && !memcmp (qname + qlen - dlen - 1, THISNODE->domain, dlen))
         {
           // correct class, domain: parse
-          u8 data[MAXSIZE];
-          int datalen = dns64::decode (data, qname, qlen - dlen - 1);
+          int client, seqno;
+          decode_header (qname, client, seqno);
 
-          int client = data[0];
-          int seqno  = ((data[1] << 7) | (data[2] >> 1)) & SEQNO_MASK;
+          u8 data[MAXSIZE];
+          int datalen = cdc62.decode (data, qname + HDRSIZE, qlen - (dlen + 1 + HDRSIZE));
+
+          printf ("cdc62.decode %d(%d): %02x %02x %02x %02x\n",
+              qlen - (dlen + 1 + HDRSIZE), datalen
+              ,data[0]
+              ,data[1]
+              ,data[2]
+              ,data[3]);
+
+          printf ("SRV got %d <%.*s>\n", seqno, qlen, qname + HDRSIZE);//D
+          printf ("SRV got %d <%.*s>\n", seqno, qlen - (dlen + 1 + HDRSIZE), qname + HDRSIZE);//D
 
           if (0 < client && client <= conns.size ())
             {
               connection *c = conns [client - 1];
 
-              redo:
-
-              for (vector<dns_rcv *>::iterator i = c->dns_rcvpq.begin ();
-                   i != c->dns_rcvpq.end ();
-                   ++i)
-                if ((*i)->seqno == seqno)
+              for (vector<dns_rcv *>::iterator i = c->dns_rcvpq.end (); i-- != c->dns_rcvpq.begin (); )
+                if (SEQNO_EQ ((*i)->seqno, seqno))
                   {
                     // already seen that request: simply reply with the cached reply
                     dns_rcv *r = *i;
 
                     printf ("DUPLICATE %d\n", htons (r->pkt->id));//D
 
-                    offs = r->pkt->len;
-                    memcpy (pkt->at (0), r->pkt->at (0), offs);
+                    memcpy (pkt->at (0), r->pkt->at (0), offs  = r->pkt->len);
+                    pkt->id = r->pkt->id;
                     goto duplicate_request;
                   }
 
               // new packet, queue
-              dns_rcv *rcv = new dns_rcv (seqno, data + 3, datalen - 3);
+              dns_rcv *rcv = new dns_rcv (seqno, data, datalen);
               c->dnsv4_receive_rep (rcv);
 
               // now generate reply
@@ -658,7 +793,10 @@ vpn::dnsv4_client (dns_packet *pkt)
 
             while (pkt->ancount-- && offs < MAXSIZE - 10)
               {
+               int qlen = //D
                 pkt->decode_label ((char *)qname, MAXSIZE - offs, offs);
+
+                printf ("got reply to <%.*s>\n", qlen, qname);//D
 
                 u16 qtype  = (*pkt) [offs++] << 8; qtype  |= (*pkt) [offs++];
                 u16 qclass = (*pkt) [offs++] << 8; qclass |= (*pkt) [offs++];
@@ -773,7 +911,7 @@ connection::dnsv4_cb (time_watcher &w)
               send = r;
 
               if (r->retry)//D
-                printf ("req %d, retry %d\n", r->pkt->id, r->retry);
+                printf ("req %d:%d, retry %d\n", r->seqno, r->pkt->id, r->retry);
               r->retry++;
               r->next = NOW + r->retry;
             }
