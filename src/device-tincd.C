@@ -69,8 +69,6 @@ struct vpn_packet_t : net_packet {
   u8 data[MAXSIZE];
 };
 
-static tap_device *self;
-
 static bool overwrite_mac;
 
 static bool
@@ -138,17 +136,15 @@ tap_device::info ()
 
 tap_device::tap_device ()
 {
-  self = this;
-
   if (setup_device ())
     {
-      //slog (L_DEBUG, _("%s is a %s"), device, info ());
+      slog (L_DEBUG, _("interface %s initialized"), info ());
       fd = device_fd;
       strcpy (ifrname, iface);
     }
   else
     {
-      slog (L_ERR, _("error while configuring tincd device (%s/%s)"), device, info ());
+      slog (L_ERR, _("error while configuring tincd device (%s)"), info ());
       exit (1);
     }
 }

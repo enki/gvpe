@@ -100,8 +100,6 @@ struct tap_device {
   // network interface name or identifier
   char ifrname[IFNAMESIZE + 1];
 
-  char *device;
-
   tap_device ();
   ~tap_device ();
 
