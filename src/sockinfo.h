@@ -21,8 +21,7 @@
 #ifndef VPE_SOCKINFO_H__
 #define VPE_SOCKINFO_H__
 
-#include <sys/socket.h>
-#include <netinet/in.h>
+#include "netcompat.h"
 
 #include "conf.h"
 
