@@ -787,7 +787,7 @@ connection::reset_connection ()
   delete ictx; ictx = 0;
   delete octx; octx = 0;
 
-  si.host= 0;
+  si.host = 0;
 
   last_activity = 0;
   retry_cnt = 0;

@@ -329,18 +329,28 @@ available when gvpe was compiled using the C<--enable-tcp> option. Never
 use this transport unless you really must, it is horribly ineffiecent and
 resource-intensive compared to the other transports.
 
-=item router-priority = positive-number
+=item router-priority = 0 | 1 | positive-number>2
 
 Sets the router priority of the given host (default: C<0>, disabled). If
 some host tries to connect to another host without a hostname, it asks
 the router host for it's IP address. The router host is the one with the
-highest priority that is currently reachable. Make sure all clients always
-connect to the router hosts, otherwise conencting to them is impossible.
+highest priority larger than C<1> that is currently reachable.
 
-=item connect = ondemand|never|always|disabled
+Make sure all hosts always connect (C<connect = always>) to the router
+hosts, otherwise connecting to them might be impossible.
+
+The special value C<1> allows other hosts to route through the router
+host, but they will never route through it by default. The value C<0>
+disables routing. The idea behind this is that some hosts can, if
+required, bump the C<router-priority> setting to higher than C<1> in their
+local config to route through specific hosts. If C<router-priority> is
+C<0>, then routing will be refused, so C<1> serves as a "enable, but do
+not use by default" switch.
+
+=item connect = ondemand | never | always | disabled
 
 Sets the connect mode (default: C<always>). It can be C<always> (always
-try to establish and keep a conenction to the given host), C<never>
+try to establish and keep a connection to the given host), C<never>
 (nevr initiate a connection to the given host, but accept connections),
 C<ondemand> (try to establish a connection on the first packet sent, and
 take it down after the keepalive interval) or C<disabled> (node is bad,

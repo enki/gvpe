@@ -129,7 +129,7 @@
 .\" ========================================================================
 .\"
 .IX Title "GVPE.CONF 5"
-.TH GVPE.CONF 5 "2004-06-11" "1.7" "GNU Virtual Private Ethernet"
+.TH GVPE.CONF 5 "2004-07-25" "1.7" "GNU Virtual Private Ethernet"
 .SH "NAME"
 gvpe.conf \- configuration file for the GNU VPE daemon
 .SH "SYNOPSIS"
@@ -435,17 +435,27 @@ Enable the TCPv4 transport using the \f(CW\*(C`tcp\-port\*(C'\fR port
 available when gvpe was compiled using the \f(CW\*(C`\-\-enable\-tcp\*(C'\fR option. Never
 use this transport unless you really must, it is horribly ineffiecent and
 resource-intensive compared to the other transports.
-.IP "router-priority = positive-number" 4
-.IX Item "router-priority = positive-number"
+.IP "router-priority = 0 | 1 | positive\-number>2" 4
+.IX Item "router-priority = 0 | 1 | positive-number>2"
 Sets the router priority of the given host (default: \f(CW0\fR, disabled). If
 some host tries to connect to another host without a hostname, it asks
 the router host for it's \s-1IP\s0 address. The router host is the one with the
-highest priority that is currently reachable. Make sure all clients always
-connect to the router hosts, otherwise conencting to them is impossible.
-.IP "connect = ondemand|never|always|disabled" 4
-.IX Item "connect = ondemand|never|always|disabled"
+highest priority larger than \f(CW1\fR that is currently reachable.
+.Sp
+Make sure all hosts always connect (\f(CW\*(C`connect = always\*(C'\fR) to the router
+hosts, otherwise connecting to them might be impossible.
+.Sp
+The special value \f(CW1\fR allows other hosts to route through the router
+host, but they will never route through it by default. The value \f(CW0\fR
+disables routing. The idea behind this is that some hosts can, if
+required, bump the \f(CW\*(C`router\-priority\*(C'\fR setting to higher than \f(CW1\fR in their
+local config to route through specific hosts. If \f(CW\*(C`router\-priority\*(C'\fR is
+\&\f(CW0\fR, then routing will be refused, so \f(CW1\fR serves as a \*(L"enable, but do
+not use by default\*(R" switch.
+.IP "connect = ondemand | never | always | disabled" 4
+.IX Item "connect = ondemand | never | always | disabled"
 Sets the connect mode (default: \f(CW\*(C`always\*(C'\fR). It can be \f(CW\*(C`always\*(C'\fR (always
-try to establish and keep a conenction to the given host), \f(CW\*(C`never\*(C'\fR
+try to establish and keep a connection to the given host), \f(CW\*(C`never\*(C'\fR
 (nevr initiate a connection to the given host, but accept connections),
 \&\f(CW\*(C`ondemand\*(C'\fR (try to establish a connection on the first packet sent, and
 take it down after the keepalive interval) or \f(CW\*(C`disabled\*(C'\fR (node is bad,

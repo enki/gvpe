@@ -1,5 +1,6 @@
 TODO items:
 
+- on shell xyz
 - add a general vpn introduction to the manual
 - reformat the texinfo manual to look less manpagish
 - use gnutls instead of openssl

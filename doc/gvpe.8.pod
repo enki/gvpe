@@ -95,7 +95,7 @@ be used for example to run nsupdate.
 
 =item C</etc/gvpe/node-down>
 
-Script which is executed whenever a conenction to another node is lost.
+Script which is executed whenever a connection to another node is lost.
 for example to run nsupdate.
 
 =item C</etc/gvpe/pubkey/*>
