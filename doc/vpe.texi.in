@@ -72,6 +72,7 @@ probably... right ;)
 * vped.conf(5)::      The main configuration file.
 * vpectrl(8)::        Config/Control programm reference.
 * vped(8)::           Networking daemon reference.
+* complex-example::   A nontrivial example from the real world. Read vpe(5).
 @end menu
 
 
@@ -79,19 +80,41 @@ probably... right ;)
 
 @c ==================================================================
 @node    vpe(5), vped.conf(5), Top, Top
-@c INCLUDE vpe.5
+@c INCLUDE-POD vpe.5
 
 @c ==================================================================
 @node    vped.conf(5), vpectrl(8), vpe(5), Top
-@c INCLUDE vped.conf.5
+@c INCLUDE-POD vped.conf.5
 
 @c ==================================================================
 @node    vpectrl(8), vped(8), vped.conf(5), Top
-@c INCLUDE vpectrl.8
+@c INCLUDE-POD vpectrl.8
 
 @c ==================================================================
-@node    vped(8), , vpectrl(8), Top
-@c INCLUDE vped.8
+@node    vped(8), complex-example, vpectrl(8), Top
+@c INCLUDE-POD vped.8
+
+@c ==================================================================
+@node    complex-example, complex/vped.conf, vped(8), Top
+@c INCLUDE-TEXT complex-example/README
+
+@menu
+* complex/vped.conf::         An example vped configuration.
+* complex/if-up::             A fully-routing if-up config.
+* complex/node-up::           A node-up/node-down script utilizing dynds.
+@end menu
+
+@c ==================================================================
+@node    complex/vped.conf, complex/if-up, complex-example, complex-example
+@c INCLUDE-EXAMPLE complex-example/vped.conf
+
+@c ==================================================================
+@node    complex/if-up, complex/node-up, complex/vped.conf, complex-example
+@c INCLUDE-EXAMPLE complex-example/if-up
+
+@c ==================================================================
+@node    complex/node-up, , complex/if-up, complex-example
+@c INCLUDE-EXAMPLE complex-example/node-up
 
 @contents
 @bye
