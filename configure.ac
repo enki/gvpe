@@ -1,10 +1,11 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.57)
-AC_INIT(src/vped.C)
+AC_PREREQ(2.59)
+AC_INIT
+AC_CONFIG_SRCDIR([src/vped.C])
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE(vpe, 1.6.1)
-AM_CONFIG_HEADER(config.h)
+AC_CONFIG_HEADERS([config.h])
 AM_MAINTAINER_MODE
 
 AH_TOP([
@@ -65,7 +66,7 @@ AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 
 AC_ARG_ENABLE(iftype,
-  [AC_HELP_STRING(--enable-iftype[=TYPE/SUBTYPE], [
+  [AS_HELP_STRING(--enable-iftype=TYPE/SUBTYPE,
      Use kernel/net device interface TYPE/SUBTYPE.
      Working combinations are:
         "native/linux"
@@ -81,7 +82,7 @@ AC_ARG_ENABLE(iftype,
      Broken combinations are:
         "tincd/cygwin";
      The default is to autodetect.
-  ])],
+  )],
   [
     IFTYPE=`echo $enableval | sed s%/.*%%`
     IFSUBTYPE=`echo $enableval | sed s%.*/%%`
@@ -174,12 +175,8 @@ AC_STRUCT_TM
 
 AC_CACHE_CHECK([for socklen_t], ac_cv_type_socklen_t,
 [
-  AC_TRY_COMPILE(
-  [#include <sys/types.h>
-  #include <sys/socket.h>],
-  [socklen_t len = 42; return len;],
-  ac_cv_type_socklen_t=yes,
-  ac_cv_type_socklen_t=no)
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
+  #include <sys/socket.h>]], [[socklen_t len = 42; return len;]])],[ac_cv_type_socklen_t=yes],[ac_cv_type_socklen_t=no])
 ])
 if test $ac_cv_type_socklen_t = yes; then
   AC_DEFINE(HAVE_SOCKLEN_T, 1, [socklen_t available])
@@ -187,13 +184,9 @@ fi
 
 AC_CACHE_CHECK([for struct addrinfo], ac_cv_struct_addrinfo,
 [
-  AC_TRY_COMPILE(
-  [#include <sys/types.h>
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
   #include <sys/socket.h>
-  #include <netdb.h>],
-  [struct addrinfo ai; ai.ai_family = AF_INET; return ai.ai_family;],
-  ac_cv_struct_addrinfo=yes,
-  ac_cv_struct_addrinfo=no)
+  #include <netdb.h>]], [[struct addrinfo ai; ai.ai_family = AF_INET; return ai.ai_family;]])],[ac_cv_struct_addrinfo=yes],[ac_cv_struct_addrinfo=no])
 ])
 if test $ac_cv_struct_addrinfo = yes; then
   AC_DEFINE(HAVE_STRUCT_ADDRINFO, 1, [struct addrinfo available])
@@ -236,7 +229,7 @@ fi
 dnl tinc_ZLIB
 
 AC_ARG_ENABLE(rohc,
-  [AC_HELP_STRING(--enable-rohc, [enable robust header compression (rfc3095).])],
+  [AS_HELP_STRING(--enable-rohc,enable robust header compression (rfc3095).)],
   [
   echo
   echo "**********************************************************************"
@@ -253,49 +246,49 @@ AC_ARG_ENABLE(rohc,
 AM_CONDITIONAL(ROHC, test x$rohc = xtrue)
 
 AC_ARG_ENABLE(icmp,
-  [AC_HELP_STRING(--enable-icmp, [enable icmp protocol support (default disabled).])],
+  [AS_HELP_STRING(--enable-icmp,enable icmp protocol support (default disabled).)],
   AC_DEFINE_UNQUOTED(ENABLE_ICMP, 1, [ICMP protocol support.])
 )
 
 AC_ARG_ENABLE(tcp,
-  [AC_HELP_STRING(--enable-tcp, [enable tcp protocol support (default disabled).])],
+  [AS_HELP_STRING(--enable-tcp,enable tcp protocol support (default disabled).)],
   AC_DEFINE_UNQUOTED(ENABLE_TCP, 1, [TCP protocol support.])
 )
 
 AC_ARG_ENABLE(dns,
-  [AC_HELP_STRING(--enable-dns, [enable dns tunnel protocol support (DOES NOT WORK).])],
+  [AS_HELP_STRING(--enable-dns,enable dns tunnel protocol support (DOES NOT WORK).)],
   AC_DEFINE_UNQUOTED(ENABLE_DNS, 1, [DNS tunnel protocol support.])
 )
 
 AC_ARG_ENABLE(http-proxy,
-  [AC_HELP_STRING(--enable-http-proxy, [enable http proxy connect support (default disabled).])],
+  [AS_HELP_STRING(--enable-http-proxy,enable http proxy connect support (default disabled).)],
   AC_DEFINE_UNQUOTED(ENABLE_HTTP_PROXY, 1, [http proxy connect support.])
 )
 
-HMAC=12    dnl see also the AC_HELP_STRING
+HMAC=12    dnl see also the AS_HELP_STRING()
 AC_ARG_ENABLE(hmac-length,
-  [AC_HELP_STRING(--enable-hmac-length=BYTES, [use a hmac of length BYTES bytes (default 12). Allowed values are 4, 8, 12, 16.])],
+  [AS_HELP_STRING(--enable-hmac-length=BYTES,use a hmac of length BYTES bytes (default 12). Allowed values are 4, 8, 12, 16.)],
   HMAC=$enableval
 )
 AC_DEFINE_UNQUOTED(HMACLENGTH, $HMAC, [Size of HMAC in each packet in bytes.])
 
-RAND=8   dnl see also the AC_HELP_STRING
+RAND=8   dnl see also the AS_HELP_STRING()
 AC_ARG_ENABLE(rand-length,
-  [AC_HELP_STRING(--enable-rand-length=BYTES, [use BYTES bytes of extra randomness (default 8). Allowed values are 0, 4, 8.])],
+  [AS_HELP_STRING(--enable-rand-length=BYTES,use BYTES bytes of extra randomness (default 8). Allowed values are 0, 4, 8.)],
   RAND=$enableval
 )
 AC_DEFINE_UNQUOTED(RAND_SIZE, $RAND, [Add this many bytes of randomness to each packet.])
 
-MTU=1500   dnl see also the AC_HELP_STRING
+MTU=1500   dnl see also the AS_HELP_STRING()
 AC_ARG_ENABLE(mtu,
-  [AC_HELP_STRING(--enable-max-mtu=BYTES, enable mtu sizes upto BYTES bytes (default 1500). Use 9100 for jumbogram support.)],
+  [AS_HELP_STRING(--enable-max-mtu=BYTES,enable mtu sizes upto BYTES bytes (default 1500). Use 9100 for jumbogram support.)],
   MTU=$enableval
 )
 AC_DEFINE_UNQUOTED(MAX_MTU, $MTU + 14, [Maximum MTU supported.])
 
 COMPRESS=1
 AC_ARG_ENABLE(compression,
-  [AC_HELP_STRING(--disable-compression, Disable compression support.)],
+  [AS_HELP_STRING(--disable-compression,Disable compression support.)],
   if test "x$enableval" = xno; then
      COMPRESS=0
   fi
@@ -304,9 +297,9 @@ AC_DEFINE_UNQUOTED(ENABLE_COMPRESSION, $COMPRESS, [Enable compression support.])
 
 CIPHER=bf_cbc
 AC_ARG_ENABLE(cipher,
-  [AC_HELP_STRING(--enable-cipher, [
+  [AS_HELP_STRING(--enable-cipher,
      Select the symmetric cipher (default "bf"). Must be one of
-     "bf" (blowfish), "aes-128" (rijndael), "aes-192" or "aes-256".])],
+     "bf" (blowfish), "aes-128" (rijndael), "aes-192" or "aes-256".)],
   if test "x$enableval" = xbf     ; then CIPHER=bf_cbc     ; fi
   if test "x$enableval" = xaes-128; then CIPHER=aes_128_cbc; fi
   if test "x$enableval" = xaes-192; then CIPHER=aes_192_cbc; fi
@@ -316,9 +309,9 @@ AC_DEFINE_UNQUOTED(ENABLE_CIPHER, EVP_${CIPHER}, [Select the symmetric cipher to
 
 DIGEST=sha1
 AC_ARG_ENABLE(digest,
-  [AC_HELP_STRING(--enable-digest, [
+  [AS_HELP_STRING(--enable-digest,
      Select the digets algorithm to use (default "sha1"). Must be one of
-     "sha1", "ripemd160", "md5" or "md4" (insecure).])],
+     "sha1", "ripemd160", "md5" or "md4" (insecure).)],
   if test "x$enableval" = xsha1     ; then DIGEST=sha1     ; fi
   if test "x$enableval" = xripemd160; then DIGEST=ripemd160; fi
   if test "x$enableval" = xmd5      ; then DIGEST=md5      ; fi
@@ -379,10 +372,11 @@ echo
 
 AC_SUBST(INCLUDES)
 
-AC_OUTPUT(Makefile po/Makefile.in
+AC_CONFIG_FILES([Makefile po/Makefile.in
 src/Makefile
 src/rohc/Makefile
 doc/Makefile
 lib/Makefile
 m4/Makefile
-)
+])
+AC_OUTPUT

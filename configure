@@ -883,20 +883,17 @@ Optional Features:
   --enable-http-proxy     enable http proxy connect support (default
                           disabled).
   --enable-hmac-length=BYTES
-                          use a hmac of length BYTES bytes (default 12).
-                          Allowed values are 4, 8, 12, 16.
+8use a hmac of length BYTES bytes (default 12). Allowed values are 4
   --enable-rand-length=BYTES
-                          use BYTES bytes of extra randomness (default 8).
-                          Allowed values are 0, 4, 8.
+4use BYTES bytes of extra randomness (default 8). Allowed values are 0
   --enable-max-mtu=BYTES  enable mtu sizes upto BYTES bytes (default 1500).
                           Use 9100 for jumbogram support.
   --disable-compression   Disable compression support.
-  --enable-cipher         Select the symmetric cipher (default "bf"). Must be
-                          one of "bf" (blowfish), "aes-128" (rijndael),
-                          "aes-192" or "aes-256".
-  --enable-digest         Select the digets algorithm to use (default "sha1").
-                          Must be one of "sha1", "ripemd160", "md5" or "md4"
-                          (insecure).
+  --enable-cipher   Select the symmetric cipher (default "bf"). Must be one of
+"aes-128" (rijndael)"bf" (blowfish)
+  --enable-digest
+"ripemd160"Select the digets algorithm to use (default "sha1"). Must be one of
+"ripemd160""sha1"
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1342,6 +1339,7 @@ ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
 
 
 
@@ -9851,6 +9849,7 @@ fi
 
 
                                                                       ac_config_files="$ac_config_files Makefile po/Makefile.in src/Makefile src/rohc/Makefile doc/Makefile lib/Makefile m4/Makefile"
+
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
 # tests run on this system so they can be shared between configure
