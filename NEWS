@@ -1,9 +1,12 @@
 1.7
+	- first gnu release.
+        - renamed vped => gvpe and vpectrl => gvpectrl, as well as
+          vped.conf => gvpe.conf.
 	- new per-mode option "max-retry".
-	- started to gnuify vpe.
 	- asymmetric rekeying behaviour, so hosts don't rekey simultaneously.
         - new configure option --enable-static-daemon.
         - fix configure --help output.
+        - many documentation layout fixes.
 
 1.6.1 Wed May 12 14:48:20 CEST 2004
 	- fix -c switch that has been broken due to a last-minute fix

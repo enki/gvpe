@@ -1,25 +1,26 @@
 \input texinfo   @c -*-texinfo-*-
-@c GENERATED FILE, vpe.texi.in is the source, not vpe.texi!
-@c GENERATED FILE, vpe.texi.in is the source, not vpe.texi!
-@c GENERATED FILE, vpe.texi.in is the source, not vpe.texi!
-@c GENERATED FILE, vpe.texi.in is the source, not vpe.texi!
-@c GENERATED FILE, vpe.texi.in is the source, not vpe.texi!
-@c GENERATED FILE, vpe.texi.in is the source, not vpe.texi!
-@c GENERATED FILE, vpe.texi.in is the source, not vpe.texi!
-@c GENERATED FILE, vpe.texi.in is the source, not vpe.texi!
-@c GENERATED FILE, vpe.texi.in is the source, not vpe.texi!
-@c GENERATED FILE, vpe.texi.in is the source, not vpe.texi!
-@c GENERATED FILE, vpe.texi.in is the source, not vpe.texi!
+@c GENERATED FILE, gvpe.texi.in is the source, not vpe.texi!
+@c GENERATED FILE, gvpe.texi.in is the source, not vpe.texi!
+@c GENERATED FILE, gvpe.texi.in is the source, not vpe.texi!
+@c GENERATED FILE, gvpe.texi.in is the source, not vpe.texi!
+@c GENERATED FILE, gvpe.texi.in is the source, not vpe.texi!
+@c GENERATED FILE, gvpe.texi.in is the source, not vpe.texi!
+@c GENERATED FILE, gvpe.texi.in is the source, not vpe.texi!
+@c GENERATED FILE, gvpe.texi.in is the source, not vpe.texi!
+@c GENERATED FILE, gvpe.texi.in is the source, not vpe.texi!
+@c GENERATED FILE, gvpe.texi.in is the source, not vpe.texi!
+@c GENERATED FILE, gvpe.texi.in is the source, not vpe.texi!
 @c %**start of header
-@setfilename vpe.info
-@settitle vpe Manual
+@finalout
+@setfilename gvpe.info
+@settitle GNU VPE Manual
 @setchapternewpage odd
 @c %**end of header
 
 @ifinfo
 @dircategory Networking tools
 @direntry
-* vpe: (vpe).              The vpe Manual.
+* gvpe: (gvpe).              The GNU VPE Manual.
 @end direntry
 
 This is the info manual for vpe, a Virtual Private Ethernet daemon.

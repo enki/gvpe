@@ -1,4 +1,4 @@
-#!/usr/bin/perl -p
+#!/usr/bin/perl
 
 use Pod::Tree;
 	
@@ -13,7 +13,7 @@ sub example {
    my $text = $_[0];
    print "\n\n\@example\n";
    $text =~ s/\n+$//;
-   $text =~ s/([\@\{\}])/@$1/g;
+   $text =~ s/([\@\{\}])/\@$1/g;
    print $text;
    print "\n\@end example\n\n";
 }
@@ -70,11 +70,11 @@ while (<>) {
                }
             } elsif ($n->is_command) {
                if ($n->is_c_head1) {
-                  print "\n\@subsection ";
+                  print "\n\@section ";
                   $walker->($_) for @{$n->get_children};
                   print "\n";
                } elsif ($n->is_c_head2) {
-                  print "\n\n\@subsubsection ";
+                  print "\n\n\@subsection ";
                   $walker->($_) for @{$n->get_children};
                   print "\n";
                } else {

@@ -88,9 +88,9 @@ $ACLOCAL -I m4
 (autoheader --version)  < /dev/null > /dev/null 2>&1 && autoheader
 
 (cd m4 && make -f Makefile.am.in Makefile.am)
-touch doc/vpe.texi
-$AUTOMAKE --add-missing
-rm doc/vpe.texi
+touch doc/gvpe.texi
+$AUTOMAKE -f --add-missing
+rm doc/gvpe.texi
 autoconf
 autoheader
 
