@@ -1,3 +1,207 @@
 
-If you look for a more portable and/or featureful vpn implementation, look
-at their tincd package:
+==== NAME ====
+
+    vpe - Overview of the virtual private ethernet suite.
+
+
+==== DESCRIPTION ====
+
+    Vpe is a suite designed to provide a virtual private network for
+    multiple nodes over an untrusted network.
+
+    "Virtual" means that no physical network is created (of course), but an
+    ethernet is emulated by creating multiple tunnels between the member
+    nodes. "Private" means that non-participating nodes cannot decode
+    ("sniff)" nor inject ("spoof") packets. In the case of vpe, even
+    participating nodes cannot spoof packets from other nodes. And "network"
+    means that more than two parties - many so-called vpn solutions only
+    create point-to-point tunnels - can participate in the network, so it's
+    possible to connect multiple branches of a company into a single
+    network.
+
+
+==   DESIGN GOALS   ==
+
+:   SIMPLE DESIGN
+        Cipher, HMAC algorithms and other key parameters must be selected at
+        compile time - this makes it possible to only link in algorithms you
+        actually need. It also makes the crypto part of the source very
+        transparent and easy to inspect.
+
+:   EASY TO SETUP
+        A few lines of config (the config file is shared unmodified between
+        all hosts) and a single run of ``vpectrl'' to generate the keys
+        suffices to make it work.
+
+:   MAC-BASED SECURITY
+        Since every host has it's own private key, other hosts cannot spoof
+        traffic from this host. That makes it possible to filter packest by
+        MAC address, e.g. to ensure that packets from a specific IP address
+        come, in fact, from a specific host.
+
+
+==== PROGRAMS ====
+
+    Vpe comes with two programs: one daemon (``vped'') and one control
+    program ``vpectrl'').
+
+:   vpectrl
+        Is used to generate the keys and give an overview of the
+        configuration.
+
+:   vped
+        Is the daemon used to establish and maintain conenctions to the
+        other network members. It should be run on the gateway machine.
+
+
+==== CONFIGURING VPE ====
+
+    Here are a few recipes for configuring your vpe:
+
+
+==   AS LOW PACKET OVERHEAD AS POSSIBLE   ==
+
+     ./configure --enable-hmac-length=4 --enable-rand-length=0
+
+    Minimize the header overhead of VPN packets.
+
+
+==   MINIMIZE CPU TIME REQUIRED   ==
+
+     ./configure --enable-cipher=bf --enable-digest=md4
+
+    Use the fastest cipher and digest algorithms.
+
+
+==   MAXIMIZE SECURITY   ==
+
+     ./configure --enable-hmac-length=16 --enable-rand-length=8 --enable-digest=sha1
+
+    In general, remember that AES-128 seems to be more secure and faster
+    than AES-192 or AES-256, more randomness and longer hmac is more secure,
+    MD4 is a fast digest, SHA1 or RIPEMD160 are better, and Blowfish is a
+    fast and so-far quite secure cipher.
+
+
+==== HOW TO SET UP A SIMPLE VPN ====
+
+    In this section I will describe how to get a simple VPN consisting of
+    three hosts up and running.
+
+
+==   STEP 1: configuration   ==
+
+    First you have to create a daemon configuation file and put it into the
+    configuration directory. This is usually ``/etc/vpe'', depending on how
+    you configured vpe, and can be overwritten using the ``-c'' commandline
+    switch.
+
+    Put the following lines into ``/etc/vpe/vped.conf'':
+
+     udp-port = 50000 # the external port to listen on (configure your firewall)
+     mtu = 1400       # minimum MTU of all outgoing interfaces on all hosts
+     ifname = vpn0    # the local network device name
+
+     node = first     # just a nickname
+     hostname = first.example.net # the DNS name or IP address of the host
+
+     node = second
+     hostname = 133.55.82.9
+
+     node = third
+     hostname = third.example.net
+
+    The only other file neccessary if the ``if-up'' script that initializes
+    the local ethernet interface. Put the following lines into
+    ``/etc/vpe/if-up'' and make it execute (``chmod 755 /etc/vpe/if-up''):
+
+     #!/bin/sh
+     ip link set $IFNAME address $MAC mtu $MTU up
+     [ $NODENAME = first  ] && ip addr add 10.0.1.1 dev $IFNAME
+     [ $NODENAME = second ] && ip addr add 10.0.2.1 dev $IFNAME
+     [ $NODENAME = third  ] && ip addr add 10.0.3.1 dev $IFNAME
+     ip route add 10.0.0.0/16 dev $IFNAME
+
+    This script will give each node a different IP address in the
+    ``10.0/16'' network. The internal network (e.g. the ``eth0'' interface)
+    should then be set to a subset of that network, e.g. ``10.0.1.0/24'' on
+    node ``first'', ``10.0.2.0/24'' on node ``second'', and so on.
+
+    By enabling routing on the gateway host that runs ``vped'' all nodes
+    will be able to reach the other nodes. You can, of course, also use
+    proxy arp or other means of pseudo-bridging (or even real briding), or
+    (best) full routing - the choice is yours.
+
+
+==   STEP 2: create the RSA key pairs for all hosts   ==
+
+    Run the following command to generate all key pairs (that might take a
+    while):
+
+     vpectrl -c /etc/vpe -g
+
+    This command will put the public keys into
+    ``/etc/vpe/pubkeys/*nodename*'' and the private keys into
+    ``/etc/vpe/hostkeys/*nodename*''.
+
+
+==   STEP 3: distribute the config files to all nodes   ==
+
+    Now distribute the config files to the other nodes. This should be done
+    in two steps, since the private keys should not be distributed. The
+    example uses rsync-over-ssh
+
+    First all the config files without the hostkeys should be distributed:
+
+     rsync -avzessh /etc/vpe first.example.net:/etc/. --exclude hostkeys
+     rsync -avzessh /etc/vpe 133.55.82.9:/etc/. --exclude hostkeys
+     rsync -avzessh /etc/vpe third.example.net:/etc/. --exclude hostkeys
+
+    Then the hostkeys should be copied:
+
+     rsync -avzessh /etc/vpe/hostkeys/first  first.example.net:/etc/hostkey
+     rsync -avzessh /etc/vpe/hostkeys/second 133.55.82.9:/etc/hostkey
+     rsync -avzessh /etc/vpe/hostkeys/third  third.example.net:/etc/hostkey
+
+    You should now check the configration by issuing the command ``vpectrl
+    -c /etc/vpe -s'' on each node and verify it's output.
+
+
+==   STEP 4: starting vped   ==
+
+    You should then start vped on each node by issuing a command like:
+
+     vped -D -linfo first # first is the nodename
+
+    This will make the vped stay in foreground. You should then see
+    "connection established" messages. If you don't see them check your
+    firewall and routing (use tcpdump ;).
+
+    If this works you should check your networking setup by pinging various
+    endpoints.
+
+    To make vped run more permanently you can either run it as a daemon (by
+    starting it without the ``-D'' switch), or, much better, from your
+    inittab. I use a line like this on my systems:
+
+     t1:2345:respawn:/opt/vpe/sbin/vped -D -L first >/dev/null 2>&1
+
+
+==   STEP 5: enjoy   ==
+
+    ... and play around. Sending a -HUP (``vpectrl -kHUP'') to the daemon
+    will make it try to connect to all other nodes again. If you run it from
+    inittab, as is recommended, ``vpectrl -k'' (or simply ``killall vped'')
+    will kill the daemon, start it again, making it read it's configuration
+    files again.
+
+
+==== SEE ALSO ====
+
+    vpe(8), vpectrl(8), vped.conf(5).
+
+
+==== AUTHOR ====
+
+    Marc Lehmann <vpe@plan9.de>
+

@@ -42,3 +42,7 @@ sample-config.tar.gz:
 
 %.8: %.pod
 	pod2man -r $(VERSION) -s 8 -c "Virtual Private Ethernet" $< >$@
+
+../README: vpe.pod
+	pod2text -q\\\" -a vpe.pod >../README
+
