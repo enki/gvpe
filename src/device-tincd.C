@@ -29,16 +29,25 @@
 
 #include "conf.h"
 
+/* make the tincd sources feel comfortable in our environment. */
+/* this was reasonably easy to do. */
 #define routing_mode 1
 #define RMODE_ROUTER 0
 
-/* need iso c-90 or ugly workaround :( */
-#define logger(level, ...) slog (		\
+#define LOG_TO_L(level)				\
     (level) == LOG_ERR     ? L_ERR		\
   : (level) == LOG_DEBUG   ? L_DEBUG		\
   : (level) == LOG_WARNING ? L_WARN		\
   : (level) == LOG_INFO    ? L_INFO		\
-                           : L_NOTICE, __VA_ARGS__)
+                           : L_NOTICE
+
+#if __STDC_VERSION__ > 199900
+# define logger(level, ...) slog (LOG_TO_L(level), __VA_ARGS__)
+#elif __GNUC__
+# define logger(level, args...) slog (LOG_TO_L(level), ## args)
+#else
+# error either need ISO-C 99 compliant compiler or gcc.
+#endif
 
 #define ifdebug(subsys) if (0)
 
