@@ -1,5 +1,6 @@
 /*
     util.C -- process management and other utility functions
+    Copyright (C) 2003 Marc Lehmann <pcg@goof.com>
     
     Some of these are taken from tinc, see the AUTHORS file.
  

@@ -2,7 +2,7 @@
     util.h -- process management and other utility functions
     Copyright (C) 1998-2002 Ivo Timmermans <ivo@o2w.nl>
                   2000-2002 Guus Sliepen <guus@sliepen.eu.org>
-                  2003      Marc Lehmannn <pcg@goof.com>
+                  2003      Marc Lehmann <pcg@goof.com>
  
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

@@ -1,10 +1,6 @@
 /*
     conf.c -- configuration code
-    Copyright (C) 1998 Robert van der Meulen
-                  1998-2002 Ivo Timmermans <ivo@o2w.nl>
-                  2000-2002 Guus Sliepen <guus@sliepen.eu.org>
-		  2000 Cris van Pelt <tribbel@arise.dhs.org>
-                  2003 Marc Lehmann <pcg@goof.com>
+    Copyright (C) 2003 Marc Lehmann <pcg@goof.com>
  
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

@@ -1,5 +1,6 @@
 /*
     vpn_tcp.C -- handle the tcp part of the protocol.
+    Copyright (C) 2003 Marc Lehmann <pcg@goof.com>
  
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
