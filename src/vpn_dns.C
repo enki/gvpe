@@ -46,18 +46,17 @@
 
 #include "vpn.h"
 
-#define MIN_POLL_INTERVAL .02  // how often to poll minimally when the server has data
-#define MAX_POLL_INTERVAL 6.  // how often to poll minimally when the server has no data
+#define MAX_POLL_INTERVAL 5.  // how often to poll minimally when the server has no data
 #define ACTIVITY_INTERVAL 5.
 
 #define INITIAL_TIMEOUT     0.1 // retry timeouts
 #define INITIAL_SYN_TIMEOUT 10. // retry timeout for initial syn
 
-#define MIN_SEND_INTERVAL 0.01 // wait at least this time between sending requests
+#define MIN_SEND_INTERVAL 0.001 // wait at least this time between sending requests
 #define MAX_SEND_INTERVAL 2. // optimistic?
 
 #define LATENCY_FACTOR   0.5 // RTT * LATENCY_FACTOR == sending rate
-#define MAX_OUTSTANDING  100 // max. outstanding requests
+#define MAX_OUTSTANDING    2 // max. outstanding requests
 #define MAX_WINDOW      1000 // max. for MAX_OUTSTANDING, and backlog
 #define MAX_BACKLOG     (100*1024) // size of gvpe protocol backlog (bytes), must be > MAXSIZE
 
@@ -426,7 +425,8 @@ struct dns_cfg
   u8 req_cdc;
 
   u8 rep_cdc;
-  u8 r2, r3, r4;
+  u8 delay; // time in 0.01s units that the server may delay replying packets
+  u8 r3, r4;
 
   u8 r5, r6, r7, r8;
 
@@ -454,8 +454,9 @@ void dns_cfg::reset (int clientid)
   max_size = htons (MAX_PKT_SIZE);
   client   = htons (clientid);
   uid      = next_uid++;
+  delay    = 0;
 
-  r2 = r3 = r4 = 0;
+  r3 = r4 = 0;
   r4 = r5 = r6 = r7 = 0;
 }
 
@@ -731,7 +732,7 @@ dns_connection::dns_connection (connection *c)
   rcvseq = sndseq = 0;
 
   last_sent = last_received = 0;
-  poll_interval = MIN_POLL_INTERVAL;
+  poll_interval = 0.5; // starting here
   send_interval = 0.5; // starting rate
   min_latency = INITIAL_TIMEOUT;
 }

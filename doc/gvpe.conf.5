@@ -129,7 +129,7 @@
 .\" ========================================================================
 .\"
 .IX Title "GVPE.CONF 5"
-.TH GVPE.CONF 5 "2005-03-07" "1.8" "GNU Virtual Private Ethernet"
+.TH GVPE.CONF 5 "2005-03-14" "1.8" "GNU Virtual Private Ethernet"
 .SH "NAME"
 gvpe.conf \- configuration file for the GNU VPE daemon
 .SH "SYNOPSIS"
@@ -460,8 +460,12 @@ The port to bind the \s-1DNS\s0 tunnel socket to. Must be \f(CW53\fR on \s-1DNS\
 Enable the \s-1DNS\s0 tunneling protocol on this node, either as server or as
 client (only available when gvpe was compiled with \f(CW\*(C`\-\-enable\-dns\*(C'\fR).
 .Sp
+\&\fB\s-1WARNING:\s0\fR Parsing and generating \s-1DNS\s0 packets is rather tricky. The code
+almost certainly contains buffer overflows and other, likely exploitable,
+bugs. You have been warned.
+.Sp
 This is the worst choice of transport protocol with respect to overhead
-(overhead cna be 2\-3 times higher than the transferred data), and probably
+(overhead can be 2\-3 times higher than the transferred data), and probably
 the best choice when tunneling through firewalls.
 .IP "enable-rawip = yes|true|on | no|false|off" 4
 .IX Item "enable-rawip = yes|true|on | no|false|off"

@@ -352,8 +352,12 @@ The port to bind the DNS tunnel socket to. Must be C<53> on DNS tunnel servers.
 Enable the DNS tunneling protocol on this node, either as server or as
 client (only available when gvpe was compiled with C<--enable-dns>).
 
+B<WARNING:> Parsing and generating DNS packets is rather tricky. The code
+almost certainly contains buffer overflows and other, likely exploitable,
+bugs. You have been warned.
+
 This is the worst choice of transport protocol with respect to overhead
-(overhead cna be 2-3 times higher than the transferred data), and probably
+(overhead can be 2-3 times higher than the transferred data), and probably
 the best choice when tunneling through firewalls.
 
 =item enable-rawip = yes|true|on | no|false|off
