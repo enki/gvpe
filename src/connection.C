@@ -458,10 +458,19 @@ struct config_packet : vpn_packet
 
   void setup (ptype type, int dst);
   bool chk_config () const;
-};
 
-#define FEATURES ((ENABLE_COMPRESSION ? FEATURE_COMPRESSION : 0) \
-                | (ENABLE_ROHC        ? FEATURE_ROHC        : 0))
+  static u8 get_features ()
+  {
+    u8 f = 0;
+#if ENABLE_COMPRESSION
+    f |= FEATURE_COMPRESSION;
+#endif
+#if ENABLE_ROHC
+    f |= FEATURE_ROHC;
+#endif
+    return f;
+  }
+};
 
 void config_packet::setup (ptype type, int dst)
 {
@@ -471,7 +480,7 @@ void config_packet::setup (ptype type, int dst)
   hmaclen = HMACLENGTH;
   flags = ENABLE_COMPRESSION ? 0x81 : 0x80;
   challengelen = sizeof (rsachallenge);
-  features = FEATURES;
+  features = get_features ();
 
   cipher_nid = htonl (EVP_CIPHER_nid (CIPHER));
   digest_nid = htonl (EVP_MD_type (RSA_HASH));
@@ -925,7 +934,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                     if (p->flags & 1) p->features |= FEATURE_COMPRESSION;
 
                     conf->protocols = p->protocols;
-                    features = p->features & FEATURES;
+                    features = p->features & config_packet::get_features ();
 
                     send_auth_response (rsi, p->id, k);
 
@@ -1049,11 +1058,11 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                         slog (L_INFO, _("%s(%s): socket address changed to %s"),
                               conf->nodename, (const char *)si, (const char *)rsi);
                       }
-
-                    delete d;
-
-                    break;
                   }
+
+                delete d;
+
+                break;
               }
           }
 
