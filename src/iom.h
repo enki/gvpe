@@ -25,9 +25,9 @@
 
 #include "slog.h"
 
-typedef double timestamp;
+typedef double tstamp;
 
-extern timestamp NOW;
+extern tstamp NOW;
 
 template<class R, class A> class callback;
 struct io_watcher;
@@ -89,38 +89,44 @@ public:
     {
       return prxy->call (obj, meth, arg);
     }
+
+  void stop ()
+    {
+      iom.unreg (this);
+    }
 };
 
 struct io_watcher : callback<void, short> {
   template<class O1, class O2>
-  io_watcher (int fd, short events, O1 *object, void (O2::*method)(short revents))
+  io_watcher (O1 *object, void (O2::*method)(short revents))
     : callback<void, short>(object,method)
+    { }
+
+  void start (int fd, short events)
     {
       iom.reg (fd, events, this);
     }
 
-  ~io_watcher ()
-    {
-      iom.unreg (this);
-    }
 };
 
-struct time_watcher : callback<void, timestamp &> {
-  timestamp at;
-
-  void set (timestamp when);
+struct time_watcher : callback<void, tstamp &> {
+  tstamp at;
 
   template<class O1, class O2>
-  time_watcher (timestamp when, O1 *object, void (O2::*method)(timestamp &))
-    : callback<void, timestamp &>(object,method)
-    , at(when)
+  time_watcher (O1 *object, void (O2::*method)(tstamp &))
+    : callback<void, tstamp &>(object,method)
+    { }
+
+  void set (tstamp when);
+
+  void trigger ()
     {
-      iom.reg (this);
+      call (at);
     }
 
-  ~time_watcher ()
+  void start (tstamp when)
     {
-      iom.unreg (this);
+      set (when);
     }
 };
 

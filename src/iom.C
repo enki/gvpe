@@ -33,11 +33,11 @@ inline bool lowest_first (const time_watcher *a, const time_watcher *b)
   return a->at > b->at;
 }
 
-timestamp NOW;
+tstamp NOW;
 
 io_manager iom;
 
-void time_watcher::set (timestamp when)
+void time_watcher::set (tstamp when)
 {
   iom.unreg (this);
   at = when;
@@ -112,18 +112,20 @@ inline void set_now (void)
 
   gettimeofday (&tv, 0);
 
-  NOW = (timestamp)tv.tv_sec + (timestamp)tv.tv_usec / 1000000;
+  NOW = (tstamp)tv.tv_sec + (tstamp)tv.tv_usec / 1000000;
 }
 
 void io_manager::loop ()
 {
   set_now ();
 
-  for (;;)
+  while (!(iow.empty () && tw.empty ()))
     {
-      int timeout = tw.empty () ? -1 : (int) ((tw[0]->at - NOW) * 1000);
+      int timeout = tw.empty ()
+                    ? 3600 * 1000 // wake up at least every hour
+                    : (int) ((tw[0]->at - NOW) * 1000);
 
-      //printf ("s%d t%d #%d <%f<%f<\n", pfs.size (), timeout, tw.size (), tw[0]->at - NOW, tw[1]->at - NOW);
+      printf ("s%d t%d #%d\n", pfs.size (), timeout, tw.size ());
 
       if (timeout >= 0)
         {
@@ -142,8 +144,7 @@ void io_manager::loop ()
       while (!tw.empty () && tw[0]->at <= NOW)
         {
           pop_heap (tw.begin (), tw.end (), lowest_first);
-          time_watcher *w = tw[tw.size () - 1];
-          w->call (w->at);
+          (*(tw.end () - 1))->trigger ();
           push_heap (tw.begin (), tw.end (), lowest_first);
         }
     }
