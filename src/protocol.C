@@ -842,7 +842,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
       // we send pings instead of auth packets after some retries,
       // so reset the retry counter and establish a connection
       // when we receive a ping.
-      if (!ictx && !octx)
+      if (!ictx)
         {
           if (auth_rate_limiter.can (rsi))
             send_auth_request (rsi, true);
