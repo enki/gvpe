@@ -38,8 +38,8 @@
 .    if (\n(.H=4u)&(1m=20u) .ds -- \(*W\h'-12u'\(*W\h'-8u'-\"  diablo 12 pitch
 .    ds L" ""
 .    ds R" ""
-.    ds C` ""
-.    ds C' ""
+.    ds C` 
+.    ds C' 
 'br\}
 .el\{\
 .    ds -- \|\(em\|
@@ -128,8 +128,8 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "VPED.CONF 5"
-.TH VPED.CONF 5 "2003-03-24" "0.1" "Virtual Private Ethernet"
+.IX Title "VPED.CONF.5 5"
+.TH VPED.CONF.5 5 "2003-03-28" "0.1" "Virtual Private Ethernet"
 .SH "NAME"
 vped.conf \- vpe daemon configuration file
 .SH "SYNOPSIS"
@@ -216,8 +216,8 @@ use paths like \f(CW\*(C`hostkeys/%s\*(C'\fR to fetch the files at the location 
 Since only the private key file of the current node is used and the
 private key file should be kept secret per-host to avoid spoofings, it is
 not recommended to use this feature.
-.IP "ifpersist = yes|no" 4
-.IX Item "ifpersist = yes|no"
+.IP "ifpersist = yes|true|on | no|false|off" 4
+.IX Item "ifpersist = yes|true|on | no|false|off"
 Should the tun/tap device be made persistent, that is, should the device
 stay up even when vped exits? Some versions of the tunnel device have
 problems sending packets when vped is restarted in persistent mode, so
@@ -249,6 +249,28 @@ this information to the \f(CW\*(C`if\-up\*(C'\fR script.
 Recommended values are 1500 (ethernet), 1492 (pppoe), 1472 (pptp).
 .Sp
 This value must be the minimum of the mtu values of all hosts.
+.IP "ip-proto = numerical-ip-protocol" 4
+.IX Item "ip-proto = numerical-ip-protocol"
+Sets the protocol number to be used for the rawip protocol. This is a
+global option because all hosts must use the same protocol, and since
+there are no port numbers, you cannot easily run more than one vped
+instance using the same protocol, nor can you share the protocol with
+other programs.
+.Sp
+The default is 47 (\s-1GRE\s0), which has a good chance of tunneling through
+firewalls (but note that the rawip protocol is not \s-1GRE\s0 compatible). Other
+common choices are 50 (\s-1IPSEC\s0, \s-1ESP\s0), 51 (\s-1IPSEC\s0, \s-1AH\s0), 4 (\s-1IPIP\s0 tunnels) or 98
+(\s-1ENCAP\s0, rfc1241)
+.IP "enable-udp = yes|true|on | no|false|off" 4
+.IX Item "enable-udp = yes|true|on | no|false|off"
+Enable the UDPv4 transport using the \f(CW\*(C`udp\-port\*(C'\fR port
+(default: \f(CW\*(C`yes\*(C'\fR). This is a good general choice since \s-1UDP\s0 tunnels well
+through many firewalls.
+.IP "enable-rawip = yes|true|on | no|false|off" 4
+.IX Item "enable-rawip = yes|true|on | no|false|off"
+Enable the \s-1RAW\s0 IPv4 transport using the \f(CW\*(C`ip\-proto\*(C'\fR protocol
+(default: \f(CW\*(C`no\*(C'\fR). This is the best choice, since the overhead per packet
+is only 38 bytes, as opposed to \s-1UDP\s0's 58 (or \s-1TCP\s0's 60+).
 .IP "if-up = relative-or-absolute-path" 4
 .IX Item "if-up = relative-or-absolute-path"
 Sets the path of a script that should be called immediately after the
@@ -363,17 +385,17 @@ try to establish and keep a conenction to the given host), \f(CW\*(C`never\*(C'\
 \&\f(CW\*(C`ondemand\*(C'\fR (try to establish a connection on the first packet sent, and
 take it down after the keepalive interval) or \f(CW\*(C`disabled\*(C'\fR (node is bad,
 don't talk to it).
-.IP "inherit-tos = yes|no" 4
-.IX Item "inherit-tos = yes|no"
+.IP "inherit-tos = yes|true|on | no|false|off" 4
+.IX Item "inherit-tos = yes|true|on | no|false|off"
 Wether to inherit the \s-1TOS\s0 settings of packets sent to the tunnel when
 sending packets to this node (default: \f(CW\*(C`yes\*(C'\fR). If set to \f(CW\*(C`yes\*(C'\fR then
 outgoing tunnel packets will have the same \s-1TOS\s0 setting as the packets sent
 to the tunnel device, which is usually what you want.
-.IP "compress = yes|no" 4
-.IX Item "compress = yes|no"
-Wether to compress data packets sent to this host (default: \f(CW\*(C`yes\*(C'\fR,
-compression is really cheap even on slow computers and has no size
-overhead at all).
+.IP "compress = yes|true|on | no|false|off" 4
+.IX Item "compress = yes|true|on | no|false|off"
+Wether to compress data packets sent to this host (default: \f(CW\*(C`yes\*(C'\fR).
+Compression is really cheap even on slow computers and has no size
+overhead at all, so enabling this is a good idea.
 .SH "CONFIG DIRECTORY LAYOUT"
 .IX Header "CONFIG DIRECTORY LAYOUT"
 The default (or recommended) directory layout for the config directory is:
@@ -394,7 +416,7 @@ The private key (taken from \f(CW\*(C`hostkeys/nodename\*(C'\fR) of the current 
 The public keys of the other nodes, one file per node.
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"
-\&\fIvpe\fR\|(8), \fIvped\fR\|(8), \fIvpectrl\fR\|(8).
+\&\fIvpe\fR\|(5), \fIvped\fR\|(8), \fIvpectrl\fR\|(8).
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Marc Lehmann <vpe@plan9.de>

@@ -37,11 +37,11 @@ $(dyn_MANS): %.8: %.x $(HELP2MAN)
 sample-config.tar.gz:
 	GZIP=$(GZIP_ENV) $(AMTAR) chozf sample-config.tar.gz sample-config
 
-%.5: %.pod
-	pod2man -r $(VERSION) -s 5 -c "Virtual Private Ethernet" $< >$@
+%.5: %.5.pod
+	pod2man -qnone -r $(VERSION) -s 5 -c "Virtual Private Ethernet" $< >$@
 
-%.8: %.pod
-	pod2man -r $(VERSION) -s 8 -c "Virtual Private Ethernet" $< >$@
+%.8: %.8.pod
+	pod2man -qnone -r $(VERSION) -s 8 -c "Virtual Private Ethernet" $< >$@
 
 ../README: vpe.pod
 	pod2text -q\\\" -a vpe.pod >../README
