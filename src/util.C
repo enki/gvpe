@@ -26,18 +26,15 @@
 #include <errno.h>
 #include <signal.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <time.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include <sys/mman.h>
 
-#include <openssl/rand.h>
-#include <openssl/rsa.h>
-#include <openssl/pem.h>
-#include <openssl/evp.h>
+#include <sys/mman.h>
 
 #include "gettext.h"
 #include "pidfile.h"
@@ -142,3 +139,23 @@ make_names (void)
     asprintf (&confbase, "%s/vpe", CONFDIR);
 }
 
+void run_script (const run_script_cb &cb, bool wait)
+{
+  int pid;
+
+  if ((pid = fork ()) == 0)
+    {
+      char *filename;
+      asprintf (&filename, "%s/%s", confbase, cb(0));
+      execl (filename, filename, (char *) 0);
+      exit (255);
+    }
+  else if (pid > 0)
+    {
+      if (wait)
+        {
+          waitpid (pid, 0, 0);
+          /* TODO: check status */
+        }
+    }
+}

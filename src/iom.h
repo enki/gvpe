@@ -23,13 +23,13 @@
 
 #include <sys/poll.h>
 
+#include "callback.h"
 #include "slog.h"
 
 typedef double tstamp;
 
 extern tstamp NOW;
 
-template<class R, class A> class callback;
 struct io_watcher;
 struct time_watcher;
 
@@ -56,49 +56,6 @@ public:
 };
 
 extern io_manager iom;
-
-template<class R, class A>
-class callback {
-  struct object { };
-
-  void *obj;
-  R (object::*meth)(A arg);
-
-  // a proxy is a kind of recipe on how to call a specific class method
-  struct proxy_base {
-    virtual R call (void *obj, R (object::*meth)(A), A arg) = 0;
-  };
-  template<class O1, class O2>
-  struct proxy : proxy_base {
-    virtual R call (void *obj, R (object::*meth)(A), A arg)
-      {
-        ((reinterpret_cast<O1 *>(obj)) ->* (reinterpret_cast<R (O2::*)(A)>(meth)))
-          (arg);
-      }
-  };
-
-  proxy_base *prxy;
-
-public:
-  template<class O1, class O2>
-  callback (O1 *object, R (O2::*method)(A))
-    {
-      static proxy<O1,O2> p;
-      obj  = reinterpret_cast<void *>(object);
-      meth = reinterpret_cast<R (object::*)(A)>(method);
-      prxy = &p;
-    }
-
-  R call(A arg) const
-    {
-      return prxy->call (obj, meth, arg);
-    }
-
-  R operator ()(A arg) const
-    {
-      return call (arg);
-    }
-};
 
 struct io_watcher : callback<void, short> {
   template<class O1, class O2>

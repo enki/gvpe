@@ -20,7 +20,6 @@
 #define VPE_PROTOCOL_H__
 
 #include <netinet/in.h>
-#include <netinet/ip.h> // for tos etc.
 
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
@@ -30,93 +29,7 @@
 #include "util.h"
 #include "sockinfo.h"
 #include "device.h"
-
-/* Protocol version. Different major versions are incompatible,
- * different minor versions probably are compatible ;)
- */
-
-#define PROTOCOL_MAJOR 0
-#define PROTOCOL_MINOR 0
-
-struct vpn;
-struct vpn_packet;
-
-struct rsaid {
-  u8 id[RSA_IDLEN]; // the challenge id
-};
-
-typedef u8 rsachallenge[RSA_KEYLEN - RSA_OVERHEAD]; // challenge data;
-typedef u8 rsaencrdata[RSA_KEYLEN]; // encrypted challenge
-typedef u8 rsaresponse[RSA_RESLEN]; // the encrypted ripemd160 hash
-
-struct crypto_ctx;
-
-// a very simple fifo pkt-queue
-class pkt_queue
-  {
-    tap_packet *queue[QUEUEDEPTH];
-    int i, j;
-
-  public:
-
-    void put (tap_packet *p);
-    tap_packet *get ();
-
-    pkt_queue ();
-    ~pkt_queue ();
-  };
-
-struct connection
-  {
-    conf_node *conf;
-    struct vpn *vpn;
-
-    sockinfo si; // the current(!) destination ip to send packets to
-    int retry_cnt;
-
-    tstamp last_activity;	// time of last packet received
-
-    u32 oseqno;
-    sliding_window iseqno;
-
-    u8 protocol;
-
-    pkt_queue queue;
-
-    crypto_ctx *octx, *ictx;
-
-    enum conf_node::connectmode connectmode;
-    u8 prot_minor; // minor number of other side
-
-    void reset_dstaddr ();
-
-    void shutdown ();
-    void reset_connection ();
-    void establish_connection_cb (tstamp &ts); time_watcher establish_connection;
-    void rekey_cb (tstamp &ts); time_watcher rekey; // next rekying (actually current reset + reestablishing)
-    void keepalive_cb (tstamp &ts); time_watcher keepalive; // next keepalive probe
-
-    void send_auth_request (const sockinfo &si, bool initiate);
-    void send_auth_response (const sockinfo &si, const rsaid &id, const rsachallenge &chg);
-    void send_connect_info (int rid, const sockinfo &rsi, u8 rprotocols);
-    void send_reset (const sockinfo &dsi);
-    void send_ping (const sockinfo &dsi, u8 pong = 0);
-    void send_data_packet (tap_packet *pkt, bool broadcast = false);
-    void inject_data_packet (tap_packet *pkt, bool broadcast = false);
-    void connect_request (int id);
-
-    void send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos = IPTOS_RELIABILITY);
-    void recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi);
-
-    void script_node ();
-    const char *script_node_up (int);
-    const char *script_node_down (int);
-
-    void dump_status ();
-
-    connection(struct vpn *vpn_);
-    ~connection ();
-  };
+#include "connection.h"
 
 struct vpn
   {

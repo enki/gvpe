@@ -23,6 +23,12 @@
 
 #include <time.h>
 
+/* Protocol version. Different major versions are incompatible,
+ * different minor versions probably are compatible ;)
+ */
+
+#define PROTOCOL_MAJOR 0
+#define PROTOCOL_MINOR 0
 
 #define RSA_KEYBITS	1280		// must be >= 1280 and divisible by 8
 #define RSA_KEYLEN	((RSA_KEYBITS) >> 3)

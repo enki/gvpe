@@ -14,6 +14,7 @@ COMMON = global.h conf.h conf.C util.h util.C device.h device.C \
 
 vped_SOURCES = vped.C hash_map.h protocol.h protocol.C sockinfo.h sockinfo.C \
                lzf/lzf.h lzf/lzfP.h lzf/lzf_c.c lzf/lzf_d.c iom.h iom.C \
+               connection.h connection.C callback.h \
                $(COMMON)
 vped_LDADD = $(top_builddir)/lib/libvpe.a
 vpectrl_SOURCES = vpectrl.C \
