@@ -279,7 +279,7 @@ retry:
                 free (fname);
               }
 
-              if (!::thisnode || !strcmp (node->nodename, ::thisnode))
+              if (::thisnode && !strcmp (node->nodename, ::thisnode))
                 thisnode = node;
             }
           else if (!strcmp (var, "private-key"))
@@ -423,7 +423,8 @@ retry:
         exit (EXIT_FAILURE);
     }
 
-  if (need_keys && rsa_key && thisnode && thisnode->rsa_key)
+  if (need_keys && ::thisnode
+      && rsa_key && thisnode && thisnode->rsa_key)
     if (BN_cmp (rsa_key->n, thisnode->rsa_key->n) != 0
         || BN_cmp (rsa_key->e, thisnode->rsa_key->e) != 0)
       {
