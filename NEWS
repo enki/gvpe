@@ -2,7 +2,6 @@
 	- protocol version 0.1, compatible with older releases.
 	- first gnu release.
         - documented the special value 1 for router-priority.
-          priorities
         - renamed vped => gvpe and vpectrl => gvpectrl, as well as
           vped.conf => gvpe.conf.
 	- new per-node option "max-retry".
