@@ -58,6 +58,7 @@
 #define TAP_IOCTL_SET_STATISTICS TAP_CONTROL_CODE(2, METHOD_BUFFERED)
 
 static HANDLE device_handle = INVALID_HANDLE_VALUE;
+static mac my_mac;
 
 static const char *
 wstrerror (int err)
@@ -129,16 +130,20 @@ tap_device::tap_device ()
       if (err)
 	continue;
 
-      if (strcmp (conf.ifname, adapterid))
-        continue;
+      if (conf.ifname)
+        {
+          if (strcmp (conf.ifname, adapterid))
+            continue;
+        }
+      else
+        {
+          found = true;
+          break;
+        }
 
-      found = true;
-      break;
-
-      snprintf (tapname, sizeof (tapname), USERMODEDEVICEDIR "%s" TAPSUFFIX,
-		adapterid);
-      device_handle = CreateFile (tapname, GENERIC_WRITE | GENERIC_READ, 0, 0, OPEN_EXISTING, indent: Standard input: 237: Error:Stmt nesting error.FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED,
-				  0);
+      snprintf (tapname, sizeof (tapname), USERMODEDEVICEDIR "%s" TAPSUFFIX, adapterid);
+      device_handle = CreateFile(tapname, GENERIC_WRITE | GENERIC_READ, 0, 0,
+                                 OPEN_EXISTING, FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED, 0);
       if (device_handle != INVALID_HANDLE_VALUE)
 	{
 	  found = true;
@@ -151,21 +156,16 @@ tap_device::tap_device ()
   if (!found)
     {
       slog (L_ERR, _("No Windows tap device found!"));
-      return false;
+      exit (1);
     }
 
-  if (!device)
-    device = xstrdup (adapterid);
-
-  if (!iface)
-    iface = xstrdup (adaptername);
+  strcpy (ifrname, adaptername);
 
   /* Try to open the corresponding tap device */
 
   if (device_handle == INVALID_HANDLE_VALUE)
     {
-      snprintf (tapname, sizeof (tapname), USERMODEDEVICEDIR "%s" TAPSUFFIX,
-		device);
+      snprintf (tapname, sizeof (tapname), USERMODEDEVICEDIR "%s" TAPSUFFIX, device);
       device_handle =
 	CreateFile (tapname, GENERIC_WRITE | GENERIC_READ, 0, 0,
 		    OPEN_EXISTING,
@@ -176,92 +176,21 @@ tap_device::tap_device ()
     {
       slog (L_ERR, _("%s (%s) is not a usable Windows tap device: %s"),
 	      device, iface, wstrerror (GetLastError ()));
-      return false;
+      exit (1);
     }
+
+  fd = cygwin_attach_handle_to_fd (tapname, -1, device_handle, 1, GENERIC_WRITE | GENERIC_READ);
 
   /* Get MAC address from tap device */
 
   if (!DeviceIoControl
-      (device_handle, TAP_IOCTL_GET_MAC, mymac.x, sizeof (mymac.x), mymac.x,
-       sizeof (mymac.x), &len, 0))
+      (device_handle, TAP_IOCTL_GET_MAC, &mac, sizeof (mac), &mac, sizeof (mac), &len, 0))
     {
       slog (L_ERR,
-	      _
-	      ("Could not get MAC address from Windows tap device %s (%s): %s"),
+	      _("Could not get MAC address from Windows tap device %s (%s): %s"),
 	      device, iface, wstrerror (GetLastError ()));
-      return false;
+      exit (1);
     }
-
-  if (routing_mode == RMODE_ROUTER)
-    {
-      overwrite_mac = 1;
-    }
-
-  /* Create a listening socket */
-
-  err = getaddrinfo (NULL, myport, &hint, &ai);
-
-  if (err || !ai)
-    {
-      slog (L_ERR, _("System call `%s' failed: %s"), "getaddrinfo",
-	      gai_strerror (errno));
-      return false;
-    }
-
-  sock = socket (ai->ai_family, ai->ai_socktype, ai->ai_protocol);
-
-  if (sock < 0)
-    {
-      slog (L_ERR, _("System call `%s' failed: %s"), "socket",
-	      strerror (errno));
-      return false;
-    }
-
-  if (bind (sock, ai->ai_addr, ai->ai_addrlen))
-    {
-      slog (L_ERR, _("System call `%s' failed: %s"), "bind",
-	      strerror (errno));
-      return false;
-    }
-
-  freeaddrinfo (ai);
-
-  if (listen (sock, 1))
-    {
-      slog (L_ERR, _("System call `%s' failed: %s"), "listen",
-	      strerror (errno));
-      return false;
-    }
-
-  /* Start the tap reader */
-
-  thread = CreateThread (NULL, 0, tapreader, NULL, 0, NULL);
-
-  if (!thread)
-    {
-      slog (L_ERR, _("System call `%s' failed: %s"), "CreateThread",
-	      wstrerror (GetLastError ()));
-      return false;
-    }
-
-  /* Wait for the tap reader to connect back to us */
-
-  if ((device_fd = accept (sock, NULL, 0)) == -1)
-    {
-      slog (L_ERR, _("System call `%s' failed: %s"), "accept",
-	      strerror (errno));
-      return false;
-    }
-
-  closesocket (sock);
-
-  device_info = _("Windows tap device");
-
-  slog (L_INFO, _("%s (%s) is a %s"), device, iface, device_info);
-
-  return true;
-}
-
 }
 
 tap_device::~tap_device ()
