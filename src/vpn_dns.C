@@ -1019,7 +1019,7 @@ vpn::dnsv4_client (dns_packet &pkt)
           }
         else
           {
-#if 1
+#if 0
             dns->send_interval *= 0.999;
 #endif
             if (dns->send_interval < MIN_SEND_INTERVAL)
