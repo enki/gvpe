@@ -202,6 +202,7 @@ struct net_rate_limiter : list<net_rateinfo>
   static const double ALPHA  = 1. - 1. / 180.; // allow bursts
   static const double CUTOFF = 10.;            // one event every CUTOFF seconds
   static const double EXPIRE = CUTOFF * 30.;   // expire entries after this time
+  static const double MAXDIF = CUTOFF * (1. / (1. - ALPHA)); // maximum diff /count value
 
   bool can (const sockinfo &si) { return can((u32)si.host);             }
   bool can (u32 host);
@@ -227,7 +228,7 @@ bool net_rate_limiter::can (u32 host)
 
       ri.host = host;
       ri.pcnt = 1.;
-      ri.diff = CUTOFF * (1. / (1. - ALPHA));
+      ri.diff = MAXDIF;
       ri.last = NOW;
 
       push_front (ri);
@@ -244,9 +245,16 @@ bool net_rate_limiter::can (u32 host)
 
       ri.last = NOW;
 
-      bool send = ri.diff / ri.pcnt > CUTOFF;
+      double dif = ri.diff / ri.pcnt;
 
-      if (send)
+      bool send = dif > CUTOFF;
+
+      if (dif > MAXDIF)
+        {
+          ri.pcnt = 1.;
+          ri.diff = MAXDIF;
+        }
+      else if (send)
         ri.pcnt++;
 
       push_front (ri);
@@ -548,6 +556,33 @@ struct connect_info_packet : vpn_packet
 /////////////////////////////////////////////////////////////////////////////
 
 void
+connection::connection_established ()
+{
+  if (ictx && octx)
+    {
+      connectmode = conf->connectmode;
+
+      rekey.start (NOW + ::conf.rekey);
+      keepalive.start (NOW + ::conf.keepalive);
+
+      // send queued packets
+      if (ictx && octx)
+        while (tap_packet *p = queue.get ())
+          {
+            send_data_packet (p);
+            delete p;
+          }
+    }
+  else
+    {
+      retry_cnt = 0;
+      establish_connection.start (NOW + 5);
+      keepalive.reset ();
+      rekey.reset ();
+    }
+}
+
+void
 connection::reset_si ()
 {
   protocol = best_protocol (THISNODE->protocols & conf->protocols);
@@ -582,12 +617,19 @@ connection::forward_si (const sockinfo &si) const
 }
 
 void
+connection::send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos)
+{
+  if (!vpn->send_vpn_packet (pkt, si, tos))
+    reset_connection ();
+}
+
+void
 connection::send_ping (const sockinfo &si, u8 pong)
 {
   ping_packet *pkt = new ping_packet;
 
   pkt->setup (conf->id, pong ? ping_packet::PT_PONG : ping_packet::PT_PING);
-  vpn->send_vpn_packet (pkt, si, IPTOS_LOWDELAY);
+  send_vpn_packet (pkt, si, IPTOS_LOWDELAY);
 
   delete pkt;
 }
@@ -600,7 +642,7 @@ connection::send_reset (const sockinfo &si)
       config_packet *pkt = new config_packet;
 
       pkt->setup (vpn_packet::PT_RESET, conf->id);
-      vpn->send_vpn_packet (pkt, si, IPTOS_MINCOST);
+      send_vpn_packet (pkt, si, IPTOS_MINCOST);
 
       delete pkt;
     }
@@ -622,7 +664,7 @@ connection::send_auth_request (const sockinfo &si, bool initiate)
 
   slog (L_TRACE, ">>%d PT_AUTH_REQ [%s]", conf->id, (const char *)si);
 
-  vpn->send_vpn_packet (pkt, si, IPTOS_RELIABILITY | IPTOS_LOWDELAY); // rsa is very very costly
+  send_vpn_packet (pkt, si, IPTOS_RELIABILITY | IPTOS_LOWDELAY); // rsa is very very costly
 
   delete pkt;
 }
@@ -640,7 +682,7 @@ connection::send_auth_response (const sockinfo &si, const rsaid &id, const rsach
 
   slog (L_TRACE, ">>%d PT_AUTH_RES [%s]", conf->id, (const char *)si);
 
-  vpn->send_vpn_packet (pkt, si, IPTOS_RELIABILITY); // rsa is very very costly
+  send_vpn_packet (pkt, si, IPTOS_RELIABILITY); // rsa is very very costly
 
   delete pkt;
 }
@@ -654,7 +696,7 @@ connection::send_connect_info (int rid, const sockinfo &rsi, u8 rprotocols)
   connect_info_packet *r = new connect_info_packet (conf->id, rid, rsi, rprotocols);
 
   r->hmac_set (octx);
-  vpn->send_vpn_packet (r, si);
+  send_vpn_packet (r, si);
 
   delete r;
 }
@@ -678,7 +720,7 @@ connection::establish_connection_cb (time_watcher &w)
       reset_si ();
 
       if (si.prot && !si.host)
-        vpn->connect_request (conf->id);
+        vpn->send_connect_request (conf->id);
       else
         {
           const sockinfo &dsi = forward_si (si);
@@ -749,7 +791,7 @@ connection::send_data_packet (tap_packet *pkt, bool broadcast)
     tos = (*pkt)[15] & IPTOS_TOS_MASK;
 
   p->setup (this, broadcast ? 0 : conf->id, &((*pkt)[6 + 6]), pkt->len - 6 - 6, ++oseqno); // skip 2 macs
-  vpn->send_vpn_packet (p, si, tos);
+  send_vpn_packet (p, si, tos);
 
   delete p;
 
@@ -774,7 +816,7 @@ connection::inject_data_packet (tap_packet *pkt, bool broadcast)
 void connection::inject_vpn_packet (vpn_packet *pkt, int tos)
 {
   if (ictx && octx)
-    vpn->send_vpn_packet (pkt, si, tos);
+    send_vpn_packet (pkt, si, tos);
   else
     establish_connection ();
 }
@@ -849,21 +891,16 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                         conf->nodename, (const char *)rsi);
                 else
                   {
-                    retry_cnt = 0;
-                    establish_connection.start (NOW + 8); //? ;)
-                    keepalive.reset ();
-                    rekey.reset ();
-
-                    delete ictx;
-                    ictx = 0;
-
                     delete octx;
 
                     octx   = new crypto_ctx (k, 1);
                     oseqno = ntohl (*(u32 *)&k[CHG_SEQNO]) & 0x7fffffff;
 
                     conf->protocols = p->protocols;
+
                     send_auth_response (rsi, p->id, k);
+
+                    connection_established ();
 
                     break;
                   }
@@ -917,17 +954,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                           si = rsi;
                           protocol = rsi.prot;
 
-                          rekey.start (NOW + ::conf.rekey);
-                          keepalive.start (NOW + ::conf.keepalive);
-
-                          // send queued packets
-                          while (tap_packet *p = queue.get ())
-                            {
-                              send_data_packet (p);
-                              delete p;
-                            }
-
-                          connectmode = conf->connectmode;
+                          connection_established ();
 
                           slog (L_INFO, _("%s(%s): connection established, protocol version %d.%d"),
                                 conf->nodename, (const char *)rsi,
@@ -963,38 +990,42 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
           {
             vpndata_packet *p = (vpndata_packet *)pkt;
 
-            if (rsi == si)
+            if (!p->hmac_chk (ictx))
+              slog (L_ERR, _("%s(%s): hmac authentication error, received invalid packet\n"
+                             "could be an attack, or just corruption or an synchronization error"),
+                    conf->nodename, (const char *)rsi);
+            else
               {
-                if (!p->hmac_chk (ictx))
-                  slog (L_ERR, _("%s(%s): hmac authentication error, received invalid packet\n"
-                                 "could be an attack, or just corruption or an synchronization error"),
-                        conf->nodename, (const char *)rsi);
-                else
+                u32 seqno;
+                tap_packet *d = p->unpack (this, seqno);
+
+                if (iseqno.recv_ok (seqno))
                   {
-                    u32 seqno;
-                    tap_packet *d = p->unpack (this, seqno);
+                    vpn->tap->send (d);
 
-                    if (iseqno.recv_ok (seqno))
+                    if (p->dst () == 0) // re-broadcast
+                      for (vpn::conns_vector::iterator i = vpn->conns.begin (); i != vpn->conns.end (); ++i)
+                        {
+                          connection *c = *i;
+
+                          if (c->conf != THISNODE && c->conf != conf)
+                            c->inject_data_packet (d);
+                        }
+
+                    if (si != rsi)
                       {
-                        vpn->tap->send (d);
+                        // fast re-sync on conneciton changes, useful especially for tcp/ip
+                        si = rsi;
 
-                        if (p->dst () == 0) // re-broadcast
-                          for (vpn::conns_vector::iterator i = vpn->conns.begin (); i != vpn->conns.end (); ++i)
-                            {
-                              connection *c = *i;
-
-                              if (c->conf != THISNODE && c->conf != conf)
-                                c->inject_data_packet (d);
-                            }
-
-                        delete d;
-
-                        break;
+                        slog (L_INFO, _("%s(%s): socket address changed to %s"),
+                              conf->nodename, (const char *)si, (const char *)rsi);
                       }
+
+                    delete d;
+
+                    break;
                   }
               }
-            else
-              slog (L_ERR,  _("received data packet from unknown source %s"), (const char *)rsi);
           }
 
         send_reset (rsi);
@@ -1072,13 +1103,13 @@ void connection::keepalive_cb (time_watcher &w)
     reset_connection ();
 }
 
-void connection::connect_request (int id)
+void connection::send_connect_request (int id)
 {
   connect_req_packet *p = new connect_req_packet (conf->id, id, conf->protocols);
 
   slog (L_TRACE, ">>%d PT_CONNECT_REQ(%d)", conf->id, id);
   p->hmac_set (octx);
-  vpn->send_vpn_packet (p, si);
+  send_vpn_packet (p, si);
 
   delete p;
 }

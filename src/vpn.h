@@ -48,24 +48,24 @@ struct vpn
 
     void reconnect_all ();
     void shutdown_all ();
-    void connect_request (int id);
-
-    void recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi);
 
     void tap_ev (io_watcher &w, short revents); io_watcher tap_ev_watcher;
 
-    void send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos = 0);
+    void send_connect_request (int id);
+
+    void recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi);
+    bool send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos);
 
 #if ENABLE_TCP
     void tcpv4_ev (io_watcher &w, short revents); io_watcher tcpv4_ev_watcher;
-    void send_tcpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
+    bool send_tcpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
 #endif
 
     void udpv4_ev (io_watcher &w, short revents); io_watcher udpv4_ev_watcher;
-    void send_udpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
+    bool send_udpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
 
     void ipv4_ev (io_watcher &w, short revents); io_watcher ipv4_ev_watcher;
-    void send_ipv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
+    bool send_ipv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
 
     vpn ();
     ~vpn ();

@@ -77,7 +77,7 @@ struct tcp_connection : io_watcher {
 
   void tcpv4_ev (io_watcher &w, short revents);
 
-  void send_packet (vpn_packet *pkt, int tos);
+  bool send_packet (vpn_packet *pkt, int tos);
 
   void error (); // abort conenction && cleanup
 
@@ -130,7 +130,7 @@ vpn::tcpv4_ev (io_watcher &w, short revents)
     }
 }
 
-void
+bool
 vpn::send_tcpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
   tcp_si_map::iterator info = tcp_si.find (&si);
@@ -145,7 +145,7 @@ vpn::send_tcpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
   else
     i = info->second;
 
-  i->send_packet (pkt, tos);
+  return i->send_packet (pkt, tos);
 }
 
 void tcp_connection::error ()
@@ -224,7 +224,7 @@ tcp_connection::tcpv4_ev (io_watcher &w, short revents)
     }
 }
 
-void
+bool
 tcp_connection::send_packet (vpn_packet *pkt, int tos)
 {
   last_activity = NOW;
@@ -269,6 +269,8 @@ tcp_connection::send_packet (vpn_packet *pkt, int tos)
       if (sizeof (u16) + pkt->len != writev (fd, vec, 2))
         error ();
     }
+
+  return state != ERROR;
 }
 
 tcp_connection::tcp_connection (int fd_, const sockinfo &si_, vpn &v_)

@@ -136,21 +136,25 @@ struct connection
     const sockinfo &forward_si (const sockinfo &si) const;
 
     void shutdown ();
+    void connection_established ();
     void reset_connection ();
+
     void establish_connection_cb (time_watcher &w); time_watcher establish_connection;
     void rekey_cb (time_watcher &w); time_watcher rekey; // next rekying (actually current reset + reestablishing)
     void keepalive_cb (time_watcher &w); time_watcher keepalive; // next keepalive probe
 
+    void send_connect_request (int id);
     void send_auth_request (const sockinfo &si, bool initiate);
     void send_auth_response (const sockinfo &si, const rsaid &id, const rsachallenge &chg);
     void send_connect_info (int rid, const sockinfo &rsi, u8 rprotocols);
     void send_reset (const sockinfo &dsi);
     void send_ping (const sockinfo &dsi, u8 pong = 0);
     void send_data_packet (tap_packet *pkt, bool broadcast = false);
+
     void inject_data_packet (tap_packet *pkt, bool broadcast = false);
     void inject_vpn_packet (vpn_packet *pkt, int tos = 0); // for forwarding
-    void connect_request (int id);
 
+    void send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos = 0);
     void recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi);
 
     void script_node ();

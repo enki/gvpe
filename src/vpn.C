@@ -187,43 +187,44 @@ vpn::setup ()
 }
 
 // send a vpn packet out to other hosts
-void
+bool
 vpn::send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
   switch (si.prot)
     {
       case PROT_IPv4:
-        send_ipv4_packet (pkt, si, tos);
-        break;
+        return send_ipv4_packet (pkt, si, tos);
 
       case PROT_UDPv4:
-        send_udpv4_packet (pkt, si, tos);
-        break;
+        return send_udpv4_packet (pkt, si, tos);
 
 #if ENABLE_TCP
       case PROT_TCPv4:
-        send_tcpv4_packet (pkt, si, tos);
-        break;
+        return send_tcpv4_packet (pkt, si, tos);
 #endif
 
       default:
         slog (L_CRIT, _("%s: FATAL: trying to send packet with unsupported protocol"), (const char *)si);
-        abort ();
+        return false;
     }
 }
 
-void
+bool
 vpn::send_ipv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
   setsockopt (ipv4_fd, SOL_IP, IP_TOS, &tos, sizeof tos);
   sendto (ipv4_fd, &((*pkt)[0]), pkt->len, 0, si.sav4 (), si.salenv4 ());
+
+  return true;
 }
 
-void
+bool
 vpn::send_udpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
   setsockopt (udpv4_fd, SOL_IP, IP_TOS, &tos, sizeof tos);
   sendto (udpv4_fd, &((*pkt)[0]), pkt->len, 0, si.sav4 (), si.salenv4 ());
+
+  return true;
 }
 
 void
@@ -498,17 +499,17 @@ connection *vpn::find_router ()
   return router;
 }
 
-void vpn::connect_request (int id)
+void vpn::send_connect_request (int id)
 {
   connection *c = find_router ();
 
   if (c)
-    c->connect_request (id);
-  //else // does not work, because all others must connect to the same router
-  //  // no router found, aggressively connect to all routers
-  //  for (conns_vector::iterator i = conns.begin (); i != conns.end (); ++i)
-  //    if ((*i)->conf->routerprio)
-  //      (*i)->establish_connection ();
+    c->send_connect_request (id);
+  else
+    // no router found, aggressively connect to all routers
+    for (conns_vector::iterator i = conns.begin (); i != conns.end (); ++i)
+      if ((*i)->conf->routerprio)
+        (*i)->establish_connection ();
 }
 
 void
