@@ -129,7 +129,7 @@
 .\" ========================================================================
 .\"
 .IX Title "GVPE 5"
-.TH GVPE 5 "2004-06-11" "1.7" "GNU Virtual Private Ethernet"
+.TH GVPE 5 "2004-09-18" "1.7" "GNU Virtual Private Ethernet"
 .SH "NAME"
 GNU\-VPE \- Overview of the GNU Virtual Private Ethernet suite.
 .SH "DESCRIPTION"
@@ -215,7 +215,9 @@ Use the fastest cipher and digest algorithms currently available in gvpe.
 .PP
 This uses a 16 byte \s-1HMAC\s0 checksum to authenticate packets (I guess 8\-12
 would also be pretty secure ;) and will additionally prefix each packet
-with 8 bytes of random data.
+with 8 bytes of random data. In the long run, people should move to
+\&\s-1SHA\-224\s0 and beyond, but support in openssl is missing as of writing this
+document.
 .PP
 In general, remember that \s-1AES\-128\s0 seems to be more secure and faster than
 \&\s-1AES\-192\s0 or \s-1AES\-256\s0, more randomness helps against sniffing and a longer

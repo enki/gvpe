@@ -43,6 +43,9 @@
 #ifndef IOM_SIG
 # define IOM_SIG 0
 #endif
+#ifndef IOM_ACCURACY
+# define IOM_ACCURACY 0.001 // start timers at most this much earlier (can be 0)
+#endif
 
 typedef double tstamp;
 extern tstamp NOW;
@@ -66,17 +69,13 @@ struct sig_watcher;
 
 template<class watcher>
 struct io_manager_vec : vector<watcher *> {
-#if IOM_CHECK
-  bool activity;
-#endif
-
   void erase_unordered (unsigned int pos)
   {
     watcher *w = (*this)[this->size () - 1];
     this->pop_back ();
 
     if (this->size ())
-      if ((*this)[pos] = w)
+      if (((*this)[pos] = w)) // '=' is correct!
         w->active = pos + 1;
   }
 };
