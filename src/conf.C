@@ -125,6 +125,7 @@ void configuration::init ()
 
 #if ENABLE_DNS
   default_node.dns_port    = 0; // default is 0 == client
+  dns_forw_host            = strdup ("127.0.0.1");
   dns_forw_port            = 53;
 #endif
 
@@ -362,13 +363,9 @@ retry:
             free (node->dns_hostname), node->dns_hostname = strdup (val);
           else if (!strcmp (var, "dns-port"))
             node->dns_port = atoi (val);
-#endif
           else if (!strcmp (var, "dns-domain"))
-            {
-#if ENABLE_DNS
-              free (node->domain), node->domain = strdup (val);
+            free (node->domain), node->domain = strdup (val);
 #endif
-            }
           else if (!strcmp (var, "router-priority"))
             node->routerprio = atoi (val);
           else if (!strcmp (var, "max-retry"))

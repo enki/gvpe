@@ -129,7 +129,7 @@
 .\" ========================================================================
 .\"
 .IX Title "GVPE.CONF 5"
-.TH GVPE.CONF 5 "2005-03-01" "1.7" "GNU Virtual Private Ethernet"
+.TH GVPE.CONF 5 "2005-03-06" "1.8" "GNU Virtual Private Ethernet"
 .SH "NAME"
 gvpe.conf \- configuration file for the GNU VPE daemon
 .SH "SYNOPSIS"
@@ -196,71 +196,14 @@ Global settings will affect the behaviour of the running gvpe daemon, that
 is, they are in some sense node-specific (config files can set different
 values on different nodes using \f(CW\*(C`on\*(C'\fR), but will affect the behaviour of
 the gvpe daemon and all connections it creates.
-.IP "loglevel = noise|trace|debug|info|notice|warn|error|critical" 4
-.IX Item "loglevel = noise|trace|debug|info|notice|warn|error|critical"
-Set the logging level. Connection established messages are logged at level
-\&\f(CW\*(C`info\*(C'\fR, notable errors are logged with \f(CW\*(C`error\*(C'\fR. Default is \f(CW\*(C`info\*(C'\fR.
-.IP "node = nickname" 4
-.IX Item "node = nickname"
-Not really a config setting but introduces a node section. The nickname is
-used to select the right configuration section and must be passed as an
-argument to the gvpe daemon.
-.IP "private-key = relative-path-to-key" 4
-.IX Item "private-key = relative-path-to-key"
-Sets the path (relative to the config directory) to the private key
-(default: \f(CW\*(C`hostkey\*(C'\fR). This is a printf format string so every \f(CW\*(C`%\*(C'\fR must
-be doubled. A single \f(CW%s\fR is replaced by the hostname, so you could
-use paths like \f(CW\*(C`hostkeys/%s\*(C'\fR to fetch the files at the location where
-\&\f(CW\*(C`gvpectrl\*(C'\fR puts them.
-.Sp
-Since only the private key file of the current node is used and the
-private key file should be kept secret per-host to avoid spoofings, it is
-not recommended to use this feature.
-.IP "ifpersist = yes|true|on | no|false|off" 4
-.IX Item "ifpersist = yes|true|on | no|false|off"
-Should the tun/tap device be made persistent, that is, should the device
-stay up even when gvpe exits? Some versions of the tunnel device have
-problems sending packets when gvpe is restarted in persistent mode, so
-if the connections can be established but you cannot send packets from
-the local node, try to set this to \f(CW\*(C`off\*(C'\fR and do an ifconfig down on the
-device.
-.IP "ifname = devname" 4
-.IX Item "ifname = devname"
-Sets the tun interface name to the given name. The default is OS-specific
-and most probably something like \f(CW\*(C`tun0\*(C'\fR.
-.IP "rekey = seconds" 4
-.IX Item "rekey = seconds"
-Sets the rekeying interval in seconds (default: \f(CW3600\fR). Connections are
-reestablished every \f(CW\*(C`rekey\*(C'\fR seconds.
-.IP "keepalive = seconds" 4
-.IX Item "keepalive = seconds"
-Sets the keepalive probe interval in seconds (default: \f(CW60\fR). After this
-many seconds of inactivity the daemon will start to send keepalive probe
-every 5 seconds until it receives a reply from the other end.  If no reply
-is received within 30 seconds, the peer is considered unreachable and the
-connection is closed.
-.IP "mtu = bytes" 4
-.IX Item "mtu = bytes"
-Sets the maximum \s-1MTU\s0 that should be used on outgoing packets (basically
-the \s-1MTU\s0 of the outgoing interface) The daemon will automatically calculate
-maximum overhead (e.g. udp header size, encryption blocksize...) and pass
-this information to the \f(CW\*(C`if\-up\*(C'\fR script.
-.Sp
-Recommended values are 1500 (ethernet), 1492 (pppoe), 1472 (pptp).
-.Sp
-This value must be the minimum of the mtu values of all hosts.
-.IP "ip-proto = numerical-ip-protocol" 4
-.IX Item "ip-proto = numerical-ip-protocol"
-Sets the protocol number to be used for the rawip protocol. This is a
-global option because all hosts must use the same protocol, and since
-there are no port numbers, you cannot easily run more than one gvpe
-instance using the same protocol, nor can you share the protocol with
-other programs.
-.Sp
-The default is 47 (\s-1GRE\s0), which has a good chance of tunneling through
-firewalls (but note that the rawip protocol is not \s-1GRE\s0 compatible). Other
-common choices are 50 (\s-1IPSEC\s0, \s-1ESP\s0), 51 (\s-1IPSEC\s0, \s-1AH\s0), 4 (\s-1IPIP\s0 tunnels) or 98
-(\s-1ENCAP\s0, rfc1241)
+.IP "dns-forw-host = hostname/ip" 4
+.IX Item "dns-forw-host = hostname/ip"
+The dns server to forward dns requests to for the \s-1DNS\s0 tunnel protocol
+(default: \f(CW127.0.0.1\fR, changing it is highly recommended).
+.IP "dns-forw-port = port-number" 4
+.IX Item "dns-forw-port = port-number"
+The port where the \f(CW\*(C`dns\-forw\-host\*(C'\fR is to be contacted (default: \f(CW53\fR,
+which is fine in most cases).
 .IP "if-up = relative-or-absolute-path" 4
 .IX Item "if-up = relative-or-absolute-path"
 Sets the path of a script that should be called immediately after the
@@ -320,6 +263,92 @@ Here is a simple if-up script:
 More complicated examples (using routing to reduce arp traffic) can be
 found in the etc/ subdirectory of the distribution.
 .RE
+.IP "ifname = devname" 4
+.IX Item "ifname = devname"
+Sets the tun interface name to the given name. The default is OS-specific
+and most probably something like \f(CW\*(C`tun0\*(C'\fR.
+.IP "ifpersist = yes|true|on | no|false|off" 4
+.IX Item "ifpersist = yes|true|on | no|false|off"
+Should the tun/tap device be made persistent, that is, should the device
+stay up even when gvpe exits? Some versions of the tunnel device have
+problems sending packets when gvpe is restarted in persistent mode, so
+if the connections can be established but you cannot send packets from
+the local node, try to set this to \f(CW\*(C`off\*(C'\fR and do an ifconfig down on the
+device.
+.IP "ip-proto = numerical-ip-protocol" 4
+.IX Item "ip-proto = numerical-ip-protocol"
+Sets the protocol number to be used for the rawip protocol. This is a
+global option because all hosts must use the same protocol, and since
+there are no port numbers, you cannot easily run more than one gvpe
+instance using the same protocol, nor can you share the protocol with
+other programs.
+.Sp
+The default is 47 (\s-1GRE\s0), which has a good chance of tunneling through
+firewalls (but note that the rawip protocol is not \s-1GRE\s0 compatible). Other
+common choices are 50 (\s-1IPSEC\s0, \s-1ESP\s0), 51 (\s-1IPSEC\s0, \s-1AH\s0), 4 (\s-1IPIP\s0 tunnels) or 98
+(\s-1ENCAP\s0, rfc1241)
+.IP "http-proxy-host = hostname/ip" 4
+.IX Item "http-proxy-host = hostname/ip"
+The \f(CW\*(C`http\-proxy\-*\*(C'\fR family of options are only available if gvpe was
+compiled with the \f(CW\*(C`\-\-enable\-http\-proxy\*(C'\fR option and enable tunneling of
+tcp connections through a http proxy server.
+.Sp
+\&\f(CW\*(C`http\-proxy\-host\*(C'\fR and \f(CW\*(C`http\-proxy\-port\*(C'\fR should specify the hostname and
+port number of the proxy server. See \f(CW\*(C`http\-proxy\-loginpw\*(C'\fR if your proxy
+requires authentication.
+.Sp
+Please note that gvpe will still try to resolve all hostnames in the
+configuration file, so if you are behind a proxy without access to a dns
+server better use numerical \s-1IP\s0 addresses.
+.Sp
+To make best use of this option disable all protocols except tcp in your
+config file and make sure your routers (or all other hosts) are listening
+on a port that the proxy allows (443, https, is a common choice).
+.Sp
+If you have a router, connecting to it will suffice. Otherwise tcp must be
+enabled on all hosts.
+.Sp
+Example:
+.Sp
+.Vb 3
+\&   http-proxy-host = proxy.example.com
+\&   http-proxy-port = 3128       # 8080 is another common choice
+\&   http-proxy-auth = schmorp:grumbeere
+.Ve
+.IP "http-proxy-port = proxy-tcp-port" 4
+.IX Item "http-proxy-port = proxy-tcp-port"
+The port where your proxy server listens.
+.IP "http-proxy-auth = login:password" 4
+.IX Item "http-proxy-auth = login:password"
+The optional login and password used to authenticate to the proxy server,
+seperated by a literal colon (\f(CW\*(C`:\*(C'\fR). Only basic authentication is
+currently supported.
+.IP "keepalive = seconds" 4
+.IX Item "keepalive = seconds"
+Sets the keepalive probe interval in seconds (default: \f(CW60\fR). After this
+many seconds of inactivity the daemon will start to send keepalive probe
+every 5 seconds until it receives a reply from the other end.  If no reply
+is received within 30 seconds, the peer is considered unreachable and the
+connection is closed.
+.IP "loglevel = noise|trace|debug|info|notice|warn|error|critical" 4
+.IX Item "loglevel = noise|trace|debug|info|notice|warn|error|critical"
+Set the logging level. Connection established messages are logged at level
+\&\f(CW\*(C`info\*(C'\fR, notable errors are logged with \f(CW\*(C`error\*(C'\fR. Default is \f(CW\*(C`info\*(C'\fR.
+.IP "mtu = bytes" 4
+.IX Item "mtu = bytes"
+Sets the maximum \s-1MTU\s0 that should be used on outgoing packets (basically
+the \s-1MTU\s0 of the outgoing interface) The daemon will automatically calculate
+maximum overhead (e.g. udp header size, encryption blocksize...) and pass
+this information to the \f(CW\*(C`if\-up\*(C'\fR script.
+.Sp
+Recommended values are 1500 (ethernet), 1492 (pppoe), 1472 (pptp).
+.Sp
+This value must be the minimum of the mtu values of all hosts.
+.IP "node = nickname" 4
+.IX Item "node = nickname"
+Not really a config setting but introduces a node section. The nickname is
+used to select the right configuration section and must be passed as an
+argument to the gvpe daemon.
 .IP "node-up = relative-or-absolute-path" 4
 .IX Item "node-up = relative-or-absolute-path"
 Sets a command (default: no script) that should be called whenever a
@@ -362,63 +391,84 @@ mapping in some dns zone:
 .IP "node-down = relative-or-absolute-path" 4
 .IX Item "node-down = relative-or-absolute-path"
 Same as \f(CW\*(C`node\-up\*(C'\fR, but gets called whenever a connection is lost.
-.IP "http-proxy-host = hostname/ip" 4
-.IX Item "http-proxy-host = hostname/ip"
-The \f(CW\*(C`http\-proxy\-*\*(C'\fR family of options are only available if gvpe was
-compiled with the \f(CW\*(C`\-\-enable\-http\-proxy\*(C'\fR option and enable tunneling of
-tcp connections through a http proxy server.
-.Sp
-\&\f(CW\*(C`http\-proxy\-host\*(C'\fR and \f(CW\*(C`http\-proxy\-port\*(C'\fR should specify the hostname and
-port number of the proxy server. See \f(CW\*(C`http\-proxy\-loginpw\*(C'\fR if your proxy
-requires authentication.
-.Sp
-Please note that gvpe will still try to resolve all hostnames in the
-configuration file, so if you are behind a proxy without access to a dns
-server better use numerical \s-1IP\s0 addresses.
-.Sp
-To make best use of this option disable all protocols except tcp in your
-config file and make sure your routers (or all other hosts) are listening
-on a port that the proxy allows (443, https, is a common choice).
-.Sp
-If you have a router, connecting to it will suffice. Otherwise tcp must be
-enabled on all hosts.
-.Sp
-Example:
-.Sp
-.Vb 3
-\&   http-proxy-host = proxy.example.com
-\&   http-proxy-port = 3128       # 8080 is another common choice
-\&   http-proxy-auth = schmorp:grumbeere
-.Ve
-.IP "http-proxy-port = proxy-tcp-port" 4
-.IX Item "http-proxy-port = proxy-tcp-port"
-The port where your proxy server listens.
-.IP "http-proxy-auth = login:password" 4
-.IX Item "http-proxy-auth = login:password"
-The optional login and password used to authenticate to the proxy server,
-seperated by a literal colon (\f(CW\*(C`:\*(C'\fR). Only basic authentication is
-currently supported.
 .IP "pid-file = path" 4
 .IX Item "pid-file = path"
-The path to the pid file to check and create (Default:
+The path to the pid file to check and create
+(default: \f(CW\*(C`LOCALSTATEDIR/run/gvpe.pid\*(C'\fR).
+.IP "private-key = relative-path-to-key" 4
+.IX Item "private-key = relative-path-to-key"
+Sets the path (relative to the config directory) to the private key
+(default: \f(CW\*(C`hostkey\*(C'\fR). This is a printf format string so every \f(CW\*(C`%\*(C'\fR must
+be doubled. A single \f(CW%s\fR is replaced by the hostname, so you could
+use paths like \f(CW\*(C`hostkeys/%s\*(C'\fR to fetch the files at the location where
+\&\f(CW\*(C`gvpectrl\*(C'\fR puts them.
+.Sp
+Since only the private key file of the current node is used and the
+private key file should be kept secret per-host to avoid spoofings, it is
+not recommended to use this feature.
+.IP "rekey = seconds" 4
+.IX Item "rekey = seconds"
+Sets the rekeying interval in seconds (default: \f(CW3600\fR). Connections are
+reestablished every \f(CW\*(C`rekey\*(C'\fR seconds.
 .Sh "\s-1NODE\s0 \s-1SPECIFIC\s0 \s-1SETTINGS\s0"
 .IX Subsection "NODE SPECIFIC SETTINGS"
 The following settings are node\-specific, that is, every node can have
 different settings, even within the same gvpe instance. Settings that are
 executed before the first node section set the defaults, settings that are
 executed within a node section only apply to the given node.
-.IP "udp-port = port-number" 4
-.IX Item "udp-port = port-number"
-Sets the port number used by the \s-1UDP\s0 protocol (default: \f(CW655\fR, not
-officially assigned by \s-1IANA\s0!).
-.IP "tcp-port = port-number" 4
-.IX Item "tcp-port = port-number"
-Similar to \f(CW\*(C`udp\-port\*(C'\fR (default: \f(CW655\fR), but sets the \s-1TCP\s0 port number.
+.IP "compress = yes|true|on | no|false|off" 4
+.IX Item "compress = yes|true|on | no|false|off"
+Wether to compress data packets sent to this host (default: \f(CW\*(C`yes\*(C'\fR).
+Compression is really cheap even on slow computers and has no size
+overhead at all, so enabling this is a good idea.
+.IP "connect = ondemand | never | always | disabled" 4
+.IX Item "connect = ondemand | never | always | disabled"
+Sets the connect mode (default: \f(CW\*(C`always\*(C'\fR). It can be \f(CW\*(C`always\*(C'\fR (always
+try to establish and keep a connection to the given host), \f(CW\*(C`never\*(C'\fR
+(never initiate a connection to the given host, but accept connections),
+\&\f(CW\*(C`ondemand\*(C'\fR (try to establish a connection on the first packet sent, and
+take it down after the keepalive interval) or \f(CW\*(C`disabled\*(C'\fR (node is bad,
+don't talk to it).
+.IP "dns-domain = domain-suffix" 4
+.IX Item "dns-domain = domain-suffix"
+The \s-1DNS\s0 domain suffix that points to the \s-1DNS\s0 tunnel server. Needs to be
+set on both client and server.
+.Sp
+The domain must point to a \s-1NS\s0 record that points to the \fIdns-hostname\fR,
+i.e.
+.Sp
+.Vb 2
+\&   dns-domainname = tunnel.example.net
+\&   dns-hostname   = tunnel-server.example.net
+.Ve
+.Sp
+Corresponds to the following \s-1DNS\s0 entries in the \f(CW\*(C`example.net\*(C'\fR domain:
+.Sp
+.Vb 2
+\&   tunnel.example.net.         NS tunnel-server.example.net.
+\&   tunnel-server.example.net.  A  13.13.13.13
+.Ve
+.IP "dns-hostname = hostname/ip" 4
+.IX Item "dns-hostname = hostname/ip"
+The address to bind the \s-1DNS\s0 tunnel socket to, similar to the \f(CW\*(C`hostname\*(C'\fR,
+but for the \s-1DNS\s0 tunnel protocol only. Default: \f(CW0.0.0.0\fR, but that might
+change.
+.IP "dns-port = port-number" 4
+.IX Item "dns-port = port-number"
+The port to bind the \s-1DNS\s0 tunnel socket to. Must be \f(CW0\fR on all \s-1DNS\s0 tunnel
+clients and \f(CW53\fR on the server.
 .IP "enable-rawip = yes|true|on | no|false|off" 4
 .IX Item "enable-rawip = yes|true|on | no|false|off"
 Enable the \s-1RAW\s0 IPv4 transport using the \f(CW\*(C`ip\-proto\*(C'\fR protocol
 (default: \f(CW\*(C`no\*(C'\fR). This is the best choice, since the overhead per packet
 is only 38 bytes, as opposed to \s-1UDP\s0's 58 (or \s-1TCP\s0's 60+).
+.IP "enable-tcp = yes|true|on | no|false|off" 4
+.IX Item "enable-tcp = yes|true|on | no|false|off"
+Enable the TCPv4 transport using the \f(CW\*(C`tcp\-port\*(C'\fR port
+(default: \f(CW\*(C`no\*(C'\fR). Support for this horribly unsuitable protocol is only
+available when gvpe was compiled using the \f(CW\*(C`\-\-enable\-tcp\*(C'\fR option. Never
+use this transport unless you really must, it is horribly ineffiecent and
+resource-intensive compared to the other transports.
 .IP "enable-udp = yes|true|on | no|false|off" 4
 .IX Item "enable-udp = yes|true|on | no|false|off"
 Enable the UDPv4 transport using the \f(CW\*(C`udp\-port\*(C'\fR port (default: \f(CW\*(C`no\*(C'\fR,
@@ -429,13 +479,20 @@ protocol is enabled automatically). This is a good general choice since
 \&\s-1NOTE:\s0 Please specify \f(CW\*(C`enable\-udp = yes\*(C'\fR if you want t use it even though
 it might get switched on automatically, as some future version might
 default to another default protocol.
-.IP "enable-tcp = yes|true|on | no|false|off" 4
-.IX Item "enable-tcp = yes|true|on | no|false|off"
-Enable the TCPv4 transport using the \f(CW\*(C`tcp\-port\*(C'\fR port
-(default: \f(CW\*(C`no\*(C'\fR). Support for this horribly unsuitable protocol is only
-available when gvpe was compiled using the \f(CW\*(C`\-\-enable\-tcp\*(C'\fR option. Never
-use this transport unless you really must, it is horribly ineffiecent and
-resource-intensive compared to the other transports.
+.IP "inherit-tos = yes|true|on | no|false|off" 4
+.IX Item "inherit-tos = yes|true|on | no|false|off"
+Wether to inherit the \s-1TOS\s0 settings of packets sent to the tunnel when
+sending packets to this node (default: \f(CW\*(C`yes\*(C'\fR). If set to \f(CW\*(C`yes\*(C'\fR then
+outgoing tunnel packets will have the same \s-1TOS\s0 setting as the packets sent
+to the tunnel device, which is usually what you want.
+.IP "max-retry = positive-number" 4
+.IX Item "max-retry = positive-number"
+The maximum interval in seconds (default: \f(CW28800\fR, 8 hours) between
+retries to establish a connection to this node. When a connection cannot
+be established, gvpe uses exponential backoff capped at this value. It's
+sometimes useful to set this to a much lower value (e.g. \f(CW120\fR) on
+connections to routers that usually are stable but sometimes are down, to
+assure quick reconnections.
 .IP "router-priority = 0 | 1 | positive\-number>2" 4
 .IX Item "router-priority = 0 | 1 | positive-number>2"
 Sets the router priority of the given host (default: \f(CW0\fR, disabled). If
@@ -453,33 +510,13 @@ required, bump the \f(CW\*(C`router\-priority\*(C'\fR setting to higher than \f(
 local config to route through specific hosts. If \f(CW\*(C`router\-priority\*(C'\fR is
 \&\f(CW0\fR, then routing will be refused, so \f(CW1\fR serves as a \*(L"enable, but do
 not use by default\*(R" switch.
-.IP "connect = ondemand | never | always | disabled" 4
-.IX Item "connect = ondemand | never | always | disabled"
-Sets the connect mode (default: \f(CW\*(C`always\*(C'\fR). It can be \f(CW\*(C`always\*(C'\fR (always
-try to establish and keep a connection to the given host), \f(CW\*(C`never\*(C'\fR
-(never initiate a connection to the given host, but accept connections),
-\&\f(CW\*(C`ondemand\*(C'\fR (try to establish a connection on the first packet sent, and
-take it down after the keepalive interval) or \f(CW\*(C`disabled\*(C'\fR (node is bad,
-don't talk to it).
-.IP "inherit-tos = yes|true|on | no|false|off" 4
-.IX Item "inherit-tos = yes|true|on | no|false|off"
-Wether to inherit the \s-1TOS\s0 settings of packets sent to the tunnel when
-sending packets to this node (default: \f(CW\*(C`yes\*(C'\fR). If set to \f(CW\*(C`yes\*(C'\fR then
-outgoing tunnel packets will have the same \s-1TOS\s0 setting as the packets sent
-to the tunnel device, which is usually what you want.
-.IP "compress = yes|true|on | no|false|off" 4
-.IX Item "compress = yes|true|on | no|false|off"
-Wether to compress data packets sent to this host (default: \f(CW\*(C`yes\*(C'\fR).
-Compression is really cheap even on slow computers and has no size
-overhead at all, so enabling this is a good idea.
-.IP "max-retry = positive-number" 4
-.IX Item "max-retry = positive-number"
-The maximum interval in seconds (default: \f(CW28800\fR, 8 hours) between
-retries to establish a connection to this node. When a connection cannot
-be established, gvpe uses exponential backoff capped at this value. It's
-sometimes useful to set this to a much lower value (e.g. \f(CW120\fR) on
-connections to routers that usually are stable but sometimes are down, to
-assure quick reconnections.
+.IP "tcp-port = port-number" 4
+.IX Item "tcp-port = port-number"
+Similar to \f(CW\*(C`udp\-port\*(C'\fR (default: \f(CW655\fR), but sets the \s-1TCP\s0 port number.
+.IP "udp-port = port-number" 4
+.IX Item "udp-port = port-number"
+Sets the port number used by the \s-1UDP\s0 protocol (default: \f(CW655\fR, not
+officially assigned by \s-1IANA\s0!).
 .SH "CONFIG DIRECTORY LAYOUT"
 .IX Header "CONFIG DIRECTORY LAYOUT"
 The default (or recommended) directory layout for the config directory is:

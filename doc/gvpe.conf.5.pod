@@ -62,79 +62,15 @@ the gvpe daemon and all connections it creates.
 
 =over 4
 
-=item loglevel = noise|trace|debug|info|notice|warn|error|critical
+=item dns-forw-host = hostname/ip
 
-Set the logging level. Connection established messages are logged at level
-C<info>, notable errors are logged with C<error>. Default is C<info>.
+The dns server to forward dns requests to for the DNS tunnel protocol
+(default: C<127.0.0.1>, changing it is highly recommended).
 
-=item node = nickname
+=item dns-forw-port = port-number
 
-Not really a config setting but introduces a node section. The nickname is
-used to select the right configuration section and must be passed as an
-argument to the gvpe daemon.
-
-=item private-key = relative-path-to-key
-
-Sets the path (relative to the config directory) to the private key
-(default: C<hostkey>). This is a printf format string so every C<%> must
-be doubled. A single C<%s> is replaced by the hostname, so you could
-use paths like C<hostkeys/%s> to fetch the files at the location where
-C<gvpectrl> puts them.
-
-Since only the private key file of the current node is used and the
-private key file should be kept secret per-host to avoid spoofings, it is
-not recommended to use this feature.
-
-=item ifpersist = yes|true|on | no|false|off
-
-Should the tun/tap device be made persistent, that is, should the device
-stay up even when gvpe exits? Some versions of the tunnel device have
-problems sending packets when gvpe is restarted in persistent mode, so
-if the connections can be established but you cannot send packets from
-the local node, try to set this to C<off> and do an ifconfig down on the
-device.
-
-=item ifname = devname
-
-Sets the tun interface name to the given name. The default is OS-specific
-and most probably something like C<tun0>.
-
-=item rekey = seconds
-
-Sets the rekeying interval in seconds (default: C<3600>). Connections are
-reestablished every C<rekey> seconds.
-
-=item keepalive = seconds
-
-Sets the keepalive probe interval in seconds (default: C<60>). After this
-many seconds of inactivity the daemon will start to send keepalive probe
-every 5 seconds until it receives a reply from the other end.  If no reply
-is received within 30 seconds, the peer is considered unreachable and the
-connection is closed.
-
-=item mtu = bytes
-
-Sets the maximum MTU that should be used on outgoing packets (basically
-the MTU of the outgoing interface) The daemon will automatically calculate
-maximum overhead (e.g. udp header size, encryption blocksize...) and pass
-this information to the C<if-up> script.
-
-Recommended values are 1500 (ethernet), 1492 (pppoe), 1472 (pptp).
-
-This value must be the minimum of the mtu values of all hosts.
-
-=item ip-proto = numerical-ip-protocol
-
-Sets the protocol number to be used for the rawip protocol. This is a
-global option because all hosts must use the same protocol, and since
-there are no port numbers, you cannot easily run more than one gvpe
-instance using the same protocol, nor can you share the protocol with
-other programs.
-
-The default is 47 (GRE), which has a good chance of tunneling through
-firewalls (but note that the rawip protocol is not GRE compatible). Other
-common choices are 50 (IPSEC, ESP), 51 (IPSEC, AH), 4 (IPIP tunnels) or 98
-(ENCAP, rfc1241)
+The port where the C<dns-forw-host> is to be contacted (default: C<53>,
+which is fine in most cases).
 
 =item if-up = relative-or-absolute-path
 
@@ -197,6 +133,100 @@ Here is a simple if-up script:
 More complicated examples (using routing to reduce arp traffic) can be
 found in the etc/ subdirectory of the distribution.
 
+=item ifname = devname
+
+Sets the tun interface name to the given name. The default is OS-specific
+and most probably something like C<tun0>.
+
+=item ifpersist = yes|true|on | no|false|off
+
+Should the tun/tap device be made persistent, that is, should the device
+stay up even when gvpe exits? Some versions of the tunnel device have
+problems sending packets when gvpe is restarted in persistent mode, so
+if the connections can be established but you cannot send packets from
+the local node, try to set this to C<off> and do an ifconfig down on the
+device.
+
+=item ip-proto = numerical-ip-protocol
+
+Sets the protocol number to be used for the rawip protocol. This is a
+global option because all hosts must use the same protocol, and since
+there are no port numbers, you cannot easily run more than one gvpe
+instance using the same protocol, nor can you share the protocol with
+other programs.
+
+The default is 47 (GRE), which has a good chance of tunneling through
+firewalls (but note that the rawip protocol is not GRE compatible). Other
+common choices are 50 (IPSEC, ESP), 51 (IPSEC, AH), 4 (IPIP tunnels) or 98
+(ENCAP, rfc1241)
+
+=item http-proxy-host = hostname/ip
+
+The C<http-proxy-*> family of options are only available if gvpe was
+compiled with the C<--enable-http-proxy> option and enable tunneling of
+tcp connections through a http proxy server.
+
+C<http-proxy-host> and C<http-proxy-port> should specify the hostname and
+port number of the proxy server. See C<http-proxy-loginpw> if your proxy
+requires authentication.
+
+Please note that gvpe will still try to resolve all hostnames in the
+configuration file, so if you are behind a proxy without access to a dns
+server better use numerical IP addresses.
+
+To make best use of this option disable all protocols except tcp in your
+config file and make sure your routers (or all other hosts) are listening
+on a port that the proxy allows (443, https, is a common choice).
+
+If you have a router, connecting to it will suffice. Otherwise tcp must be
+enabled on all hosts.
+
+Example:
+
+   http-proxy-host = proxy.example.com
+   http-proxy-port = 3128	# 8080 is another common choice
+   http-proxy-auth = schmorp:grumbeere
+
+=item http-proxy-port = proxy-tcp-port
+
+The port where your proxy server listens.
+
+=item http-proxy-auth = login:password
+
+The optional login and password used to authenticate to the proxy server,
+seperated by a literal colon (C<:>). Only basic authentication is
+currently supported.
+
+=item keepalive = seconds
+
+Sets the keepalive probe interval in seconds (default: C<60>). After this
+many seconds of inactivity the daemon will start to send keepalive probe
+every 5 seconds until it receives a reply from the other end.  If no reply
+is received within 30 seconds, the peer is considered unreachable and the
+connection is closed.
+
+=item loglevel = noise|trace|debug|info|notice|warn|error|critical
+
+Set the logging level. Connection established messages are logged at level
+C<info>, notable errors are logged with C<error>. Default is C<info>.
+
+=item mtu = bytes
+
+Sets the maximum MTU that should be used on outgoing packets (basically
+the MTU of the outgoing interface) The daemon will automatically calculate
+maximum overhead (e.g. udp header size, encryption blocksize...) and pass
+this information to the C<if-up> script.
+
+Recommended values are 1500 (ethernet), 1492 (pppoe), 1472 (pptp).
+
+This value must be the minimum of the mtu values of all hosts.
+
+=item node = nickname
+
+Not really a config setting but introduces a node section. The nickname is
+used to select the right configuration section and must be passed as an
+argument to the gvpe daemon.
+
 =item node-up = relative-or-absolute-path
 
 Sets a command (default: no script) that should be called whenever a
@@ -244,46 +274,27 @@ mapping in some dns zone:
 
 Same as C<node-up>, but gets called whenever a connection is lost.
 
-=item http-proxy-host = hostname/ip
-
-The C<http-proxy-*> family of options are only available if gvpe was
-compiled with the C<--enable-http-proxy> option and enable tunneling of
-tcp connections through a http proxy server.
-
-C<http-proxy-host> and C<http-proxy-port> should specify the hostname and
-port number of the proxy server. See C<http-proxy-loginpw> if your proxy
-requires authentication.
-
-Please note that gvpe will still try to resolve all hostnames in the
-configuration file, so if you are behind a proxy without access to a dns
-server better use numerical IP addresses.
-
-To make best use of this option disable all protocols except tcp in your
-config file and make sure your routers (or all other hosts) are listening
-on a port that the proxy allows (443, https, is a common choice).
-
-If you have a router, connecting to it will suffice. Otherwise tcp must be
-enabled on all hosts.
-
-Example:
-
-   http-proxy-host = proxy.example.com
-   http-proxy-port = 3128	# 8080 is another common choice
-   http-proxy-auth = schmorp:grumbeere
-
-=item http-proxy-port = proxy-tcp-port
-
-The port where your proxy server listens.
-
-=item http-proxy-auth = login:password
-
-The optional login and password used to authenticate to the proxy server,
-seperated by a literal colon (C<:>). Only basic authentication is
-currently supported.
-
 =item pid-file = path
 
-The path to the pid file to check and create (Default:
+The path to the pid file to check and create
+(default: C<LOCALSTATEDIR/run/gvpe.pid>).
+
+=item private-key = relative-path-to-key
+
+Sets the path (relative to the config directory) to the private key
+(default: C<hostkey>). This is a printf format string so every C<%> must
+be doubled. A single C<%s> is replaced by the hostname, so you could
+use paths like C<hostkeys/%s> to fetch the files at the location where
+C<gvpectrl> puts them.
+
+Since only the private key file of the current node is used and the
+private key file should be kept secret per-host to avoid spoofings, it is
+not recommended to use this feature.
+
+=item rekey = seconds
+
+Sets the rekeying interval in seconds (default: C<3600>). Connections are
+reestablished every C<rekey> seconds.
 
 =back
 
@@ -296,20 +307,61 @@ executed within a node section only apply to the given node.
 
 =over 4
 
-=item udp-port = port-number
+=item compress = yes|true|on | no|false|off
 
-Sets the port number used by the UDP protocol (default: C<655>, not
-officially assigned by IANA!).
+Wether to compress data packets sent to this host (default: C<yes>).
+Compression is really cheap even on slow computers and has no size
+overhead at all, so enabling this is a good idea.
 
-=item tcp-port = port-number
+=item connect = ondemand | never | always | disabled
 
-Similar to C<udp-port> (default: C<655>), but sets the TCP port number.
+Sets the connect mode (default: C<always>). It can be C<always> (always
+try to establish and keep a connection to the given host), C<never>
+(never initiate a connection to the given host, but accept connections),
+C<ondemand> (try to establish a connection on the first packet sent, and
+take it down after the keepalive interval) or C<disabled> (node is bad,
+don't talk to it).
+
+=item dns-domain = domain-suffix
+
+The DNS domain suffix that points to the DNS tunnel server. Needs to be
+set on both client and server.
+
+The domain must point to a NS record that points to the I<dns-hostname>,
+i.e.
+
+   dns-domainname = tunnel.example.net
+   dns-hostname   = tunnel-server.example.net
+
+Corresponds to the following DNS entries in the C<example.net> domain:
+
+   tunnel.example.net.         NS tunnel-server.example.net.
+   tunnel-server.example.net.  A  13.13.13.13
+
+=item dns-hostname = hostname/ip
+
+The address to bind the DNS tunnel socket to, similar to the C<hostname>,
+but for the DNS tunnel protocol only. Default: C<0.0.0.0>, but that might
+change.
+
+=item dns-port = port-number
+
+The port to bind the DNS tunnel socket to. Must be C<0> on all DNS tunnel
+clients and C<53> on the server.
 
 =item enable-rawip = yes|true|on | no|false|off
 
 Enable the RAW IPv4 transport using the C<ip-proto> protocol
 (default: C<no>). This is the best choice, since the overhead per packet
 is only 38 bytes, as opposed to UDP's 58 (or TCP's 60+).
+
+=item enable-tcp = yes|true|on | no|false|off
+
+Enable the TCPv4 transport using the C<tcp-port> port
+(default: C<no>). Support for this horribly unsuitable protocol is only
+available when gvpe was compiled using the C<--enable-tcp> option. Never
+use this transport unless you really must, it is horribly ineffiecent and
+resource-intensive compared to the other transports.
 
 =item enable-udp = yes|true|on | no|false|off
 
@@ -322,13 +374,21 @@ NOTE: Please specify C<enable-udp = yes> if you want t use it even though
 it might get switched on automatically, as some future version might
 default to another default protocol.
 
-=item enable-tcp = yes|true|on | no|false|off
+=item inherit-tos = yes|true|on | no|false|off
 
-Enable the TCPv4 transport using the C<tcp-port> port
-(default: C<no>). Support for this horribly unsuitable protocol is only
-available when gvpe was compiled using the C<--enable-tcp> option. Never
-use this transport unless you really must, it is horribly ineffiecent and
-resource-intensive compared to the other transports.
+Wether to inherit the TOS settings of packets sent to the tunnel when
+sending packets to this node (default: C<yes>). If set to C<yes> then
+outgoing tunnel packets will have the same TOS setting as the packets sent
+to the tunnel device, which is usually what you want.
+
+=item max-retry = positive-number
+
+The maximum interval in seconds (default: C<28800>, 8 hours) between
+retries to establish a connection to this node. When a connection cannot
+be established, gvpe uses exponential backoff capped at this value. It's
+sometimes useful to set this to a much lower value (e.g. C<120>) on
+connections to routers that usually are stable but sometimes are down, to
+assure quick reconnections.
 
 =item router-priority = 0 | 1 | positive-number>2
 
@@ -348,36 +408,14 @@ local config to route through specific hosts. If C<router-priority> is
 C<0>, then routing will be refused, so C<1> serves as a "enable, but do
 not use by default" switch.
 
-=item connect = ondemand | never | always | disabled
+=item tcp-port = port-number
 
-Sets the connect mode (default: C<always>). It can be C<always> (always
-try to establish and keep a connection to the given host), C<never>
-(never initiate a connection to the given host, but accept connections),
-C<ondemand> (try to establish a connection on the first packet sent, and
-take it down after the keepalive interval) or C<disabled> (node is bad,
-don't talk to it).
+Similar to C<udp-port> (default: C<655>), but sets the TCP port number.
 
-=item inherit-tos = yes|true|on | no|false|off
+=item udp-port = port-number
 
-Wether to inherit the TOS settings of packets sent to the tunnel when
-sending packets to this node (default: C<yes>). If set to C<yes> then
-outgoing tunnel packets will have the same TOS setting as the packets sent
-to the tunnel device, which is usually what you want.
-
-=item compress = yes|true|on | no|false|off
-
-Wether to compress data packets sent to this host (default: C<yes>).
-Compression is really cheap even on slow computers and has no size
-overhead at all, so enabling this is a good idea.
-
-=item max-retry = positive-number
-
-The maximum interval in seconds (default: C<28800>, 8 hours) between
-retries to establish a connection to this node. When a connection cannot
-be established, gvpe uses exponential backoff capped at this value. It's
-sometimes useful to set this to a much lower value (e.g. C<120>) on
-connections to routers that usually are stable but sometimes are down, to
-assure quick reconnections.
+Sets the port number used by the UDP protocol (default: C<655>, not
+officially assigned by IANA!).
 
 =back
 

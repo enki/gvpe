@@ -624,7 +624,7 @@ void dns_snd::gen_stream_req (int seqno, byte_stream &stream)
   pkt->qdcount = htons (1);
 
   int offs = 6*2;
-  int dlen = MAX_DOMAIN_SIZE - (strlen (THISNODE->domain) + 2);
+  int dlen = MAX_DOMAIN_SIZE - (strlen (dns->c->conf->domain) + 2);
   // MAX_DOMAIN_SIZE is technically 255, but bind doesn't compress responses well,
   // so we need to have space for 2*MAX_DOMAIN_SIZE + header + extra
 
@@ -652,7 +652,7 @@ void dns_snd::gen_stream_req (int seqno, byte_stream &stream)
       enclen -= lbllen;
     }
 
-  append_domain (*pkt, offs, THISNODE->domain);
+  append_domain (*pkt, offs, dns->c->conf->domain);
 
   (*pkt)[offs++] = 0;
   (*pkt)[offs++] = RR_TYPE_ANY >> 8; (*pkt)[offs++] = RR_TYPE_ANY;
@@ -678,7 +678,7 @@ void dns_snd::gen_syn_req ()
 
   (*pkt)[offs] = elen;
   offs += elen + 1;
-  append_domain (*pkt, offs, THISNODE->domain);
+  append_domain (*pkt, offs, dns->c->conf->domain);
 
   (*pkt)[offs++] = 0;
   (*pkt)[offs++] = RR_TYPE_A   >> 8; (*pkt)[offs++] = RR_TYPE_A;
