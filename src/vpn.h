@@ -54,7 +54,7 @@ struct vpn
 
     void tap_ev (io_watcher &w, short revents); io_watcher tap_ev_watcher;
 
-    void send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos = IPTOS_RELIABILITY);
+    void send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos = 0);
 
 #if ENABLE_TCP
     void tcpv4_ev (io_watcher &w, short revents); io_watcher tcpv4_ev_watcher;

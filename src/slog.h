@@ -68,7 +68,7 @@ extern void log_to (int mask);
 
 extern void slog_ (const loglevel l, const char *m, ...);
 
-#ifdef __GNUC__
+#if __GNUC__ > 2
 # define slog(l, ...) do { if ((l) >= log_level) slog_ (l, __VA_ARGS__); } while (0)
 #else
 # define slog slog_

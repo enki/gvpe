@@ -240,6 +240,9 @@ vpn::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
       || pkt->typ () >= vpn_packet::PT_MAX)
     slog (L_WARN, _("(%s): received corrupted packet type %d (src %d, dst %d)"),
           (const char *)rsi, pkt->typ (), pkt->src (), pkt->dst ());
+  else if (dst > conns.size ())
+    slog (L_WARN, _("(%s): received corrupted packet type %d (src %d, dst %d)"),
+          (const char *)rsi, pkt->typ (), pkt->src (), pkt->dst ());
   else
     {
       connection *c = conns[src - 1];
@@ -248,12 +251,16 @@ vpn::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
         slog (L_WARN, _("%s(%s): received broadcast, but we are no router"),
               c->conf->nodename, (const char *)rsi);
       else if (dst != 0 && dst != THISNODE->id)
-        // FORWARDING NEEDED ;)
-        slog (L_WARN,
-              _("received frame for node %d ('%s') from %s, but this is node %d ('%s')"),
-              dst, conns[dst - 1]->conf->nodename,
-              (const char *)rsi,
-              THISNODE->id, THISNODE->nodename);
+        {
+          if (THISNODE->routerprio)
+            // the tos setting gets lost here. who cares.
+            conns[dst - 1]->inject_vpn_packet (pkt);
+          else
+            slog (L_WARN,
+                  _("%s(%s): forwarding request (=> %s), but we are no router"),
+                  c->conf->nodename, (const char *)rsi,
+                  conns[dst - 1]->conf->nodename);
+        }
       else
         c->recv_vpn_packet (pkt, rsi);
     }

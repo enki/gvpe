@@ -132,7 +132,8 @@ struct connection
     enum conf_node::connectmode connectmode;
     u8 prot_minor; // minor number of other side
 
-    void reset_dstaddr ();
+    void reset_si ();
+    const sockinfo &forward_si (const sockinfo &si) const;
 
     void shutdown ();
     void reset_connection ();
@@ -147,6 +148,7 @@ struct connection
     void send_ping (const sockinfo &dsi, u8 pong = 0);
     void send_data_packet (tap_packet *pkt, bool broadcast = false);
     void inject_data_packet (tap_packet *pkt, bool broadcast = false);
+    void inject_vpn_packet (vpn_packet *pkt, int tos = 0); // for forwarding
     void connect_request (int id);
 
     void recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi);

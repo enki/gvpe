@@ -548,7 +548,7 @@ struct connect_info_packet : vpn_packet
 /////////////////////////////////////////////////////////////////////////////
 
 void
-connection::reset_dstaddr ()
+connection::reset_si ()
 {
   protocol = best_protocol (THISNODE->protocols & conf->protocols);
 
@@ -557,6 +557,28 @@ connection::reset_dstaddr ()
   if (!conf->tcp_port) protocol &= ~PROT_TCPv4;
 
   si.set (conf, protocol);
+}
+
+// ensure sockinfo is valid, forward if necessary
+const sockinfo &
+connection::forward_si (const sockinfo &si) const
+{
+  if (!si.valid ())
+    {
+      connection *r = vpn->find_router ();
+
+      if (r)
+        {
+          slog (L_DEBUG, _("%s: no common protocol, trying indirectly through %s"),
+                conf->nodename, r->conf->nodename);
+          return r->si;
+        }
+      else
+        slog (L_DEBUG, _("%s: node unreachable, no common protocol"),
+              conf->nodename);
+    }
+
+  return si;
 }
 
 void
@@ -600,7 +622,8 @@ connection::send_auth_request (const sockinfo &si, bool initiate)
 
   slog (L_TRACE, ">>%d PT_AUTH_REQ [%s]", conf->id, (const char *)si);
 
-  vpn->send_vpn_packet (pkt, si, IPTOS_RELIABILITY); // rsa is very very costly
+  vpn->send_vpn_packet (pkt, si, IPTOS_RELIABILITY | IPTOS_LOWDELAY); // rsa is very very costly
+
 
   delete pkt;
 }
@@ -653,20 +676,22 @@ connection::establish_connection_cb (time_watcher &w)
 
       w.at = NOW + retry_int;
 
-      if (conf->hostname)
-        {
-          reset_dstaddr ();
+      reset_si ();
 
-          if (si.valid () && auth_rate_limiter.can (si))
-           {
-            if (retry_cnt < 4)
-              send_auth_request (si, true);
-            else
-              send_ping (si, 0);
-           }
-        }
-      else
+      if (si.prot && !si.host)
         vpn->connect_request (conf->id);
+      else
+        {
+          const sockinfo &dsi = forward_si (si);
+
+          if (dsi.valid () && auth_rate_limiter.can (dsi))
+            {
+              if (retry_cnt < 4)
+                send_auth_request (dsi, true);
+              else
+                send_ping (dsi, 0);
+            }
+        }
     }
 }
 
@@ -745,6 +770,14 @@ connection::inject_data_packet (tap_packet *pkt, bool broadcast)
 
       establish_connection ();
     }
+}
+
+void connection::inject_vpn_packet (vpn_packet *pkt, int tos)
+{
+  if (ictx && octx)
+    vpn->send_vpn_packet (pkt, si, tos);
+  else
+    establish_connection ();
 }
 
 void
@@ -1006,11 +1039,11 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 
             slog (L_TRACE, "<<%d PT_CONNECT_INFO(%d,%s) (%d)",
                            conf->id, p->id, (const char *)p->si, !c->ictx && !c->octx);
-            //slog (L_ERR, "%d PROTOCL(C%x,T%x,0S%x,S%x,P%x,SP%x)", 
-            //      p->id, c->conf->protocols, THISNODE->protocols, p->si.supported_protocols(0), p->si.supported_protocols (c->conf),
-            //      protocol, p->si.prot);
 
-            c->send_auth_request (p->si, true);
+            const sockinfo &dsi = forward_si (p->si);
+
+            if (dsi.valid ())
+              c->send_auth_request (dsi, true);
           }
 
         break;
