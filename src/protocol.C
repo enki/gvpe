@@ -1138,6 +1138,11 @@ void vpn::connect_request (int id)
 
   if (c)
     c->connect_request (id);
+  //else // does not work, because all others must connect to the same router
+  //  // no router found, aggressively connect to all routers
+  //  for (conns_vector::iterator i = conns.begin (); i != conns.end (); ++i)
+  //    if ((*i)->conf->routerprio)
+  //      (*i)->establish_connection ();
 }
 
 void
