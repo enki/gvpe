@@ -58,8 +58,8 @@
 #define IP_OVERHEAD  20			// size of a (normal) ip header
 #define GRE_OVERHEAD (IP_OVERHEAD +  4)
 #define ICMP_OVERHEAD (IP_OVERHEAD + 4)
-#define UDP_OVERHEAD (IP_OVERHEAD + 20)	// size of a (normal) ip + udp header
-#define TCP_OVERHEAD (IP_OVERHEAD + 22)	// size of a (normal) ip + tcp header + pakcetlength
+#define UDP_OVERHEAD (IP_OVERHEAD + 20)	// size of a (normal) ip + udp header (wrong, but don't care)
+#define TCP_OVERHEAD (IP_OVERHEAD + 22)	// size of a (normal) ip + tcp header + packetlength
 #define MAX_OVERHEAD UDP_OVERHEAD	// the max. overhead of any protocol (ok, tcp doesn't count)
 #define ETH_OVERHEAD 14			// the size of an ethernet header
 #define MAXSIZE (MAX_MTU + VPE_OVERHEAD)// slightly too large, but who cares
