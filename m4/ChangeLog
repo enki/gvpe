@@ -1,0 +1,10 @@
+2003-02-20  gettextize  <bug-gnu-gettext@gnu.org>
+
+	* iconv.m4: New file, from gettext-0.11.5.
+	* intdiv0.m4: New file, from gettext-0.11.5.
+	* isc-posix.m4: New file, from gettext-0.11.5.
+	* lib-ld.m4: New file, from gettext-0.11.5.
+	* lib-link.m4: New file, from gettext-0.11.5.
+	* lib-prefix.m4: New file, from gettext-0.11.5.
+	* Makefile.am (EXTRA_DIST): Add the new files.
+

@@ -1,0 +1,64 @@
+.Dd 2002-03-25
+.Dt VPECTRL 8
+.\" Manual page created by:
+.\" Ivo Timmermans <ivo@o2w.nl>
+.\" Guus Sliepen <guus@sliepen.eu.org>
+.\" Modified extensively by Marc Lehmann <pcg@goof.com>
+.Sh NAME
+.Nm vpectrl
+.Nd Virtual Private Ethernet Control Program
+.Sh SYNOPSIS
+.Nm
+.Op Fl cgks
+.Op Fl -config Ns = Ns Ar DIR
+.Op Fl -generate-keys
+.Op Fl -help
+.Op Fl -kill Ns = Ns Ar SIGNAL
+.Op Fl -show-config
+.Op Fl -version
+.Sh DESCRIPTION
+This is the control program for the vped, the virtual private ethernet daemon.
+.Sh OPTIONS
+.Bl -tag -width indent
+.It Fl c, -config Ns = Ns Ar DIR
+Read configuration options from
+.Ar DIR .
+.It Fl g, -generate-keys
+Generate public/private RSA keypair and exit.
+.It Fl -help
+Display short list of options.
+.It Fl k, -kill Ns Op = Ns Ar SIGNAL
+Attempt to kill a running
+.Nm
+(optionally with the specified
+.Ar SIGNAL
+instead of SIGTERM) and exit.
+.It Fl s, --show-config
+Show a summary of the configuration, and how vped interprets it. Can also be very useful
+when designing firewall scripts.
+.It Fl -version
+Output version information and exit.
+.El
+.Sh BUGS
+.Pp
+If you find any bugs, report them to vpe@plan9.de.
+.Sh TODO
+A lot.
+.Sh SEE ALSO
+.Xr vpe.conf 5 ,
+.Xr vped 8 ,
+.Pp
+The full documentation for vpe is maintained as a Texinfo manual.
+If the info and tinc programs are properly installed at your site,
+the command
+.Ic info vpe
+should give you access to the complete manual.
+.Pp
+vpe comes with ABSOLUTELY NO WARRANTY.
+This is free software, and you are welcome to redistribute it under certain conditions;
+see the file COPYING for details.
+.Sh AUTHORS
+.An "Marc Lehmann" Aq vpe@plan9.de
+.Pp
+And thanks to many others for their contributions to vpe, especially the tincd authors
+who inspired this program and whose sourcecode I scavanged!

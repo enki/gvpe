@@ -1,0 +1,333 @@
+/*
+    vpectrl.C -- the main file for vpectrl
+    Copyright (C) 1998-2002 Ivo Timmermans <ivo@o2w.nl>
+                  2000-2002 Guus Sliepen <guus@sliepen.eu.org>
+                  2003      Marc Lehmannn <pcg@goof.com>
+ 
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+ 
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+ 
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc. 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
+
+#include "config.h"
+
+#include <cstdio>
+#include <cstring>
+
+#include <errno.h>
+#include <fcntl.h>
+#include <getopt.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <signal.h>
+
+#include <openssl/rand.h>
+#include <openssl/rsa.h>
+#include <openssl/pem.h>
+#include <openssl/evp.h>
+
+#include "pidfile.h"
+
+#include "gettext.h"
+
+#include "conf.h"
+#include "slog.h"
+#include "util.h"
+#include "protocol.h"
+
+/* If nonzero, display usage information and exit. */
+static int show_help;
+
+/* If nonzero, print the version on standard output and exit.  */
+static int show_version;
+
+/* If nonzero, it will attempt to kill a running vped and exit. */
+static int kill_vped;
+
+/* If nonzero, it will attempt to kill a running vped and exit. */
+static int show_config;
+
+/* If nonzero, generate public/private keypair for this net. */
+static int generate_keys;
+
+static struct option const long_options[] =
+    {
+      {"config", required_argument, NULL, 'c'},
+      {"kill", optional_argument, NULL, 'k'},
+      {"help", no_argument, &show_help, 1},
+      {"version", no_argument, &show_version, 1},
+      {"generate-keys", no_argument, NULL, 'g'},
+      {"show-config", no_argument, &show_config, 's'},
+      {NULL, 0, NULL, 0}
+    };
+
+static void
+usage (int status)
+{
+  if (status != 0)
+    fprintf (stderr, _("Try `%s --help\' for more information.\n"), get_identity ());
+  else
+    {
+      printf (_("Usage: %s [option]...\n\n"), get_identity ());
+      printf (_
+              ("  -c, --config=DIR           Read configuration options from DIR.\n"
+               "  -k, --kill[=SIGNAL]        Attempt to kill a running vped and exit.\n"
+               "  -g, --generate-keys        Generate public/private RSA keypair.\n"
+               "  -s, --show-config          Display the configuration information.\n"
+               "      --help                 Display this help and exit.\n"
+               "      --version              Output version information and exit.\n\n"));
+      printf (_("Report bugs to <vpe@plan9.de>.\n"));
+    }
+
+  exit (status);
+}
+
+void
+parse_options (int argc, char **argv, char **envp)
+{
+  int r;
+  int option_index = 0;
+
+  while ((r =
+            getopt_long (argc, argv, "c:k::gs", long_options,
+                         &option_index)) != EOF)
+    {
+      switch (r)
+        {
+        case 0:		/* long option */
+          break;
+
+        case 'c':		/* config file */
+          confbase = strdup (optarg);
+          break;
+
+        case 'k':		/* kill old vpeds */
+          if (optarg)
+            {
+              if (!strcasecmp (optarg, "HUP"))
+                kill_vped = SIGHUP;
+              else if (!strcasecmp (optarg, "TERM"))
+                kill_vped = SIGTERM;
+              else if (!strcasecmp (optarg, "KILL"))
+                kill_vped = SIGKILL;
+              else if (!strcasecmp (optarg, "USR1"))
+                kill_vped = SIGUSR1;
+              else if (!strcasecmp (optarg, "USR2"))
+                kill_vped = SIGUSR2;
+              else if (!strcasecmp (optarg, "WINCH"))
+                kill_vped = SIGWINCH;
+              else if (!strcasecmp (optarg, "INT"))
+                kill_vped = SIGINT;
+              else if (!strcasecmp (optarg, "ALRM"))
+                kill_vped = SIGALRM;
+              else
+                {
+                  kill_vped = atoi (optarg);
+
+                  if (!kill_vped)
+                    {
+                      fprintf (stderr,
+                               _
+                               ("Invalid argument `%s'; SIGNAL must be a number or one of HUP, TERM, KILL, USR1, USR2, WINCH, INT or ALRM.\n"),
+                               optarg);
+                      usage (1);
+                    }
+                }
+            }
+          else
+            kill_vped = SIGTERM;
+
+          break;
+
+        case 'g':		/* generate public/private keypair */
+          generate_keys = RSA_KEYBITS;
+          break;
+
+        case 's':
+          show_config = 1;
+          break;
+
+        case '?':
+          usage (1);
+
+        default:
+          break;
+        }
+    }
+}
+
+/* This function prettyprints the key generation process */
+
+void
+indicator (int a, int b, void *p)
+{
+  switch (a)
+    {
+    case 0:
+      fprintf (stderr, ".");
+      break;
+
+    case 1:
+      fprintf (stderr, "+");
+      break;
+
+    case 2:
+      fprintf (stderr, "-");
+      break;
+
+    case 3:
+      switch (b)
+        {
+        case 0:
+          fprintf (stderr, " p\n");
+          break;
+
+        case 1:
+          fprintf (stderr, " q\n");
+          break;
+
+        default:
+          fprintf (stderr, "?");
+        }
+      break;
+
+    default:
+      fprintf (stderr, "?");
+    }
+}
+
+/*
+ * generate public/private RSA keypairs for all hosts that don't have one.
+ */
+int
+keygen (int bits)
+{
+  RSA *rsa_key;
+  FILE *f;
+  char *name = NULL;
+  char *fname;
+
+  asprintf (&fname, "%s/hostkeys", confbase);
+  mkdir (fname, 0700);
+  free (fname);
+
+  asprintf (&fname, "%s/pubkey", confbase);
+  mkdir (fname, 0700);
+  free (fname);
+
+  for (configuration::node_vector::iterator i = conf.nodes.begin (); i != conf.nodes.end (); ++i)
+    {
+      conf_node *node = *i;
+
+      asprintf (&fname, "%s/pubkey/%s", confbase, node->nodename);
+
+      f = fopen (fname, "a");
+
+      if (!f)
+        {
+          perror (fname);
+          exit (1);
+        }
+
+      if (ftell (f))
+        {
+          fprintf (stderr, "'%s' already exists, skipping this node\n",
+                   fname);
+          fclose (f);
+          continue;
+        }
+
+      fprintf (stderr, _("generating %d bits key for %s:\n"), bits,
+               node->nodename);
+
+      rsa_key = RSA_generate_key (bits, 0xFFFF, indicator, NULL);
+
+      if (!rsa_key)
+        {
+          fprintf (stderr, _("error during key generation!\n"));
+          return -1;
+        }
+      else
+        fprintf (stderr, _("Done.\n"));
+
+      PEM_write_RSAPublicKey (f, rsa_key);
+      fclose (f);
+      free (fname);
+
+      asprintf (&fname, "%s/hostkeys/%s", confbase, node->nodename);
+
+      f = fopen (fname, "a");
+      if (!f)
+        {
+          perror (fname);
+          exit (1);
+        }
+
+      PEM_write_RSAPrivateKey (f, rsa_key, NULL, NULL, 0, NULL, NULL);
+      fclose (f);
+      free (fname);
+    }
+
+  return 0;
+}
+
+int
+main (int argc, char **argv, char **envp)
+{
+  set_identity (argv[0]);
+  log_to (LOGTO_STDERR);
+
+  setlocale (LC_ALL, "");
+  bindtextdomain (PACKAGE, LOCALEDIR);
+  textdomain (PACKAGE);
+
+  parse_options (argc, argv, envp);
+
+  if (show_version)
+    {
+      printf (_("%s version %s (built %s %s, protocol %d:%d)\n"), get_identity (),
+              VERSION, __DATE__, __TIME__, PROTOCOL_MAJOR, PROTOCOL_MINOR);
+      printf (_
+              ("Copyright (C) 2003 Marc Lehmann <vpe@plan9.de> and others.\n"
+               "See the AUTHORS file for a complete list.\n\n"
+               "vpe comes with ABSOLUTELY NO WARRANTY.  This is free software,\n"
+               "and you are welcome to redistribute it under certain conditions;\n"
+               "see the file COPYING for details.\n"));
+
+      return 0;
+    }
+
+  if (show_help)
+    usage (0);
+
+  make_names ();
+  conf.read_config (false);
+
+  if (generate_keys)
+    {
+      RAND_load_file ("/dev/urandom", 1024);
+      exit (keygen (generate_keys));
+    }
+
+  if (kill_vped)
+    exit (kill_other (kill_vped));
+
+  if (show_config)
+    {
+      conf.print ();
+      exit (0);
+    }
+
+  usage (1);
+}
