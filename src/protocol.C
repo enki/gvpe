@@ -60,15 +60,6 @@ static time_t next_timecheck;
 
 #define MAGIC "vped\xbd\xc6\xdb\x82"	// 8 bytes of magic
 
-static u8
-best_protocol (u8 protset)
-{
-  if (protset & PROT_IPv4)
-    return PROT_IPv4;
-
-  return PROT_UDPv4;
-}
-
 struct crypto_ctx
   {
     EVP_CIPHER_CTX cctx;
@@ -684,7 +675,7 @@ connection::send_auth_request (const sockinfo &si, bool initiate)
 {
   auth_req_packet *pkt = new auth_req_packet (conf->id, initiate, THISNODE->protocols);
 
-  prot_send = best_protocol (THISNODE->protocols & conf->protocols);
+  protocol = best_protocol (THISNODE->protocols & conf->protocols);
 
   rsachallenge chg;
 
@@ -992,8 +983,9 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 
                         connectmode = conf->connectmode;
 
-                        slog (L_INFO, _("%s(%s): connection established, protocol version %d.%d"),
+                        slog (L_INFO, _("%s(%s): %s connection established, protocol version %d.%d"),
                               conf->nodename, (const char *)rsi,
+                              strprotocol (protocol),
                               p->prot_major, p->prot_minor);
 
                         if (::conf.script_node_up)
@@ -1173,7 +1165,7 @@ const char *connection::script_node_down (int)
 void
 connection::send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
-  if (prot_send & PROT_IPv4)
+  if (protocol & PROT_IPv4)
     vpn->send_ipv4_packet (pkt, si, tos);
   else
     vpn->send_udpv4_packet (pkt, si, tos);

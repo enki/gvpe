@@ -53,6 +53,22 @@ char *pidfilename;
 
 struct configuration conf;
 
+u8 best_protocol (u8 protset)
+{
+  if (protset & PROT_IPv4)
+    return PROT_IPv4;
+
+  return PROT_UDPv4;
+}
+
+const char *strprotocol (u8 protocol)
+{
+  if (protocol & PROT_IPv4 ) return "rawip";
+  if (protocol & PROT_UDPv4) return "udp";
+
+  return "<unknown>";
+}
+
 configuration::configuration ()
 {
   init ();

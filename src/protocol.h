@@ -79,7 +79,7 @@ struct connection
     u32 oseqno;
     sliding_window iseqno;
 
-    u8 prot_send, prot_recv;
+    u8 protocol;
 
     pkt_queue queue;
 

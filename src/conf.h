@@ -44,6 +44,10 @@ enum {
   PROT_TCPv4 = 4, // tcp over ipv4 (NYI)
 };
 
+// select the "best" protocol of the available ones
+u8 best_protocol (u8 protset);
+const char *strprotocol (u8 protocol);
+
 struct conf_node {
   int id;         // the id of this node, a 12-bit-number
 
