@@ -1,6 +1,7 @@
 =head1 NAME
 
 C<gvpe> - GNU Virtual Private Ethernet Daemon
+
 =head1 SYNOPSIS
 
 C<gvpe> [B<-cDlL>] [B<--config=>I<DIR>] [B<--no-detach>] [B<-l=>I<LEVEL]>]
