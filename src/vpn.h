@@ -19,8 +19,6 @@
 #ifndef VPE_VPN_H__
 #define VPE_VPN_H__
 
-#include <netinet/ip.h>
-
 #include "global.h"
 #include "conf.h"
 #include "device.h"

@@ -34,7 +34,16 @@
 #include <unistd.h>
 
 #include <netinet/in.h>
-#include <netinet/ip_icmp.h>
+#include <arpa/inet.h>
+#ifdef ENABLE_ICMP
+# ifdef HAVE_NETINET_IN_SYSTM_H
+#  include <netinet/in_systm.h>
+# endif
+# ifdef HAVE_NETINET_IP_H
+#  include <netinet/ip.h>
+# endif
+# include <netinet/ip_icmp.h>
+#endif
 
 #include <openssl/err.h>
 #include <openssl/pem.h>
@@ -108,7 +117,9 @@ void configuration::init ()
   keepalive = DEFAULT_KEEPALIVE;
   llevel    = L_INFO;
   ip_proto  = IPPROTO_GRE;
+#if ENABLE_ICMP
   icmp_type = ICMP_ECHOREPLY;
+#endif
 
   default_node.udp_port    = DEFAULT_UDPPORT;
   default_node.tcp_port    = DEFAULT_UDPPORT;
@@ -229,8 +240,11 @@ retry:
             }
           else if (!strcmp (var, "ip-proto"))
             ip_proto = atoi (val);
+#if ENABLE_ICMP
+          //TODO: error message
           else if (!strcmp (var, "icmp-type"))
             icmp_type = atoi (val);
+#endif
 
           // per config
           else if (!strcmp (var, "node"))

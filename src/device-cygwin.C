@@ -38,6 +38,12 @@
 #include "conf.h"
 #include "util.h"
 
+const char *
+tap_device::info ()
+{
+  return _("broken cygwin cipe device");
+}
+
 tap_device::tap_device ()
 {
   if ((fd = open (conf.ifname, O_RDWR)) < 0)

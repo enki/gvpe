@@ -19,7 +19,7 @@
 #ifndef VPE_DEVICE_H__
 #define VPE_DEVICE_H__
 
-#include <net/if.h>
+#define IFNAMESIZE 256
 
 #include "gettext.h"
 
@@ -82,7 +82,7 @@ struct tap_device {
   int fd;
 
   // linux tuntap
-  char ifrname[IFNAMSIZ + 1];
+  char ifrname[IFNAMESIZE + 1];
 
   char *device;
 
@@ -90,7 +90,7 @@ struct tap_device {
   ~tap_device ();
 
   const char *interface () { return ifrname; }
-  const char *info () { return _("Linux tun/tap device"); }
+  const char *info ();
 
   tap_packet *recv ();
   void send (tap_packet *pkt);

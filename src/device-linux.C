@@ -30,8 +30,10 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 
+#include <net/if.h>
+
 #ifdef LINUX_IF_TUN_H
-#include LINUX_IF_TUN_H
+# include LINUX_IF_TUN_H
 #else
 #include <linux/if_tun.h>
 #endif
@@ -40,6 +42,12 @@
 #include "gettext.h"
 
 #include "conf.h"
+
+const char *
+tap_device::info ()
+{
+  return _("Linux tun/tap device");
+}
 
 tap_device::tap_device ()
 {
@@ -94,9 +102,9 @@ tap_device::recv ()
 
   if (pkt->len <= 0)
     {
+      delete pkt;
       slog (L_ERR, _("error while reading from %s %s: %s"),
             info (), DEFAULT_DEVICE, strerror (errno));
-      free (pkt);
       return 0;
     }
 

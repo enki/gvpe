@@ -63,43 +63,72 @@ AC_PROG_RANLIB
 
 AC_ISC_POSIX
 
-m4_if([
-dnl Check and set OS
+AC_ARG_ENABLE(iftype,
+  [AC_HELP_STRING(--enable-iftype[=TYPE/SUBTYPE], [
+     Use kernel/net device interface TYPE/SUBTYPE.
+     Working combinations are:
+        "native/linux" "tincd/linux";
+     Untested combinations are:
+        "tincd/freebsd" "tincd/netbsd" "tincd/darwin" "tincd/solaris"
+        "tincd/openbsd" "tincd/netbsd" "tincd/cygwin";
+     Broken combinations are:
+        "native/cygwin";
+     The default is autodetected.
+  ])],
+  [
+    IFTYPE=`echo $enableval | sed s%/.*%%`
+    IFSUBTYPE=`echo $enableval | sed s%.*/%%`
+  ]
+)
 
-case $target_os in
-  *linux*)
-    AC_DEFINE(HAVE_LINUX, 1, [Linux])
-    [ rm -f src/device.c; ln -sf linux/device.c src/device.c ]
-  ;;
-  *freebsd*)
-    AC_DEFINE(HAVE_FREEBSD, 1, [FreeBSD])
-    [ rm -f src/device.c; ln -sf freebsd/device.c src/device.c ]
-  ;;
-  *darwin*)
-    AC_DEFINE(HAVE_DARWIN, 1, [Darwin (MacOS/X)])
-    [ rm -f src/device.c; ln -sf darwin/device.c src/device.c ]
-  ;;
-  *solaris*)
-    AC_DEFINE(HAVE_SOLARIS, 1, [Solaris/SunOS])
-    [ rm -f src/device.c; ln -sf solaris/device.c src/device.c ]
-  ;;
-  *openbsd*)
-    AC_DEFINE(HAVE_OPENBSD, 1, [OpenBSD])
-    [ rm -f src/device.c; ln -sf openbsd/device.c src/device.c ]
-  ;;
-  *netbsd*)
-    AC_DEFINE(HAVE_NETBSD, 1, [NetBSD])
-    [ rm -f src/device.c; ln -sf netbsd/device.c src/device.c ]
-  ;;
-  *cygwin*)
-    AC_DEFINE(HAVE_CYGWIN, 1, [Cygwin])
-    [ rm -f src/device.c; ln -sf cygwin/device.c src/device.c ]
-  ;;
-  *)
-    AC_MSG_ERROR("Unknown operating system.")
-  ;;
-esac
-])
+dnl Check and set OS
+AC_MSG_CHECKING(for kernel networking interface type)
+
+if test "x$IFTYPE" = "x"; then
+   case $target_os in
+     *linux*)
+       IFTYPE=native
+       IFSUBTYPE=linux
+       AC_DEFINE(HAVE_LINUX, 1, [Linux])
+     ;;
+     *freebsd*)
+       IFTYPE=tincd
+       IFSUBTYPE=freebsd
+       AC_DEFINE(HAVE_FREEBSD, 1, [FreeBSD])
+     ;;
+     *darwin*)
+       IFTYPE=tincd
+       IFSUBTYPE=darwin
+       AC_DEFINE(HAVE_DARWIN, 1, [Darwin (MacOS/X)])
+     ;;
+     *solaris*)
+       IFTYPE=tincd
+       IFSUBTYPE=solaris
+       AC_DEFINE(HAVE_SOLARIS, 1, [Solaris/SunOS])
+     ;;
+     *openbsd*)
+       IFTYPE=tincd
+       IFSUBTYPE=openbsd
+       AC_DEFINE(HAVE_OPENBSD, 1, [OpenBSD])
+     ;;
+     *netbsd*)
+       IFTYPE=tincd
+       IFSUBTYPE=netbsd
+       AC_DEFINE(HAVE_NETBSD, 1, [NetBSD])
+     ;;
+     *cygwin*)
+       IFTYPE=tincd
+       IFSUBTYPE=cygwin
+       AC_DEFINE(HAVE_CYGWIN, 1, [Cygwin])
+     ;;
+     *)
+       AC_MSG_ERROR("Unknown operating system.")
+     ;;
+   esac
+fi
+AC_MSG_RESULT($IFTYPE/$IFSUBTYPE)
+AC_SUBST(IFTYPE,$IFTYPE)
+AC_SUBST(IFSUBTYPE,$IFSUBTYPE)
 
 AC_CACHE_SAVE
 
@@ -110,13 +139,21 @@ AC_CHECK_HEADERS(ext/hash_map)
 
 dnl Checks for header files.
 AC_CHECK_HEADERS([fcntl.h inttypes.h limits.h malloc.h stdint.h strings.h syslog.h unistd.h \
-	sys/file.h sys/ioctl.h sys/param.h sys/time.h netinet/in_systm.h cygwin.h])
-AC_CHECK_HEADERS([net/ethernet.h net/if.h netinet/ip.h netinet/tcp.h], [], [],
-	[#include <sys/types.h>
-	 #include <sys/socket.h>
-	 #ifdef HAVE_NETINET_IN_SYSTM_H
-     #include <netinet/in_systm.h>
-	 #endif])
+	sys/file.h sys/ioctl.h sys/param.h sys/time.h netinet/in_systm.h cygwin.h arpa/inet.h netinet/in.h])
+AC_CHECK_HEADERS([net/ethernet.h net/if.h netinet/ip.h netinet/tcp.h netinet/in_systm.h], [], [],
+[
+#include <sys/types.h>
+#include <sys/socket.h>
+#ifdef HAVE_NETINET_IN_H
+# include <netinet/in.h>
+#endif
+#ifdef HAVE_ARPA_INET_H
+# include <arpa/inet.h>
+#endif
+#ifdef HAVE_NETINET_IN_SYSTM_H
+# include <netinet/in_systm.h>
+#endif
+])
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -272,22 +309,6 @@ AC_ARG_ENABLE(digest,
 )
 AC_DEFINE_UNQUOTED(ENABLE_DIGEST, EVP_${DIGEST}, [Select the digest algorithm to use.])
 
-TRUST=1
-m4_if([
-AC_ARG_ENABLE(trust,
-  [AC_HELP_STRING(--enable-trust, [
-     Make authentication faster but allow decoding by all hosts of a VPN.
-     Use this when the VPN hosts DO trust each other and you don't care
-     wether man-in-the-middle sniffing attacks are possible by admins
-     of other VPN hosts. On pentiums or similar machines this can cut down
-     the time for reconnects by 0.4 seconds or more.])],
-  if test "x$enableval" = xyes; then
-     TRUST=1
-  fi
-)
-])
-AC_DEFINE_UNQUOTED(ENABLE_TRUST, $TRUST, [Faster, but VPN hosts may sniff each others data.])
-
 if $CXX -v --help 2>&1 | grep -q fno-rtti; then
    CXXFLAGS="$CXXFLAGS -fno-rtti"
 fi
@@ -310,14 +331,21 @@ echo
 echo "***"
 echo "*** Configuration Summary"
 echo "***"
+echo "*** Kernel Iface: $IFTYPE/$IFSUBTYPE"
 echo "*** Cipher used:  $CIPHER"
 echo "*** Digest used:  $DIGEST"
 echo "*** HMAC length:  $HMAC"
 echo "*** RAND used:    $RAND"
 echo "*** Max. MTU:     $MTU"
 echo "*** Compression:  $COMPRESS"
-dnl echo "*** Trusted Mode: $TRUST"
 echo "***"
+
+if test "x$DIGEST" = xmd4; then
+echo "*** WARNING"
+echo "*** The digest you have chosen ($DIGEST) is known to be insecure"
+echo "***"
+fi
+
 echo
 
 ])

@@ -171,9 +171,10 @@ tcp_connection::write_packet ()
       u16 plen = htons (w_pkt->len);
 
       iovec vec[2];
-      vec[0].iov_base = ((u8 *)&plen) + w_ofs;
+      //TODO: char* is the right type? hardly...
+      vec[0].iov_base = (char *)((u8 *)&plen) + w_ofs;
       vec[0].iov_len = 2 - w_ofs;
-      vec[1].iov_base = &((*w_pkt)[0]);
+      vec[1].iov_base = (char *)&((*w_pkt)[0]);
       vec[1].iov_len = w_len - 2;
 
       len = writev (fd, vec, 2);
@@ -403,7 +404,9 @@ tcp_connection::send_packet (vpn_packet *pkt, int tos)
         {
           // how this maps to the underlying tcp packets we don't know
           // and we don't care. at least we tried ;)
+#if defined(SOL_IP) && defined(IP_TOS)
           setsockopt (fd, SOL_IP, IP_TOS, &tos, sizeof tos);
+#endif
 
           w_pkt = pkt;
           w_ofs = 0;

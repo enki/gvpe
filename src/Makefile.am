@@ -3,7 +3,12 @@
 sbin_PROGRAMS = vped
 bin_PROGRAMS = vpectrl
 
-EXTRA_DIST = device-linux.C device-cygwin.C callback.pl
+EXTRA_DIST = device-linux.C device-cygwin.C device-tincd.C callback.pl	\
+   tincd/apply tincd/fixit	\
+   tincd/cygwin/device.c tincd/darwin/device.c tincd/freebsd/device.c	\
+   tincd/linux/device.c tincd/mingw/device.c tincd/netbsd/device.c	\
+   tincd/openbsd/device.c tincd/raw_socket/device.c tincd/solaris/device.c
+
 
 INCLUDES = @INCLUDES@ -I$(top_builddir) -I$(top_srcdir)/lib
 
@@ -24,7 +29,8 @@ vpectrl_LDADD = $(top_builddir)/lib/libvpe.a
 localedir = $(datadir)/locale
 
 DEFINES = -DPKGLIBDIR=$(pkglibdir) -DCONFDIR=\"$(sysconfdir)\"	\
-	  -DLOCALEDIR=\"$(localedir)\" -DLOCALSTATEDIR=\"$(localstatedir)\"
+	  -DLOCALEDIR=\"$(localedir)\" -DLOCALSTATEDIR=\"$(localstatedir)\" \
+          -DIFTYPE_@IFTYPE@=1 -DIF_@IFSUBTYPE@=1
 
 AM_CFLAGS = $(DEFINES)
 AM_CXXFLAGS = $(DEFINES)

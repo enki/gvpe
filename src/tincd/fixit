@@ -1,0 +1,10 @@
+#!/usr/bin/perl
+
+while (<>) {
+   if (/^#include \"(.*)"/) {
+      warn "skipping local include $1";
+   } else {
+      print;
+   }
+}
+

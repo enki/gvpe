@@ -32,15 +32,32 @@
 #include <time.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <arpa/inet.h>
+#include <sys/socket.h>
 #include <netinet/in.h>
-#include <netinet/ip_icmp.h>
+#include <arpa/inet.h>
+#include <net/if.h>
+#ifdef HAVE_NETINET_IN_SYSTM_H
+# include <netinet/in_systm.h>
+#endif
+#ifdef HAVE_NETINET_IP_H
+# include <netinet/ip.h>
+#endif
+#ifdef HAVE_NETINET_TCP_H
+# include <netinet/tcp.h>
+#endif
+#if ENABLE_ICMP
+# include <netinet/ip_icmp.h>
+#endif
 
 #include "pidfile.h"
 
 #include "connection.h"
 #include "util.h"
 #include "vpn.h"
+
+#if !defined(SOL_IP) && defined(IPPROTO_IP)
+# define SOL_IP IPPROTO_IP
+#endif
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -86,7 +103,7 @@ vpn::setup ()
 
       fcntl (ipv4_fd, F_SETFL, O_NONBLOCK);
 
-#ifdef IP_MTU_DISCOVER
+#if defined(SOL_IP) && defined(IP_MTU_DISCOVER)
       // this I really consider a linux bug. I am neither connected
       // nor do I fragment myself. Linux still sets DF and doesn't
       // fragment for me sometimes.
@@ -124,7 +141,7 @@ vpn::setup ()
         setsockopt (udpv4_fd, SOL_SOCKET, SO_REUSEADDR, &oval, sizeof oval);
       }
 
-#ifdef IP_MTU_DISCOVER
+#if defined(SOL_IP) && defined(IP_MTU_DISCOVER)
       // this I really consider a linux bug. I am neither connected
       // nor do I fragment myself. Linux still sets DF and doesn't
       // fragment for me sometimes.
@@ -168,7 +185,7 @@ vpn::setup ()
       }
 #endif
 
-#ifdef IP_MTU_DISCOVER
+#if defined(SOL_IP) && defined(IP_MTU_DISCOVER)
       // this I really consider a linux bug. I am neither connected
       // nor do I fragment myself. Linux still sets DF and doesn't
       // fragment for me sometimes.
@@ -273,7 +290,9 @@ vpn::send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 bool
 vpn::send_ipv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
+#if defined(SOL_IP) && defined(IP_TOS)
   setsockopt (ipv4_fd, SOL_IP, IP_TOS, &tos, sizeof tos);
+#endif
   sendto (ipv4_fd, &((*pkt)[0]), pkt->len, 0, si.sav4 (), si.salenv4 ());
 
   return true;
@@ -303,14 +322,33 @@ ipv4_checksum (u16 *data, unsigned int len)
 }
 
 #if ENABLE_ICMP
+struct icmp_header {
+  u8          type;
+  u8          code;
+  u16         checksum;
+  union {
+        struct {
+                u16   id;
+                u16   sequence;
+        } echo;
+        u32   gateway;
+        struct {
+                u16   unused;
+                u16   mtu;
+        } frag;
+  } un;
+};
+
 bool
 vpn::send_icmpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
+#if defined(SOL_IP) && defined(IP_TOS)
   setsockopt (icmpv4_fd, SOL_IP, IP_TOS, &tos, sizeof tos);
+#endif
 
   pkt->unshift_hdr (4);
 
-  icmphdr *hdr = (icmphdr *)&((*pkt)[0]);
+  icmp_header *hdr = (icmp_header *)&((*pkt)[0]);
   hdr->type = ::conf.icmp_type;
   hdr->code = 255;
   hdr->checksum = 0;
@@ -325,7 +363,9 @@ vpn::send_icmpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 bool
 vpn::send_udpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
+#if defined(SOL_IP) && defined(IP_TOS)
   setsockopt (udpv4_fd, SOL_IP, IP_TOS, &tos, sizeof tos);
+#endif
   sendto (udpv4_fd, &((*pkt)[0]), pkt->len, 0, si.sav4 (), si.salenv4 ());
 
   return true;
@@ -437,7 +477,7 @@ vpn::icmpv4_ev (io_watcher &w, short revents)
         {
           pkt->len = len;
 
-          icmphdr *hdr = (icmphdr *)&((*pkt)[IP_OVERHEAD]);
+          icmp_header *hdr = (icmp_header *)&((*pkt)[IP_OVERHEAD]);
 
           if (hdr->type == ::conf.icmp_type
               && hdr->code == 255)
@@ -531,13 +571,13 @@ vpn::tap_ev (io_watcher &w, short revents)
 
       if (src != THISNODE->id)
         {
-          slog (L_ERR, _("FATAL: tap packet not originating on current node received, terminating."));
+          slog (L_ERR, _("FATAL: tap packet not originating on current node received, exiting."));
           exit (1);
         }
 
       if (dst == THISNODE->id)
         {
-          slog (L_ERR, _("FATAL: tap packet destined for current node received, terminating."));
+          slog (L_ERR, _("FATAL: tap packet destined for current node received, exiting."));
           exit (1);
         }
 

@@ -160,9 +160,18 @@ consistently on all hosts), but this is usually ineffective.
 =item MAC=fe:fd:80:00:00:01
 
 The MAC address to set the interface to. The script *must* set the
-interface MAC to this value. On GNU/Linux you will most likely use this:
+interface MAC to this value. You will most likely use one of these:
 
-   ip link set $IFNAME address $MAC mtu $MTU up
+   ip link set $IFNAME address $MAC mtu $MTU up # GNU/Linux
+   ifconfig $IFNAME ether $MAC mtu $MTU up      # FreeBSD
+
+=item IFTYPE=native
+
+=item IFSUBTYPE=linux # or freebsd, darwin etc..
+
+The interface type (C<native> or C<tincd>) and the subtype (usually the os
+name in lowercase) that this vpe was configured for. Can be used to select
+the correct syntax to use for network-related commands.
 
 =item NODENAME=branch1
 

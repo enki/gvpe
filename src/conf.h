@@ -77,7 +77,9 @@ struct configuration {
   RSA *rsa_key;     // our private rsa key
   loglevel llevel;
   u8 ip_proto;      // the ip protocol to use
+#if ENABLE_ICMP
   u8 icmp_type;     // the icmp type for the icmp-protocol
+#endif
 
   char *script_if_up;
   char *script_node_up;

@@ -37,6 +37,23 @@ extern "C" {
 #include "vpn.h"
 #include "connection.h"
 
+#include <sys/socket.h>
+#ifdef HAVE_NETINET_IN_H
+# include <netinet/in.h>
+#endif
+#include <arpa/inet.h>
+#include <net/if.h>
+#ifdef HAVE_NETINET_IN_SYSTM_H
+# include <netinet/in_systm.h>
+#endif
+#ifdef HAVE_NETINET_IP_H
+# include <netinet/ip.h>
+#endif
+
+#ifndef IPTOS_TOS_MASK
+# define IPTOS_TOS_MASK (IPTOS_LOWDELAY | IPTOS_THROUGHPUT | IPTOS_RELIABILITY | IPTOS_MINCOST)
+#endif
+
 #if !HAVE_RAND_PSEUDO_BYTES
 # define  RAND_pseudo_bytes RAND_bytes
 #endif
