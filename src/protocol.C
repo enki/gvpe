@@ -548,10 +548,6 @@ struct config_packet : vpn_packet
     const u8 curflags () const
     {
       return 0x80
-             | 0x02
-#if PROTOCOL_MAJOR != 2
-#error hi
-#endif
              | (ENABLE_COMPRESSION ? 0x01 : 0x00);
     }
 

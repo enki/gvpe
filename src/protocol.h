@@ -34,7 +34,7 @@
    incompatible version have different protocols.
  */
 
-#define PROTOCOL_MAJOR 2
+#define PROTOCOL_MAJOR 3
 #define PROTOCOL_MINOR 0
 
 struct vpn;
