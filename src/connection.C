@@ -816,7 +816,7 @@ connection::reset_connection ()
   delete ictx; ictx = 0;
   delete octx; octx = 0;
 #if ENABLE_DNS
-  delete dns;  dns = 0;
+  dnsv4_reset_connection ();
 #endif
 
   si.host = 0;

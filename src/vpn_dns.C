@@ -45,17 +45,17 @@
 
 #include "vpn.h"
 
-#define MIN_POLL_INTERVAL .2  // how often to poll minimally when the server is having data
+#define MIN_POLL_INTERVAL .02  // how often to poll minimally when the server is having data
 #define MAX_POLL_INTERVAL 6.  // how often to poll minimally when the server has no data
 #define ACTIVITY_INTERVAL 5.
 
 #define INITIAL_TIMEOUT     1.
 #define INITIAL_SYN_TIMEOUT 2.
 
-#define MIN_SEND_INTERVAL 0.001
+#define MIN_SEND_INTERVAL 0.01
 #define MAX_SEND_INTERVAL 0.5 // optimistic?
 
-#define MAX_OUTSTANDING 400 // max. outstanding requests
+#define MAX_OUTSTANDING 800 // max. outstanding requests
 #define MAX_WINDOW      1000 // max. for MAX_OUTSTANDING
 #define MAX_BACKLOG     (100*1024) // size of protocol backlog, must be > MAXSIZE
 
@@ -352,7 +352,7 @@ bool byte_stream::put (vpn_packet *pkt)
 
 vpn_packet *byte_stream::get ()
 {
-  int len = (data [0] << 8) | data [1];
+  unsigned int len = (data [0] << 8) | data [1];
 
   if (len > MAXSIZE && fill >= 2)
     abort (); // TODO handle this gracefully, connection reset
@@ -716,9 +716,7 @@ void dns_connection::receive_rep (dns_rcv *r)
       last_received = NOW;
       tw.trigger ();
       
-      poll_interval *= 0.99;
-      if (poll_interval > MIN_POLL_INTERVAL)
-        poll_interval = MIN_POLL_INTERVAL;
+      poll_interval = send_interval;
     }
   else
     {
@@ -955,25 +953,30 @@ vpn::dnsv4_client (dns_packet &pkt)
     if ((*i)->pkt->id == pkt.id)
       {
         dns_connection *dns = (*i)->dns;
+        connection *c = dns->c;
         int seqno = (*i)->seqno;
         u8 data[MAXSIZE], *datap = data;
 
         if ((*i)->retry)
           {
-            dns->send_interval *= 1.01;
-            if (dns->send_interval < MAX_SEND_INTERVAL)
+            dns->send_interval *= 1.001;
+            if (dns->send_interval > MAX_SEND_INTERVAL)
               dns->send_interval = MAX_SEND_INTERVAL;
           }
         else
           {
-            dns->send_interval *= 0.99;
+#if 1
+            dns->send_interval *= 0.9999;
+#endif
             if (dns->send_interval < MIN_SEND_INTERVAL)
               dns->send_interval = MIN_SEND_INTERVAL;
 
             // the latency surely puts an upper bound on
             // the minimum send interval
-            if (dns->send_interval > NOW - (*i)->sent)
-              dns->send_interval = NOW - (*i)->sent;
+            double latency = NOW - (*i)->sent;
+
+            if (dns->send_interval > latency)
+              dns->send_interval = latency;
           }
 
         delete *i;
@@ -1039,13 +1042,20 @@ vpn::dnsv4_client (dns_packet &pkt)
                           {
                             slog (L_DEBUG, _("got tunnel RST request"));
 
-                            connection *c = dns->c;
-                            delete c->dns; c->dns = 0;
+                            delete dns; c->dns = 0;
 
                             return;
                           }
                         else if (ip [3] == CMD_IP_SYN)
-                          dns->established = true;
+                          {
+                            slog (L_DEBUG, _("got tunnel SYN reply, server likes us."));
+                            dns->established = true;
+                          }
+                        else if (ip [3] == CMD_IP_REJ)
+                          {
+                            slog (L_DEBUG, _("got tunnel REJ reply, server does not like us, aborting."));
+                            abort ();
+                          }
                         else
                           slog (L_INFO, _("got unknown meta command %02x"), ip [3]);
                       }
@@ -1120,6 +1130,12 @@ connection::send_dnsv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
   return true;
 }
 
+void
+connection::dnsv4_reset_connection ()
+{
+  //delete dns; dns = 0; //TODO
+}
+
 #define NEXT(w) do { if (next > (w)) next = w; } while (0)
 
 void
@@ -1184,7 +1200,6 @@ dns_connection::time_cb (time_watcher &w)
       if (send)
         {
           last_sent = NOW;
-
           sendto (vpn->dnsv4_fd,
                   send->pkt->at (0), send->pkt->len, 0,
                   vpn->dns_forwarder.sav4 (), vpn->dns_forwarder.salenv4 ());
@@ -1193,7 +1208,9 @@ dns_connection::time_cb (time_watcher &w)
   else
     NEXT (last_sent + send_interval);
 
-  //printf ("pi %f si %f N %f (%d:%d)\n", poll_interval, send_interval, next - NOW, vpn->dns_sndpq.size (), snddq.size ());
+  slog (L_NOISE, "pi %f si %f N %f (%d:%d)",
+        poll_interval, send_interval, next - NOW,
+        vpn->dns_sndpq.size (), snddq.size ());
 
   // TODO: no idea when this happens, but when next < NOW, we have a problem
   if (next < NOW + 0.0001)

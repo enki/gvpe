@@ -143,6 +143,7 @@ struct connection
     struct dns_connection *dns;
 
     bool send_dnsv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
+    void dnsv4_reset_connection ();
 #endif
 
     enum conf_node::connectmode connectmode;
