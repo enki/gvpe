@@ -893,8 +893,9 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
 
             if (!k)
               {
-                slog (L_ERR, _("challenge from %s (%s) illegal or corrupted"),
+                slog (L_ERR, _("challenge from %s (%s) illegal or corrupted, disabling node"),
                       conf->nodename, (const char *)sockinfo (ssa));
+                connectmode = conf_node::C_DISABLED;
                 break;
               }
 
