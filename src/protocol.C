@@ -981,7 +981,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
 
                         connectmode = conf->connectmode;
 
-                        slog (L_INFO, _("%s(%s): connection established, protocol version %d:%d"),
+                        slog (L_INFO, _("%s(%s): connection established, protocol version %d.%d"),
                               conf->nodename, (const char *)sockinfo (ssa),
                               p->prot_major, p->prot_minor);
 
