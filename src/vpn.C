@@ -250,7 +250,7 @@ vpn::udpv4_ev (io_watcher &w, short revents)
       socklen_t sa_len = sizeof (sa);
       int len;
 
-      len = recvfrom (w.fd, &((*pkt)[0]), MAXSIZE, 0, (sockaddr *)&sa, &sa_len);
+      len = recvfrom (w.p->fd, &((*pkt)[0]), MAXSIZE, 0, (sockaddr *)&sa, &sa_len);
 
       sockinfo si(sa);
 
@@ -293,7 +293,7 @@ vpn::ipv4_ev (io_watcher &w, short revents)
       socklen_t sa_len = sizeof (sa);
       int len;
 
-      len = recvfrom (w.fd, &((*pkt)[0]), MAXSIZE, 0, (sockaddr *)&sa, &sa_len);
+      len = recvfrom (w.p->fd, &((*pkt)[0]), MAXSIZE, 0, (sockaddr *)&sa, &sa_len);
 
       sockinfo si(sa, PROT_IPv4);
 
@@ -358,6 +358,9 @@ struct tcp_connection : io_watcher {
   vpn &v;
   bool ok;
 
+  vpn_packet *r_pkt;
+  u32 r_len, r_ofs;
+
   void tcpv4_ev (io_watcher &w, short revents);
 
   operator tcp_si_map::value_type()
@@ -365,14 +368,16 @@ struct tcp_connection : io_watcher {
       return tcp_si_map::value_type (&si, this);
     }
 
-  tcp_connection (int fd_, const sockinfo &si_, vpn &v_)
-    : v(v_), si(si_), io_watcher(this, &tcp_connection::tcpv4_ev), ok(false)
+  tcp_connection (int fd, const sockinfo &si_, vpn &v_)
+    : v(v_), si(si_), io_watcher(this, &tcp_connection::tcpv4_ev)
     {
       last_activity = NOW;
-      start (fd_, POLLOUT);
+      ok = false;
+      r_pkt = 0;
+      start (fd, POLLOUT);
     }
 
-  ~tcp_connection () { close (fd); }
+  ~tcp_connection () { if (p) close (p->fd); }
 };
 
 void tcp_si_map::cleaner_cb (time_watcher &w)
@@ -423,10 +428,10 @@ vpn::send_tcpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 
       if (i->ok)
         {
-          setsockopt (i->fd, SOL_IP, IP_TOS, &tos, sizeof tos);
+          setsockopt (i->p->fd, SOL_IP, IP_TOS, &tos, sizeof tos);
 
           // we use none of the advantages of tcp
-          write (i->fd, (void *)pkt, pkt->len + sizeof (u32)) != pkt->len + sizeof (u32);
+          write (i->p->fd, (void *)pkt, pkt->len + sizeof (u32)) != pkt->len + sizeof (u32);
         }
     }
   
@@ -444,20 +449,18 @@ tcp_connection::tcpv4_ev (io_watcher &w, short revents)
   if (!ok) // just established?
     {
       ok = true;
-      fcntl (fd, F_SETFL, 0);
-      stop ();
-      start (fd, POLLIN);
+      set (POLLIN);
     }
 
   if (revents & (POLLIN | POLLERR))
     {
       u32 len;
 
-      if (sizeof (len) == read (fd, &len, sizeof (len)))
+      if (sizeof (len) == read (p->fd, &len, sizeof (len)))
         {
           vpn_packet *pkt = new vpn_packet;
 
-          if (len == read (fd, &((*pkt)[0]), len))
+          if (len == read (p->fd, &((*pkt)[0]), len))
             {
               pkt->len = len;
 
@@ -469,7 +472,8 @@ tcp_connection::tcpv4_ev (io_watcher &w, short revents)
         }
 
       tcp_si.erase (&si);
-      stop ();
+
+      set (0);//D
     }
 }
 
@@ -482,7 +486,7 @@ vpn::tcpv4_ev (io_watcher &w, short revents)
       socklen_t sa_len = sizeof (sa);
       int len;
 
-      int fd = accept (w.fd, (sockaddr *)&sa, &sa_len);
+      int fd = accept (w.p->fd, (sockaddr *)&sa, &sa_len);
 
       if (fd >= 0)
         {
@@ -491,7 +495,7 @@ vpn::tcpv4_ev (io_watcher &w, short revents)
           sockinfo si(sa, PROT_TCPv4);
           tcp_connection *i = new tcp_connection (fd, si, *this);
 
-          slog (L_ERR, "accepted %d\n", fd);//D
+          slog (L_DEBUG, _("accepted tcp connection from %s\n"), (const char *)si);//D
 
           tcp_si.insert (*i);
         }

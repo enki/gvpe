@@ -26,14 +26,14 @@
 #include "slog.h"
 #include "iom.h"
 
+tstamp NOW;
+bool iom_valid;
+io_manager iom;
+
 inline bool earliest_first (const time_watcher *a, const time_watcher *b)
 {
   return a->at > b->at;
 }
-
-tstamp NOW;
-
-io_manager iom;
 
 void time_watcher::set (tstamp when)
 {
@@ -61,24 +61,37 @@ void time_watcher::start ()
     iom.reg (this);
 }
 
+time_watcher::~time_watcher ()
+{
+  if (iom_valid)
+    iom.unreg (this);
+}
+
+io_watcher::~io_watcher ()
+{
+  if (iom_valid)
+    iom.unreg (this);
+}
+
 void io_manager::reg (io_watcher *w)
 {
   pollfd pfd;
 
-  pfd.fd     = w->fd;
-  pfd.events = w->events;
-
   pfs.push_back (pfd);
   iow.push_back (w);
+
+  w->p = &(*(pfs.end () - 1));
 }
 
 void io_manager::unreg (io_watcher *w)
 {
-  unsigned int sz = iow.size ();
-  unsigned int i = find (iow.begin (), iow.end (), w) - iow.begin ();
-
-  if (i != sz)
+  if (w->p)
     {
+      unsigned int sz = iow.size ();
+      unsigned int i = find (iow.begin (), iow.end (), w) - iow.begin ();
+
+      assert (i != sz);
+
       if (sz == 1)
         {
           pfs.clear ();
@@ -94,6 +107,8 @@ void io_manager::unreg (io_watcher *w)
           iow[i] = iow[sz - 1]; iow.pop_back ();
           pfs[i] = pfs[sz - 1]; pfs.pop_back ();
         }
+
+      w->p = 0;
     }
 }
 
@@ -104,9 +119,6 @@ void io_manager::reschedule_time_watchers ()
 
 void io_manager::reg (time_watcher *w)
 {
-  if (w->registered)
-    slog (L_CRIT, "FATAL: io_manager::reg(time_watcher) called on already-registered watcher");
-
   w->registered = true;
 
   tw.push_back (w);
@@ -120,14 +132,13 @@ void io_manager::unreg (time_watcher *w)
       unsigned int sz = tw.size ();
       unsigned int i = find (tw.begin (), tw.end (), w) - tw.begin ();
 
-      if (i != sz)
-        {
-          if (i != sz - 1)
-            tw[i] = tw[sz - 1];
+      assert (i != sz);
+      
+      if (i != sz - 1)
+        tw[i] = tw[sz - 1];
 
-          tw.pop_back ();
-          reschedule_time_watchers ();
-        }
+      tw.pop_back ();
+      reschedule_time_watchers ();
 
       w->registered = false;
     }
@@ -193,6 +204,8 @@ void io_manager::idle_cb (time_watcher &w)
 
 io_manager::io_manager ()
 {
+  iom_valid = true;
+
   set_now ();
   idle = new time_watcher (this, &io_manager::idle_cb);
   idle->start (0);
@@ -200,6 +213,6 @@ io_manager::io_manager ()
 
 io_manager::~io_manager ()
 {
-  //
+  iom_valid = false;
 }
 

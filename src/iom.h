@@ -21,6 +21,8 @@
 
 #include <vector>
 
+#include <cassert>
+
 #include <sys/poll.h>
 
 #include "callback.h"
@@ -55,27 +57,37 @@ public:
   ~io_manager ();
 };
 
-extern io_manager iom;
+extern io_manager iom; // a singleton, together with it's construction/destruction problems.
 
 struct io_watcher : callback2<void, io_watcher &, short> {
-  int fd;
-  short events;
+  pollfd *p;
 
   template<class O1, class O2>
   io_watcher (O1 *object, void (O2::*method)(io_watcher &, short))
     : callback2<void, io_watcher &, short>(object,method)
     { }
 
-  ~io_watcher ()
+  ~io_watcher ();
+
+  void set(int fd, short events)
     {
-      iom.unreg (this);
+      assert (p);
+      p->fd     = fd;
+      p->events = events;
     }
 
-  void start (int fd_, short events_)
+  void set(short events)
     {
-      fd = fd_;
-      events = events_;
-      iom.reg (this);
+      assert (p);
+      p->events = events;
+    }
+
+  void start (int fd, short events)
+    {
+      iom.reg (this); // make sure pfd is set
+
+      p->fd     = fd;
+      p->events = events;
     }
 
   void stop ()
@@ -96,10 +108,7 @@ struct time_watcher : callback1<void, time_watcher &> {
     , registered(false)
     { }
 
-  ~time_watcher ()
-    {
-      iom.unreg (this);
-    }
+  ~time_watcher ();
 
   void set (tstamp when);
   void trigger ();
@@ -123,6 +132,7 @@ struct time_watcher : callback1<void, time_watcher &> {
   void reset (tstamp when = TSTAMP_CANCEL)
     {
       stop ();
+
       at = when;
     }
 };
