@@ -871,8 +871,8 @@ Optional Features:
                           Use kernel/net device interface TYPE/SUBTYPE.
                           Working combinations are: "native/linux"
                           "tincd/linux" "tincd/freebsd" "tincd/openbsd"
-                          "native/cygwin"; Untested combinations are:
-                          "tincd/netbsd" "tincd/darwin" "tincd/solaris"
+                          "tincd/darwin" "native/cygwin"; Untested
+                          combinations are: "tincd/netbsd" "tincd/solaris"
                           "tincd/mingw"; Broken combinations are:
                           "tincd/cygwin"; The default is to autodetect.
   --enable-rohc           enable robust header compression (rfc3095).
@@ -9280,7 +9280,7 @@ _ACEOF
 
 fi;
 
-HMAC=12    # Check whether --enable-hmac-length or --disable-hmac-length was given.
+HMAC=8    # Check whether --enable-hmac-length or --disable-hmac-length was given.
 if test "${enable_hmac_length+set}" = set; then
   enableval="$enable_hmac_length"
   HMAC=$enableval

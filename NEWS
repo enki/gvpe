@@ -8,7 +8,7 @@
    - portability workarounds, especially for unfriendly freebsd
    - very minor bugfixes
    - warnings when choosing insecure ciphers/hashes
-   - reduced default hmac length to 12.
+   - reduced default hmac length to 8.
    - cvs now contains configure, Makefile.in and other generated files.
 
 1.0

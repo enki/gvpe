@@ -99,6 +99,7 @@ void configuration::init ()
 {
   memset (this, 0, sizeof (*this));
 
+  mtu       = DEFAULT_MTU;
   rekey     = DEFAULT_REKEY;
   keepalive = DEFAULT_KEEPALIVE;
   llevel    = L_INFO;

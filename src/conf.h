@@ -30,6 +30,7 @@
 #define DEFAULT_REKEY		3600
 #define DEFAULT_KEEPALIVE	60	// one keepalive/minute (it's just 8 bytes...)
 #define DEFAULT_UDPPORT		655	// same as tinc, conflicts would be rare
+#define DEFAULT_MTU		1500	// let's ether-net
 
 enum {
   PROT_UDPv4  = 0x01, // udp over ipv4

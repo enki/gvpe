@@ -71,10 +71,10 @@ AC_ARG_ENABLE(iftype,
         "tincd/linux"
         "tincd/freebsd"
         "tincd/openbsd"
+        "tincd/darwin"
         "native/cygwin";
      Untested combinations are:
         "tincd/netbsd"
-        "tincd/darwin"
         "tincd/solaris"
         "tincd/mingw";
      Broken combinations are:
@@ -267,7 +267,7 @@ AC_ARG_ENABLE(http-proxy,
   AC_DEFINE_UNQUOTED(ENABLE_HTTP_PROXY, 1, [http proxy connect support.])
 )
 
-HMAC=12    dnl see also the AC_HELP_STRING
+HMAC=8    dnl see also the AC_HELP_STRING
 AC_ARG_ENABLE(hmac-length,
   [AC_HELP_STRING(--enable-hmac-length=BYTES, [use a hmac of length BYTES bytes (default 12). Allowed values are 4, 8, 12, 16.])],
   HMAC=$enableval

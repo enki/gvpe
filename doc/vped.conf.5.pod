@@ -217,7 +217,7 @@ The node id of the remote node.
 The numerical IP address of the remote host (vped accepts connections from
 everywhere, as long as the other host can authenticate itself).
 
-=item DESTPORT=407 # deprecated
+=item DESTPORT=655 # deprecated
 
 The UDP port used by the other side.
 
@@ -292,12 +292,12 @@ executed within a node section only apply to the given node.
 
 =item udp-port = port-number
 
-Sets the port number used by the UDP protocol (default: C<407>, not
+Sets the port number used by the UDP protocol (default: C<655>, not
 officially assigned by IANA!).
 
 =item tcp-port = port-number
 
-Similar to C<udp-port> (default: C<407>), but sets the TCP port number.
+Similar to C<udp-port> (default: C<655>), but sets the TCP port number.
 
 =item enable-rawip = yes|true|on | no|false|off
 

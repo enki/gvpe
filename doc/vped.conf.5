@@ -129,7 +129,7 @@
 .\" ========================================================================
 .\"
 .IX Title "VPED.CONF 5"
-.TH VPED.CONF 5 "2003-10-14" "1.0" "Virtual Private Ethernet"
+.TH VPED.CONF 5 "2003-10-16" "1.2" "Virtual Private Ethernet"
 .SH "NAME"
 vped.conf \- vpe daemon configuration file
 .SH "SYNOPSIS"
@@ -335,8 +335,8 @@ The node id of the remote node.
 .IX Item "DESTIP=188.13.66.8"
 The numerical \s-1IP\s0 address of the remote host (vped accepts connections from
 everywhere, as long as the other host can authenticate itself).
-.IP "DESTPORT=407 # deprecated" 4
-.IX Item "DESTPORT=407 # deprecated"
+.IP "DESTPORT=655 # deprecated" 4
+.IX Item "DESTPORT=655 # deprecated"
 The \s-1UDP\s0 port used by the other side.
 .IP "STATE=UP" 4
 .IX Item "STATE=UP"
@@ -404,11 +404,11 @@ executed before the first node section set the defaults, settings that are
 executed within a node section only apply to the given node.
 .IP "udp-port = port-number" 4
 .IX Item "udp-port = port-number"
-Sets the port number used by the \s-1UDP\s0 protocol (default: \f(CW407\fR, not
+Sets the port number used by the \s-1UDP\s0 protocol (default: \f(CW655\fR, not
 officially assigned by \s-1IANA\s0!).
 .IP "tcp-port = port-number" 4
 .IX Item "tcp-port = port-number"
-Similar to \f(CW\*(C`udp\-port\*(C'\fR (default: \f(CW407\fR), but sets the \s-1TCP\s0 port number.
+Similar to \f(CW\*(C`udp\-port\*(C'\fR (default: \f(CW655\fR), but sets the \s-1TCP\s0 port number.
 .IP "enable-rawip = yes|true|on | no|false|off" 4
 .IX Item "enable-rawip = yes|true|on | no|false|off"
 Enable the \s-1RAW\s0 IPv4 transport using the \f(CW\*(C`ip\-proto\*(C'\fR protocol
