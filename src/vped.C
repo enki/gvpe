@@ -49,8 +49,6 @@
 #include "vpn.h"
 #include "iom.h"
 
-vpn network;
-
 static loglevel llevel = L_NONE;
 
 /* If nonzero, display usage information and exit. */

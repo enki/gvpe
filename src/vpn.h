@@ -83,7 +83,7 @@ struct vpn
     const char *script_if_up ();
   };
 
-extern struct vpn network;
+extern vpn network; // THE vpn
 
 #endif
 

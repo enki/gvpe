@@ -14,12 +14,12 @@ INCLUDES = @INCLUDES@ -I$(top_builddir) -I$(top_srcdir)/lib
 
 LIBS = @LIBS@ @LIBINTL@
 
-COMMON = global.h conf.h conf.C util.h util.C device.h device.C \
+COMMON = global.h conf.h conf.C util.h util.C \
          slog.h slog.C netcompat.h
 
 vped_SOURCES = vped.C hash_map.h vpn.h vpn.C vpn_tcp.C sockinfo.h sockinfo.C \
                lzf/lzf.h lzf/lzfP.h lzf/lzf_c.c lzf/lzf_d.c iom.h iom.C \
-               connection.h connection.C callback.h \
+               connection.h connection.C callback.h device.h device.C \
                $(COMMON)
 vped_LDADD = $(top_builddir)/lib/libvpe.a
 vpectrl_SOURCES = vpectrl.C \

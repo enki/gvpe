@@ -42,6 +42,8 @@
 #include "util.h"
 #include "vpn.h"
 
+vpn network; // THE vpn (bad design...)
+
 /////////////////////////////////////////////////////////////////////////////
 
 const char *vpn::script_if_up ()

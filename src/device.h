@@ -25,6 +25,7 @@
 #include "gettext.h"
 
 #include "global.h"
+#include "util.h"
 
 struct net_packet {
   u32 len; // actually u16, but padding...
@@ -86,8 +87,6 @@ u8 &net_packet::operator[] (u16 offset) const
 {
   return ((data_packet *)this)->data_[offset];
 }
-
-typedef u8 mac[6];
 
 struct tap_packet : net_packet {
   mac dst;

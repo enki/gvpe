@@ -22,8 +22,10 @@
 #ifndef UTIL_H__
 #define UTIL_H__
 
+#include "gettext.h"
+
+#include "slog.h"
 #include "iom.h"
-#include "device.h"
 
 /*
  * check for an existing vped for this net, and write pid to pidfile
@@ -49,6 +51,8 @@ extern void make_names (void);
  * check wether the given path is an absolute pathname
  */
 #define ABSOLUTE_PATH(c) ((c)[0] == '/')
+
+typedef u8 mac[6];
 
 extern void id2mac (unsigned int id, void *m);
 

@@ -160,13 +160,13 @@ EXTRA_DIST = device-linux.C device-cygwin.C device-tincd.C callback.pl	\
    tincd/openbsd/device.c tincd/raw_socket/device.c tincd/solaris/device.c
 
 
-COMMON = global.h conf.h conf.C util.h util.C device.h device.C \
+COMMON = global.h conf.h conf.C util.h util.C \
          slog.h slog.C netcompat.h
 
 
 vped_SOURCES = vped.C hash_map.h vpn.h vpn.C vpn_tcp.C sockinfo.h sockinfo.C \
                lzf/lzf.h lzf/lzfP.h lzf/lzf_c.c lzf/lzf_d.c iom.h iom.C \
-               connection.h connection.C callback.h \
+               connection.h connection.C callback.h device.h device.C \
                $(COMMON)
 
 vped_LDADD = $(top_builddir)/lib/libvpe.a
@@ -193,15 +193,15 @@ bin_PROGRAMS = vpectrl$(EXEEXT)
 sbin_PROGRAMS = vped$(EXEEXT)
 PROGRAMS = $(bin_PROGRAMS) $(sbin_PROGRAMS)
 
-am__objects_1 = conf.$(OBJEXT) util.$(OBJEXT) device.$(OBJEXT) \
-	slog.$(OBJEXT)
+am__objects_1 = conf.$(OBJEXT) util.$(OBJEXT) slog.$(OBJEXT)
 am_vpectrl_OBJECTS = vpectrl.$(OBJEXT) $(am__objects_1)
 vpectrl_OBJECTS = $(am_vpectrl_OBJECTS)
 vpectrl_DEPENDENCIES = $(top_builddir)/lib/libvpe.a
 vpectrl_LDFLAGS =
 am_vped_OBJECTS = vped.$(OBJEXT) vpn.$(OBJEXT) vpn_tcp.$(OBJEXT) \
 	sockinfo.$(OBJEXT) lzf_c.$(OBJEXT) lzf_d.$(OBJEXT) \
-	iom.$(OBJEXT) connection.$(OBJEXT) $(am__objects_1)
+	iom.$(OBJEXT) connection.$(OBJEXT) device.$(OBJEXT) \
+	$(am__objects_1)
 vped_OBJECTS = $(am_vped_OBJECTS)
 vped_DEPENDENCIES = $(top_builddir)/lib/libvpe.a
 vped_LDFLAGS =
