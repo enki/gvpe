@@ -80,6 +80,8 @@ get_config_string(const char *key, char **res)
     *res = conf.ifname;
   else if (!strcmp (key, "Device"))
     *res = 0;
+  else if (!strcmp (key, "DeviceType"))
+    *res = "tap";
   else
     {
       slog (L_ERR, _("tincd layer asking for unknown config '%s'"), key);
@@ -94,6 +96,10 @@ get_config_string(const char *key, char **res)
 #if IF_linux
 # include "tincd/linux/device.c"
 const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME hw ether $MAC mtu $MTU"; }
+
+#elif IF_bsd
+# include "tincd/bsd/device.c"
+const char * tap_device::if_up () { return "/sbin/ifconfig $IFNAME ether $MAC mtu $MTU"; }
 
 #elif IF_freebsd
 # include "tincd/freebsd/device.c"

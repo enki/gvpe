@@ -1,14 +1,16 @@
 1.9
         - WARNING: this version checks the return value of if-up etc.
           scripts and exits on failure.
-        - run if-up/node-up etc. scripts via /bin/sh.
-        - interface initialization (mac, mtu) is now done automatically
-          in most configurations.
+        - IMPORTANT: run if-up/node-up etc. scripts via /bin/sh.
+        - IMPORTANT: interface initialization (MAC, MTU) is now done
+          automatically in most configurations.
         - make some DNS transport values configurable and document them.
         - improved OS specific information in gvpe.osdep(5).
-        - new low-level device native/darwin, that supports the tap
+        - new tap device type "native/darwin", that supports the tap
           driver available for darwin (thanks to matthew mead who tested
           it out with me in a long session). tincd/darwin is still available.
+        - new device type "tincd/bsd", which is a newer version of the
+          *bsd-drivers taken from tinc.
         - fixed a bug in relying on the order of global construction
           when tcp transport was enabled. The fix makes it use no
           cpu time unless it is in use, too.

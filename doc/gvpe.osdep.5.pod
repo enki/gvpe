@@ -76,6 +76,15 @@ at (no kidding :):
 The MAC address is dynamically being patched into packets and
 ARP-requests, so only IPv4 works with ARP on this platform.
 
+=head2 tincd/bsd
+
+TAP-device, maybe; migth work for many bsd variants.
+
+This driver is a newer version of the C<tincd/*bsd> drivers. It I<might>
+provide a TAP device, or might not work at all. You might try this
+interface type first, and, if it doesn't work, try one of the OS-specific
+drivers.
+
 =head2 tincd/freebsd
 
 TAP-device; part of the kernel (since 4.x, maybe earlier).

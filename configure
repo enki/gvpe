@@ -874,10 +874,10 @@ Optional Features:
                           "native/linux" "tincd/linux" "tincd/netbsd"
                           "tincd/freebsd" "tincd/openbsd" "native/darwin"
                           "tincd/darwin" "native/cygwin"; Untested
-                          combinations are: "tincd/solaris" "tincd/mingw"
-                          "tincd/raw_socket" "tincd/uml_socket"; Broken
-                          combinations are: "tincd/cygwin"; The default is to
-                          autodetect.
+                          combinations are: "tincd/bsd" "tincd/solaris"
+                          "tincd/mingw" "tincd/raw_socket" "tincd/uml_socket";
+                          Broken combinations are: "tincd/cygwin"; The default
+                          is to autodetect.
   --enable-static-daemon  enable statically linked daemon.
   --enable-rohc           enable robust header compression (rfc3095).
   --enable-icmp           enable icmp protocol support (default disabled).

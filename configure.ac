@@ -89,6 +89,7 @@ AC_ARG_ENABLE(iftype,
         "tincd/darwin"
         "native/cygwin";
      Untested combinations are:
+        "tincd/bsd"
         "tincd/solaris"
         "tincd/mingw"
         "tincd/raw_socket"
