@@ -52,12 +52,11 @@
 #define INITIAL_TIMEOUT     1.
 #define INITIAL_SYN_TIMEOUT 2.
 
-#define MIN_SEND_INTERVAL (1./1000.)
+#define MIN_SEND_INTERVAL 0.001
 #define MAX_SEND_INTERVAL 0.5 // optimistic?
 
 #define MAX_OUTSTANDING 400 // max. outstanding requests
 #define MAX_WINDOW      1000 // max. for MAX_OUTSTANDING
-#define MAX_RATE        100 // requests/s
 #define MAX_BACKLOG     (100*1024) // size of protocol backlog, must be > MAXSIZE
 
 #define MAX_DOMAIN_SIZE 220 // 255 is legal limit, but bind doesn't compress well
@@ -503,9 +502,11 @@ struct dns_snd
   struct dns_connection *dns;
   int seqno;
 
-  dns_snd (dns_connection *dns);
   void gen_stream_req (int seqno, byte_stream &stream);
   void gen_syn_req (const dns_cfg &cfg);
+
+  dns_snd (dns_connection *dns);
+  ~dns_snd ();
 };
 
 static u16 dns_id = 12098; // TODO: should be per-vpn
@@ -528,10 +529,16 @@ dns_snd::dns_snd (dns_connection *dns)
   timeout = 0;
   retry = 0;
   seqno = 0;
+  sent = NOW;
 
   pkt = new dns_packet;
 
   pkt->id = next_id ();
+}
+
+dns_snd::~dns_snd ()
+{
+  delete pkt;
 }
 
 static void append_domain (dns_packet &pkt, int &offs, const char *domain)
@@ -751,6 +758,8 @@ void dns_connection::receive_rep (dns_rcv *r)
             si.host = 0; si.port = 0; si.prot = PROT_DNSv4;
 
             vpn->recv_vpn_packet (pkt, si);
+
+            delete pkt;
           }
 
         // check for further packets
@@ -833,16 +842,11 @@ vpn::dnsv4_server (dns_packet &pkt)
 
                   pkt [offs++] = 0xc0; pkt [offs++] = 6 * 2; // refer to name in query section
 
-                  // type
                   int rtype = dns ? dns->cfg.rrtype : RR_TYPE_A;
-                  pkt [offs++] = rtype       >> 8; pkt [offs++] = rtype;
-
-                  // class
-                  pkt [offs++] = RR_CLASS_IN >> 8; pkt [offs++] = RR_CLASS_IN;
-
-                  // TTL
+                  pkt [offs++] = rtype       >> 8; pkt [offs++] = rtype;       // type
+                  pkt [offs++] = RR_CLASS_IN >> 8; pkt [offs++] = RR_CLASS_IN; // class
                   pkt [offs++] = 0; pkt [offs++] = 0;
-                  pkt [offs++] = 0; pkt [offs++] = dns ? dns->cfg.def_ttl : 0;
+                  pkt [offs++] = 0; pkt [offs++] = dns ? dns->cfg.def_ttl : 0; // TTL
 
                   int rdlen_offs = offs += 2;
 
@@ -1145,7 +1149,7 @@ dns_connection::time_cb (time_watcher &w)
               r->timeout = NOW + r->retry;
             }
         }
-      else if (r->timeout < next)
+      else
         NEXT (r->timeout);
     }
 
@@ -1179,11 +1183,7 @@ dns_connection::time_cb (time_watcher &w)
 
       if (send)
         {
-         printf ("send pkt\n");
           last_sent = NOW;
-
-          if (!send->retry)
-            send->sent = NOW;
 
           sendto (vpn->dnsv4_fd,
                   send->pkt->at (0), send->pkt->len, 0,
@@ -1193,7 +1193,11 @@ dns_connection::time_cb (time_watcher &w)
   else
     NEXT (last_sent + send_interval);
 
-  printf ("pi %f si %f N %f (%d:%d)\n", poll_interval, send_interval, next - NOW, vpn->dns_sndpq.size (), snddq.size ());
+  //printf ("pi %f si %f N %f (%d:%d)\n", poll_interval, send_interval, next - NOW, vpn->dns_sndpq.size (), snddq.size ());
+
+  // TODO: no idea when this happens, but when next < NOW, we have a problem
+  if (next < NOW + 0.0001)
+    next = NOW + 0.1;
 
   w.start (next);
 }
