@@ -634,14 +634,14 @@ vpn::reconnect_all ()
 
 connection *vpn::find_router ()
 {
-  u32 prio = 0;
+  u32 prio = 1;
   connection *router = 0;
 
   for (conns_vector::iterator i = conns.begin (); i != conns.end (); ++i)
     {
       connection *c = *i;
 
-      if (c->conf->routerprio > prio
+      if (c->conf->routerprio >= prio
           && c->connectmode == conf_node::C_ALWAYS // so we don't drop the connection if in use
           && c->ictx && c->octx
           && c->conf != THISNODE                   // redundant, since ictx==octx==0 always on thisnode
