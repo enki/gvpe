@@ -1,340 +1,400 @@
-.Dd 2002-04-09
-.Dt TINC.CONF 5
-.\" Manual page created by:
-.\" Ivo Timmermans <ivo@o2w.nl>
-.\" Guus Sliepen <guus@sliepen.eu.org>
-.Sh NAME
-.Nm tinc.conf
-.Nd tinc daemon configuration
-.Sh DESCRIPTION
-The files in the
-.Pa /etc/tinc/
-directory contain runtime and security information for the tinc daemon.
-.Sh NETWORKS
-It is perfectly ok for you to run more than one tinc daemon.
-However, in its default form,
-you will soon notice that you can't use two different configuration files without the
-.Fl c
-option.
-.Pp
-We have thought of another way of dealing with this: network names.
-This means that you call
-.Nm
-with the
-.Fl n
-option, which will assign a name to this daemon.
-.Pp
-The effect of this is that the daemon will set its configuration root to
-.Pa /etc/tinc/ Ns Ar NETNAME Ns Pa / ,
-where 
-.Ar NETNAME
-is your argument to the
-.Fl n
-option.
-You'll notice that messages appear in syslog as coming from
-.Nm tincd. Ns Ar NETNAME .
-.Pp
-However, it is not strictly necessary that you call tinc with the
-.Fl n
-option.
-In this case, the network name would just be empty,
-and it will be used as such.
-.Nm tinc
-now looks for files in
-.Pa /etc/tinc/ ,
-instead of 
-.Pa /etc/tinc/ Ns Ar NETNAME Ns Pa / ;
-the configuration file should be
-.Pa /etc/tinc/tinc.conf ,
-and the host configuration files are now expected to be in
-.Pa /etc/tinc/hosts/ .
-.Pp
-But it is highly recommended that you use this feature of
-.Nm tinc ,
-because it will be so much clearer whom your daemon talks to.
-Hence, we will assume that you use it.
-.Sh NAMES
-Each tinc daemon should have a name that is unique in the network which it will be part of.
-The name will be used by other tinc daemons for identification.
-The name has to be declared in the
-.Pa /etc/tinc/ Ns Ar NETNAME Ns Pa /tinc.conf
-file.
-.Pp
-To make things easy,
-choose something that will give unique and easy to remember names to your tinc daemon(s).
-You could try things like hostnames, owner surnames or location names.
-.Sh PUBLIC/PRIVATE KEYS
-You should use 
-.Ic tincd -K
-to generate public/private keypairs.
-It will generate two keys.
-The private key should be stored in a separate file
-.Pa /etc/tinc/ Ns Ar NETNAME Ns Pa /rsa_key.priv
-\-\- where 
-.Ar NETNAME
-stands for the network (see 
-.Sx NETWORKS )
-above.
-The public key should be stored in the host configuration file
-.Pa /etc/tinc/ Ns Ar NETNAME Ns Pa /hosts/ Ns Va NAME
-\-\- where
-.Va NAME
-stands for the name of the local tinc daemon (see
-.Sx NAMES ) .
-.Sh SERVER CONFIGURATION
-The server configuration of the daemon is done in the file
-.Pa /etc/tinc/ Ns Ar NETNAME Ns Pa /tinc.conf .
-This file consists of comments (lines started with a
-.Li # )
-or assignments in the form of:
-.Pp
-.Va Variable Li = Ar Value .
-.Pp
-The variable names are case insensitive, and any spaces, tabs,
-newlines and carriage returns are ignored.
-Note: it is not required that you put in the 
-.Li =
-sign, but doing so improves readability.
-If you leave it out, remember to replace it with at least one space character.
-.Pp
-Here are all valid variables, listed in alphabetical order.
-The default value is given between parentheses.
-.Bl -tag -width indent
-.It Va AddressFamily Li = ipv4 | ipv6 | any Po ipv4 Pc Bq experimental
-This option affects the address family of listening and outgoing sockets.
-If
-.Qq any
-is selected, then depending on the operating system both IPv4 and IPv6 or just
-IPv6 listening sockets will be created.
-.It Va BindToInterface Li = Ar interface Bq experimental
-If your computer has more than one network interface,
-.Nm tinc
-will by default listen on all of them for incoming connections.
-It is possible to bind only to a single interface with this variable.
-.Pp
-This option may not work on all platforms.
-.It Va ConnectTo Li = Ar name
-Specifies which other tinc daemon to connect to on startup.
-Multiple
-.Va ConnectTo
-variables may be specified,
-in which case outgoing connections to each specified tinc daemon are made.
-The names should be known to this tinc daemon
-(i.e., there should be a host configuration file for the name on the
-.Va ConnectTo
-line).
-.Pp
-If you don't specify a host with
-.Va ConnectTo ,
-.Nm tinc
-won't try to connect to other daemons at all,
-and will instead just listen for incoming connections.
-.It Va Device Li = Ar device Po /dev/tap0 or /dev/net/tun Pc
-The virtual network device to use.
-.Nm tinc
-will automatically detect what kind of device it is.
-Note that you can only use one device per daemon.
-The info pages of the tinc package contain more information
-about configuring the virtual network device.
-.It Va Hostnames Li = yes | no Pq no
-This option selects whether IP addresses (both real and on the VPN) should
-be resolved. Since DNS lookups are blocking, it might affect tinc's
-efficiency, even stopping the daemon for a few seconds every time it does
-a lookup if your DNS server is not responding.
-.Pp
-This does not affect resolving hostnames to IP addresses from the
-host configuration files.
-.It Va Interface Li = Ar interface
-Defines the name of the interface corresponding to the virtual network device.
-Depending on the operating system and the type of device this may or may not actually set the name.
-Currently this option only affects the Linux tun/tap device.
-.It Va KeyExpire Li = Ar period Pq 3600
-This option controls the period the encryption keys used to encrypt the data are valid.
-It is common practice to change keys at regular intervals to make it even harder for crackers,
-even though it is thought to be nearly impossible to crack a single key.
-.It Va MACExpire Li = Ar period Pq 600
-This option controls the amount of time MAC addresses are kept before they are removed.
-This only has effect when
-.Va Mode
-is set to
-.Qq switch .
-.It Va MaxTimeout Li = Ar period Pq 900
-This is the maximum delay before trying to reconnect to other tinc daemons.
-.It Va Mode Li = router | switch | hub Pq router
-This option selects the way packets are routed to other daemons.
-.Bl -tag -width indent
-.It router
-In this mode
-.Va Subnet
-variables in the host configuration files will be used to form a routing table.
-Only unicast packets of routable protocols (IPv4 and IPv6) are supported in this mode.
-.It switch
-In this mode the MAC addresses of the packets on the VPN will be used to
-dynamically create a routing table just like an Ethernet switch does.
-Unicast, multicast and broadcast packets of every protocol that runs over Ethernet are supported in this mode
-at the cost of frequent broadcast ARP requests and routing table updates.
-.It hub
-This mode is almost the same as the switch mode, but instead
-every packet will be broadcast to the other daemons
-while no routing table is managed.
-.El
-.It Va Name Li = Ar name Bq required
-This is the name which identifies this tinc daemon.
-It must be unique for the virtual private network this daemon will connect to.
-.It Va PingTimeout Li = Ar period Pq 60
-The number of seconds of inactivity that
-.Nm tinc
-will wait before sending a probe to the other end.
-If that other end doesn't answer within that same amount of time,
-the connection is terminated,
-and the others will be notified of this.
-.It Va PriorityInheritance Li = yes | no Po no Pc Bq experimental
-When this option is enabled the value of the TOS field of tunneled IPv4 packets
-will be inherited by the UDP packets that are sent out.
-.It Va PrivateKey Li = Ar key Bq obsolete
-The private RSA key of this tinc daemon.
-It will allow this tinc daemon to authenticate itself to other daemons.
-.It Va PrivateKeyFile Li = Ar filename Bq recommended
-The file in which the private RSA key of this tinc daemon resides.
-Note that there must be exactly one of
-.Va PrivateKey
-or
-.Va PrivateKeyFile
-specified in the configuration file.
-.El
-.Sh HOST CONFIGURATION FILES
-The host configuration files contain all information needed
-to establish a connection to those hosts.
-A host configuration file is also required for the local tinc daemon,
-it will use it to read in it's listen port, public key and subnets.
-.Pp
-The idea is that these files are portable.
-You can safely mail your own host configuration file to someone else.
-That other person can then copy it to his own hosts directory,
-and now his tinc daemon will be able to connect to your tinc daemon.
-Since host configuration files only contain public keys,
-no secrets are revealed by sending out this information.
-.Bl -tag -width indent
-.It Va Address Li = Ar address Bq recommended
-The IP address or hostname of this tinc daemon on the real network.
-This wil only be used when trying to make an outgoing connection to this tinc daemon.
-Multiple
-.Va Address
-variables can be specified, in which case each address will be tried until a working
-connection has been established.
-.It Va Cipher Li = Ar cipher Pq blowfish
-The symmetric cipher algorithm used to encrypt UDP packets.
-Any cipher supported by OpenSSL is recognised.
-Furthermore, specifying
-.Qq none
-will turn off packet encryption.
-.It Va Compression Li = Ar level Pq 0
-This option sets the level of compression used for UDP packets.
-Possible values are 0 (off), 1 (fast) and any integer up to 9 (best).
-.It Va Digest Li = Ar digest Pq sha1
-The digest algorithm used to authenticate UDP packets.
-Any digest supported by OpenSSL is recognised.
-Furthermore, specifying
-.Qq none
-will turn off packet authentication.
-.It Va IndirectData Li = yes | no Pq no
-This option specifies whether other tinc daemons besides the one you specified with
-.Va ConnectTo
-can make a direct connection to you.
-This is especially useful if you are behind a firewall
-and it is impossible to make a connection from the outside to your tinc daemon.
-Otherwise, it is best to leave this option out or set it to no.
-.It Va MACLength Li = Ar length Pq 4
-The length of the message authentication code used to authenticate UDP packets.
-Can be anything from
-.Qq 0
-up to the length of the digest produced by the digest algorithm.
-.It Va Port Li = Ar port Pq 655
-The port number on which this tinc daemon is listening for incoming connections.
-.It Va PublicKey Li = Ar key Bq obsolete
-The public RSA key of this tinc daemon.
-It will be used to cryptographically verify it's identity and to set up a secure connection.
-.It Va PublicKeyFile Li = Ar filename Bq obsolete
-The file in which the public RSA key of this tinc daemon resides.
-.Pp
-From version 1.0pre4 on
-.Nm tinc
-will store the public key directly into the host configuration file in PEM format,
-the above two options then are not necessary.
-Either the PEM format is used, or exactly one of the above two options must be specified
-in each host configuration file,
-if you want to be able to establish a connection with that host.
-.It Va Subnet Li = Ar address Ns Op Li / Ns Ar prefixlength
-The subnet which this tinc daemon will serve.
-.Nm tinc
-tries to look up which other daemon it should send a packet to by searching the appropriate subnet.
-If the packet matches a subnet,
-it will be sent to the daemon who has this subnet in his host configuration file.
-Multiple
-.Va Subnet
-variables can be specified.
-.Pp
-Subnets can either be single MAC, IPv4 or IPv6 addresses,
-in which case a subnet consisting of only that single address is assumed,
-or they can be a IPv4 or IPv6 network address with a prefixlength.
-Shorthand notations are not supported.
-For example, IPv4 subnets must be in a form like 192.168.1.0/24,
-where 192.168.1.0 is the network address and 24 is the number of bits set in the netmask.
-Note that subnets like 192.168.1.1/24 are invalid!
-Read a networking HOWTO/FAQ/guide if you don't understand this.
-IPv6 subnets are notated like fec0:0:0:1:0:0:0:0/64.
-MAC addresses are notated like 0:1a:2b:3c:4d:5e.
-.It Va TCPOnly Li = yes | no Pq no
-If this variable is set to yes,
-then the packets are tunnelled over the TCP connection instead of a UDP connection.
-This is especially useful for those who want to run a tinc daemon
-from behind a masquerading firewall,
-or if UDP packet routing is disabled somehow.
-Setting this options also implicitly sets IndirectData.
-.El
-.Sh FILES
-.Bl -tag -width indent
-.It Pa /etc/tinc/
-The top directory for configuration files.
-.It Pa /etc/tinc/ Ns Ar NETNAME Ns Pa /tinc.conf
-The default name of the server configuration file for net
-.Ar NETNAME .
-.It Pa /etc/tinc/ Ns Ar NETNAME Ns Pa /hosts/
-Host configuration files are kept in this directory.
-.It Pa /etc/tinc/ Ns Ar NETNAME Ns Pa /tinc-up
-If an executable file with this name exists,
-it will be executed right after the tinc daemon has connected to the virtual network device.
-It can be used to set up the corresponding network interface.
-.Pp
-The environment variable
-.Ev $NETNAME
-will be passed to the executable.
-If specified with the
-.Va Interface
-configuration variable,
-or if the virtual network device is a Linux tun/tap device,
-the environment variable
-.Ev $INTERFACE
-will be set to the name of the network interface.
-.It Pa /etc/tinc/ Ns Ar NETNAME Ns Pa /tinc-down
-If an executable file with this name exists,
-it will be executed right before the tinc daemon is going to close
-its connection to the virtual network device.
-The same environment variables will be passed as mentioned above.
-.El
-.Sh SEE ALSO
-.Xr tincd 8 ,
-.Pa http://tinc.nl.linux.org/ ,
-.Pa http://www.linuxdoc.org/LDP/nag2/ .
-.Pp
-The full documentation for
-.Nm tinc
-is maintained as a Texinfo manual.
-If the info and tinc programs are properly installed at your site, the command
-.Ic info tinc
-should give you access to the complete manual.
-.Pp
-.Nm tinc
-comes with ABSOLUTELY NO WARRANTY.
-This is free software, and you are welcome to redistribute it under certain conditions;
-see the file COPYING for details.
+.\" Automatically generated by Pod::Man v1.36, Pod::Parser v1.13
+.\"
+.\" Standard preamble:
+.\" ========================================================================
+.de Sh \" Subsection heading
+.br
+.if t .Sp
+.ne 5
+.PP
+\fB\\$1\fR
+.PP
+..
+.de Sp \" Vertical space (when we can't use .PP)
+.if t .sp .5v
+.if n .sp
+..
+.de Vb \" Begin verbatim text
+.ft CW
+.nf
+.ne \\$1
+..
+.de Ve \" End verbatim text
+.ft R
+.fi
+..
+.\" Set up some character translations and predefined strings.  \*(-- will
+.\" give an unbreakable dash, \*(PI will give pi, \*(L" will give a left
+.\" double quote, and \*(R" will give a right double quote.  | will give a
+.\" real vertical bar.  \*(C+ will give a nicer C++.  Capital omega is used to
+.\" do unbreakable dashes and therefore won't be available.  \*(C` and \*(C'
+.\" expand to `' in nroff, nothing in troff, for use with C<>.
+.tr \(*W-|\(bv\*(Tr
+.ds C+ C\v'-.1v'\h'-1p'\s-2+\h'-1p'+\s0\v'.1v'\h'-1p'
+.ie n \{\
+.    ds -- \(*W-
+.    ds PI pi
+.    if (\n(.H=4u)&(1m=24u) .ds -- \(*W\h'-12u'\(*W\h'-12u'-\" diablo 10 pitch
+.    if (\n(.H=4u)&(1m=20u) .ds -- \(*W\h'-12u'\(*W\h'-8u'-\"  diablo 12 pitch
+.    ds L" ""
+.    ds R" ""
+.    ds C` ""
+.    ds C' ""
+'br\}
+.el\{\
+.    ds -- \|\(em\|
+.    ds PI \(*p
+.    ds L" ``
+.    ds R" ''
+'br\}
+.\"
+.\" If the F register is turned on, we'll generate index entries on stderr for
+.\" titles (.TH), headers (.SH), subsections (.Sh), items (.Ip), and index
+.\" entries marked with X<> in POD.  Of course, you'll have to process the
+.\" output yourself in some meaningful fashion.
+.if \nF \{\
+.    de IX
+.    tm Index:\\$1\t\\n%\t"\\$2"
+..
+.    nr % 0
+.    rr F
+.\}
+.\"
+.\" For nroff, turn off justification.  Always turn off hyphenation; it makes
+.\" way too many mistakes in technical documents.
+.hy 0
+.if n .na
+.\"
+.\" Accent mark definitions (@(#)ms.acc 1.5 88/02/08 SMI; from UCB 4.2).
+.\" Fear.  Run.  Save yourself.  No user-serviceable parts.
+.    \" fudge factors for nroff and troff
+.if n \{\
+.    ds #H 0
+.    ds #V .8m
+.    ds #F .3m
+.    ds #[ \f1
+.    ds #] \fP
+.\}
+.if t \{\
+.    ds #H ((1u-(\\\\n(.fu%2u))*.13m)
+.    ds #V .6m
+.    ds #F 0
+.    ds #[ \&
+.    ds #] \&
+.\}
+.    \" simple accents for nroff and troff
+.if n \{\
+.    ds ' \&
+.    ds ` \&
+.    ds ^ \&
+.    ds , \&
+.    ds ~ ~
+.    ds /
+.\}
+.if t \{\
+.    ds ' \\k:\h'-(\\n(.wu*8/10-\*(#H)'\'\h"|\\n:u"
+.    ds ` \\k:\h'-(\\n(.wu*8/10-\*(#H)'\`\h'|\\n:u'
+.    ds ^ \\k:\h'-(\\n(.wu*10/11-\*(#H)'^\h'|\\n:u'
+.    ds , \\k:\h'-(\\n(.wu*8/10)',\h'|\\n:u'
+.    ds ~ \\k:\h'-(\\n(.wu-\*(#H-.1m)'~\h'|\\n:u'
+.    ds / \\k:\h'-(\\n(.wu*8/10-\*(#H)'\z\(sl\h'|\\n:u'
+.\}
+.    \" troff and (daisy-wheel) nroff accents
+.ds : \\k:\h'-(\\n(.wu*8/10-\*(#H+.1m+\*(#F)'\v'-\*(#V'\z.\h'.2m+\*(#F'.\h'|\\n:u'\v'\*(#V'
+.ds 8 \h'\*(#H'\(*b\h'-\*(#H'
+.ds o \\k:\h'-(\\n(.wu+\w'\(de'u-\*(#H)/2u'\v'-.3n'\*(#[\z\(de\v'.3n'\h'|\\n:u'\*(#]
+.ds d- \h'\*(#H'\(pd\h'-\w'~'u'\v'-.25m'\f2\(hy\fP\v'.25m'\h'-\*(#H'
+.ds D- D\\k:\h'-\w'D'u'\v'-.11m'\z\(hy\v'.11m'\h'|\\n:u'
+.ds th \*(#[\v'.3m'\s+1I\s-1\v'-.3m'\h'-(\w'I'u*2/3)'\s-1o\s+1\*(#]
+.ds Th \*(#[\s+2I\s-2\h'-\w'I'u*3/5'\v'-.3m'o\v'.3m'\*(#]
+.ds ae a\h'-(\w'a'u*4/10)'e
+.ds Ae A\h'-(\w'A'u*4/10)'E
+.    \" corrections for vroff
+.if v .ds ~ \\k:\h'-(\\n(.wu*9/10-\*(#H)'\s-2\u~\d\s+2\h'|\\n:u'
+.if v .ds ^ \\k:\h'-(\\n(.wu*10/11-\*(#H)'\v'-.4m'^\v'.4m'\h'|\\n:u'
+.    \" for low resolution devices (crt and lpr)
+.if \n(.H>23 .if \n(.V>19 \
+\{\
+.    ds : e
+.    ds 8 ss
+.    ds o a
+.    ds d- d\h'-1'\(ga
+.    ds D- D\h'-1'\(hy
+.    ds th \o'bp'
+.    ds Th \o'LP'
+.    ds ae ae
+.    ds Ae AE
+.\}
+.rm #[ #] #H #V #F C
+.\" ========================================================================
+.\"
+.IX Title "VPED.CONF 5"
+.TH VPED.CONF 5 "2003-03-23" "0.1" "Virtual Private Ethernet"
+.SH "NAME"
+vped.conf \- vpe daemon configuration file
+.SH "SYNOPSIS"
+.IX Header "SYNOPSIS"
+.Vb 3
+\&   udp-port = 407
+\&   mtu = 1492
+\&   ifname = vpn0
+.Ve
+.PP
+.Vb 2
+\&   node = branch1
+\&   hostname = 1.2.3.4
+.Ve
+.PP
+.Vb 3
+\&   node = branch2
+\&   hostname = www.example.net
+\&   udp-port = 500       # this host uses a different udp-port
+.Ve
+.PP
+.Vb 2
+\&   node = branch3
+\&   connect = ondemand
+.Ve
+.SH "DESCRIPTION"
+.IX Header "DESCRIPTION"
+The vpe config file consists of a series of lines that contain \f(CW\*(C`variable
+= value\*(C'\fR pairs. Empty lines are ignored. Comments start with a \f(CW\*(C`#\*(C'\fR and
+extend to the end of the line. They can be used on their own lines, or
+after any directives. Spaces are allowed before or after the \f(CW\*(C`=\*(C'\fR sign or
+after values, but not within the variable names or values themselves.
+.PP
+The only exception to the above is the \*(L"on\*(R" directive that can prefix any
+\&\f(CW\*(C`name = value\*(C'\fR setting and will only \*(L"execute\*(R" it on the named node, or
+(if the nodename starts with \*(L"!\*(R") on all nodes except the named one.
+.PP
+.Vb 3
+\& name = value
+\& on branch1 loglevel = noise
+\& on !branch2 connect = ondemand
+.Ve
+.PP
+All settings are executed \*(L"in order\*(R", that is, later settings of the same
+variable overwrite earlier ones.
+.SH "ANATOMY OF A CONFIG FILE"
+.IX Header "ANATOMY OF A CONFIG FILE"
+Usually, a config file starts with global settings (like the udp port to
+listen on), followed by node-specific sections that begin with a \f(CW\*(C`node =
+nickname\*(C'\fR line.
+.PP
+Every node that is part of the network must have a section that starts
+with \f(CW\*(C`node = nickname\*(C'\fR. The number and order of the nodes is important
+and must be the same on all hosts. It is not uncommon for node sections to
+be completely empty \- if the default values are right.
+.PP
+Node-specific settings can be used at any time. If used before the first
+node section they will set the default values for all following nodes.
+.SH "CONFIG VARIABLES"
+.IX Header "CONFIG VARIABLES"
+.Sh "\s-1GLOBAL\s0 \s-1SETTINGS\s0"
+.IX Subsection "GLOBAL SETTINGS"
+Global settings will affect the behaviour of the running vped daemon, that
+is, they are in some sense node-specific (config files can set different
+values on different nodes using \f(CW\*(C`on\*(C'\fR), but will affect the behaviour of
+the vped daemon and all connections it creates.
+.IP "loglevel = noise|trace|debug|info|notice|warn|error|critical" 4
+.IX Item "loglevel = noise|trace|debug|info|notice|warn|error|critical"
+Set the logging level. Connection established messages are logged at level
+\&\f(CW\*(C`info\*(C'\fR, notable errors are logged with \f(CW\*(C`error\*(C'\fR. Default is \f(CW\*(C`info\*(C'\fR.
+.IP "node = nickname" 4
+.IX Item "node = nickname"
+Not really a config setting but introduces a node section. The nickname is
+used to select the right configuration section and must be passed as an
+argument to the vped daemon.
+.IP "private-key = relative-path-to-key" 4
+.IX Item "private-key = relative-path-to-key"
+Sets the path (relative to the config directory) to the private key
+(default: \f(CW\*(C`hostkey\*(C'\fR). This is a printf format string so every \f(CW\*(C`%\*(C'\fR must
+be doubled. A single \f(CW%s\fR is replaced by the hostname, so you could
+use paths like \f(CW\*(C`hostkeys/%s\*(C'\fR to fetch the files at the location where
+\&\f(CW\*(C`vpectrl\*(C'\fR puts them.
+.Sp
+Since only the private key file of the current node is used and the
+private key file should be kept secret per-host to avoid spoofings, it is
+not recommended to use this feature.
+.IP "ifpersist = yes|no" 4
+.IX Item "ifpersist = yes|no"
+Should the tun/tap device be made persistent, that is, should the device
+stay up even when vped exits? Some versions of the tunnel device have
+problems sending packets when vped is restarted in persistent mode, so
+if the connections can be established but you cannot send packets from
+the local node, try to set this to \f(CW\*(C`off\*(C'\fR and do an ifconfig down on the
+device.
+.IP "ifname = devname" 4
+.IX Item "ifname = devname"
+Sets the tun interface name to the given name. The default is OS-specific
+and most probably something like \f(CW\*(C`tun0\*(C'\fR.
+.IP "rekey = seconds" 4
+.IX Item "rekey = seconds"
+Sets the rekeying interval in seconds (default: \f(CW3600\fR). Connections are
+reestablished every \f(CW\*(C`rekey\*(C'\fR seconds.
+.IP "keepalive = seconds" 4
+.IX Item "keepalive = seconds"
+Sets the keepalive probe interval in seconds (default: \f(CW60\fR). After this
+many seconds of inactivity the daemon will start to send keepalive probe
+every 5 seconds until it receives a reply from the other end.  If no reply
+is received within 30 seconds, the peer is considered unreachable and the
+connection is closed.
+.IP "mtu = bytes" 4
+.IX Item "mtu = bytes"
+Sets the maximum \s-1MTU\s0 that should be used on outgoing packets (basically
+the \s-1MTU\s0 of the outgoing interface) The daemon will automatically calculate
+maximum overhead (e.g. udp header size, encryption blocksize...) and pass
+this information to the \f(CW\*(C`if\-up\*(C'\fR script.
+.Sp
+Recommended values are 1500 (ethernet), 1492 (pppoe), 1472 (pptp).
+.Sp
+This value must be the minimum of the mtu values of all hosts.
+.IP "if-up = relative-or-absolute-path" 4
+.IX Item "if-up = relative-or-absolute-path"
+Sets the path of a script that should be called immediately after the
+network interface is initialized (but not neccessarily up). The following
+environment variables are passed to it (the values are just examples):
+.RS 4
+.IP "CONFBASE=/etc/vpe" 4
+.IX Item "CONFBASE=/etc/vpe"
+The configuration base directory.
+.IP "IFNAME=vpn0" 4
+.IX Item "IFNAME=vpn0"
+The interface to initialize.
+.IP "MTU=1436" 4
+.IX Item "MTU=1436"
+The \s-1MTU\s0 to set the interface to. You can use lower values (if done
+consistently on all hosts), but this is usually ineffective.
+.IP "MAC=fe:fd:80:00:00:01" 4
+.IX Item "MAC=fe:fd:80:00:00:01"
+The \s-1MAC\s0 address to set the interface to. The script *must* set the
+interface \s-1MAC\s0 to this value. On GNU/Linux you will most likely use this:
+.Sp
+.Vb 1
+\& ip link set $IFNAME address $MAC mtu $MTU up
+.Ve
+.IP "NODENAME=branch1" 4
+.IX Item "NODENAME=branch1"
+The nickname of the current node, as passed to the vped daemon.
+.IP "NODEID=1" 4
+.IX Item "NODEID=1"
+The numerical node id of the current node. The first node mentioned in the
+config file gets \s-1ID\s0 1, the second \s-1ID\s0 2 and so on.
+.RE
+.RS 4
+.Sp
+Here is a simple if-up script:
+.Sp
+.Vb 5
+\& #!/bin/sh
+\& ip link set $IFNAME address $MAC mtu $MTU up
+\& [ $NODENAME = branch1 ] && ip addr add 10.0.0.1 dev $IFNAME
+\& [ $NODENAME = branch2 ] && ip addr add 10.1.0.1 dev $IFNAME
+\& ip route add 10.0.0.0/8 dev $IFNAME
+.Ve
+.Sp
+More complicated examples (using routing to reduce arp traffic) can be
+found in the etc/ subdirectory of the distribution.
+.RE
+.IP "node-up = relative-or-absolute-path" 4
+.IX Item "node-up = relative-or-absolute-path"
+Sets a command (default: no script) that should be called whenever a
+connection is established (even on rekeying operations). In addition
+to the variables passed to \f(CW\*(C`if\-up\*(C'\fR scripts, the following environment
+variables will be set:
+.RS 4
+.IP "DESTNODE=branch2" 4
+.IX Item "DESTNODE=branch2"
+The name of the remote node.
+.IP "DESTID=2" 4
+.IX Item "DESTID=2"
+The node id of the remote node.
+.IP "DESTIP=188.13.66.8" 4
+.IX Item "DESTIP=188.13.66.8"
+The numerical \s-1IP\s0 address of the remote host (vped accepts connections from
+everywhere, as long as the other host can authenticate itself).
+.IP "DESTPORT=407 # deprecated" 4
+.IX Item "DESTPORT=407 # deprecated"
+The \s-1UDP\s0 port used by the other side.
+.IP "STATE=UP" 4
+.IX Item "STATE=UP"
+Node-up scripts get called with STATE=UP, node-down scripts get called
+with STATE=DOWN.
+.RE
+.RS 4
+.Sp
+Here is a nontrivial example that uses nsupdate to update the name => ip
+mapping in some dns zone:
+.Sp
+.Vb 6
+\& #!/bin/sh
+\& {
+\&   echo update delete $DESTNODE.lowttl.example.net. a
+\&   echo update add $DESTNODE.lowttl.example.net. 1 in a $DESTIP
+\&   echo   
+\& } | nsupdate -d -k $CONFBASE:key.example.net.
+.Ve
+.RE
+.IP "node-down = relative-or-absolute-path" 4
+.IX Item "node-down = relative-or-absolute-path"
+Same as \f(CW\*(C`node\-up\*(C'\fR, but gets called whenever a connection is lost.
+.Sh "\s-1NODE\s0 \s-1SPECIFIC\s0 \s-1SETTINGS\s0"
+.IX Subsection "NODE SPECIFIC SETTINGS"
+The following settings are node\-specific, that is, every node can have
+different settings, even within the same vped instance. Settings that are
+executed before the first node section set the defaults, settings that are
+executed within a node section only apply to the given node.
+.IP "udp-port = port-number" 4
+.IX Item "udp-port = port-number"
+Sets the port number used by the \s-1UDP\s0 protocol (default: \f(CW407\fR, not
+officially assigned by \s-1IANA\s0!).
+.IP "router-priority = positive-number" 4
+.IX Item "router-priority = positive-number"
+Sets the router priority of the given host (default: \f(CW0\fR, disabled). If
+some host tries to connect to another host without a hostname, it asks
+the router host for it's \s-1IP\s0 address. The router host is the one with the
+highest priority that is currently reachable. Make sure all clients always
+connect to the router hosts, otherwise conencting to them is impossible.
+.IP "connect = ondemand|never|always|disabled" 4
+.IX Item "connect = ondemand|never|always|disabled"
+Sets the connect mode (default: \f(CW\*(C`always\*(C'\fR). It can be \f(CW\*(C`always\*(C'\fR (always
+try to establish and keep a conenction to the given host), \f(CW\*(C`never\*(C'\fR
+(nevr initiate a connection to the given host, but accept connections),
+\&\f(CW\*(C`ondemand\*(C'\fR (try to establish a connection on the first packet sent, and
+take it down after the keepalive interval) or \f(CW\*(C`disabled\*(C'\fR (node is bad,
+don't talk to it).
+.IP "inherit-tos = yes|no" 4
+.IX Item "inherit-tos = yes|no"
+Wether to inherit the \s-1TOS\s0 settings of packets sent to the tunnel when
+sending packets to this node (default: \f(CW\*(C`yes\*(C'\fR). If set to \f(CW\*(C`yes\*(C'\fR then
+outgoing tunnel packets will have the same \s-1TOS\s0 setting as the packets sent
+to the tunnel device, which is usually what you want.
+.IP "compress = yes|no" 4
+.IX Item "compress = yes|no"
+Wether to compress data packets sent to this host (default: \f(CW\*(C`yes\*(C'\fR,
+compression is really cheap even on slow computers and has no size
+overhead at all).
+.SH "CONFIG DIRECTORY LAYOUT"
+.IX Header "CONFIG DIRECTORY LAYOUT"
+The default (or recommended) directory layout for the config directory is:
+.IP "vped.conf" 4
+.IX Item "vped.conf"
+The config file.
+.IP "if-up" 4
+.IX Item "if-up"
+The if-up script
+.IP "node\-up, node-down" 4
+.IX Item "node-up, node-down"
+If used the node up or node-down scripts.
+.IP "hostkey" 4
+.IX Item "hostkey"
+The private key (taken from \f(CW\*(C`hostkeys/nodename\*(C'\fR) of the current host.
+.IP "pubkey/nodename" 4
+.IX Item "pubkey/nodename"
+The public keys of the other nodes, one file per node.
+.SH "SEE ALSO"
+.IX Header "SEE ALSO"
+\&\fIvpe\fR\|(8), \fIvpectrl\fR\|(8).
+.SH "AUTHOR"
+.IX Header "AUTHOR"
+Marc Lehmann <vpe@plan9.de>
