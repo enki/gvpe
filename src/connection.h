@@ -138,8 +138,10 @@ struct connection
     crypto_ctx *octx, *ictx;
 
 #if ENABLE_DNS
-    vector<struct dns_rep *> dns_rcvq;
-    vector<struct dns_req *> dns_sndq;
+    sockinfo dns_si;
+
+    struct byte_stream *dns_rcvdq; int dns_rcvseq;
+    struct byte_stream *dns_snddq; int dns_sndseq;
 
     void dnsv4_cb (time_watcher &w); time_watcher dnsv4_tw;
     bool send_dnsv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
