@@ -36,8 +36,6 @@
  * length of the decoded packet is returned.
 */
 
-#include <asm/byteorder.h>
-
 #include "rohc.h"
 #include "decomp.h"
 
@@ -295,7 +293,7 @@ int iponly_decode_ir(
 		pro->counter = 0;
 
 		// Get and set SN
-		sn = ntohs(* ((__u16 *)s));
+		sn = ntohs(* ((u16 *)s));
 		d_lsb_init(&pro->sn, sn, -1);
 		d_ip_id_init(&pro->ip_id1, ntohs(active1->ip.id), sn);
 		s += 2;
@@ -764,7 +762,7 @@ static int decode_irdyn(
 		size = d_decode_dynamic_ip4(src2, &active2->ip, &active2->rnd, &active2->nbo);
 		src2 += size; payload_size -= size;
 	}
-	sn = ntohs(* ((__u16 *)src2));
+	sn = ntohs(* ((u16 *)src2));
 	d_lsb_init(&pro->sn, sn, -1);
 	d_ip_id_init(&pro->ip_id1,ntohs(active1->ip.id), sn);
 	syncronize(pro);
@@ -822,7 +820,7 @@ static int help_to_decode_uo0_and_uo1(
 	*sn = d_lsb_decode(&pro->sn, sn_bits, number_of_sn_bits);
 
  	if (active1->rnd) {
-		*id = ntohs(*((__u16 *)src));
+		*id = ntohs(*((u16 *)src));
 		src += 2; field_counter +=2; *payload_size -= 2;
 
 	} else {
@@ -836,7 +834,7 @@ static int help_to_decode_uo0_and_uo1(
 	if (pro->multiple_ip){
 
 		if (active2->rnd) {
-			*id2 = ntohs(*((__u16 *)src));
+			*id2 = ntohs(*((u16 *)src));
 
 			src +=2; field_counter +=2; *payload_size -= 2;
 		} else {
@@ -958,14 +956,14 @@ static int help_to_decode_uor2(
 
 	// Random IP ID ?
 	if (active1->rnd) {
-		*id = ntohs(*((__u16 *)src2));
+		*id = ntohs(*((u16 *)src2));
 		src2 +=2; field_counter +=2; *payload_size -= 2;
 	}
 
 	// Multiple ip-header
 
 	if (( pro->multiple_ip )&&( active2->rnd )){
-		*id2 = ntohs(*((__u16 *)src2));
+		*id2 = ntohs(*((u16 *)src2));
 		src2 +=2; field_counter +=2; *payload_size -= 2;
 	}
 
@@ -1082,11 +1080,11 @@ static int decode_extention3(
 	}
 	if (I) {
 		if(pro->multiple_ip){
-			active2->ip.id = *((__u16 *)fields);
+			active2->ip.id = *((u16 *)fields);
 			fields += 2;
 			*update_id2 = 1;
 		}else{
-			active1->ip.id = *((__u16 *)fields);
+			active1->ip.id = *((u16 *)fields);
 			fields += 2;
 			*ip_id_changed = 1;
 		}
@@ -1216,7 +1214,7 @@ static int decode_outer_header_flags(
 	*rnd = GET_BIT_1(flags);
 
 	if (GET_BIT_0(flags)) {
-		ip->id = *((__u16 *)fields);
+		ip->id = *((u16 *)fields);
 		fields += 2; size += 2;
 		*updated_id = 1;
 	}

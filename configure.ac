@@ -241,19 +241,16 @@ AC_ARG_ENABLE(rohc,
   echo
   echo "**********************************************************************"
   echo "**********************************************************************"
-  echo "**** --enable-rohc not yet implemented *******************************"
-  echo "**********************************************************************"
-  echo "**** uuh sorry, I am such an ass, but I didn't find any rfc3095 (ROHC)"
-  echo "**** implementation to be used in GPL code on the web."
-  echo "**** so this option is just a fake. Please implement one and send it"
-  echo "**** to me ;)"
-  echo "**********************************************************************"
-  echo "**********************************************************************"
+  echo "**** --enable-rohc is highly experimental, do not use ****************"
   echo "**********************************************************************"
   echo "**********************************************************************"
   echo
+  rohc=true
+  AC_DEFINE_UNQUOTED(ENABLE_ROHC, 1, [ROHC support])
   ]
 )
+
+AM_CONDITIONAL(ROHC, test x$rohc = xtrue)
 
 AC_ARG_ENABLE(icmp,
   [AC_HELP_STRING(--enable-icmp, [enable icmp protocol support (default disabled).])],
@@ -379,6 +376,7 @@ AC_SUBST(INCLUDES)
 
 AC_OUTPUT(Makefile po/Makefile.in
 src/Makefile
+src/rohc/Makefile
 doc/Makefile
 lib/Makefile
 m4/Makefile

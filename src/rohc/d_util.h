@@ -30,8 +30,6 @@
 #ifndef _D_UTIL_H
 #define _D_UTIL_H
 
-#include <linux/ip.h>
-#include <linux/udp.h>
 #include "rohc.h"
 
 #define OLD_REF_VALUE   0

@@ -337,17 +337,20 @@ vpndata_packet::setup (connection *conn, int dst, u8 *d, u32 l, u32 seqno)
 
 #if ENABLE_COMPRESSION
   u8 cdata[MAX_MTU];
-  u32 cl;
 
-  cl = lzf_compress (d, l, cdata + 2, (l - 2) & ~7);
-  if (cl)
+  if (conn->features & ENABLE_COMPRESSION)
     {
-      type = PT_DATA_COMPRESSED;
-      d = cdata;
-      l = cl + 2;
+      u32 cl = lzf_compress (d, l, cdata + 2, (l - 2) & ~7);
 
-      d[0] = cl >> 8;
-      d[1] = cl;
+      if (cl)
+        {
+          type = PT_DATA_COMPRESSED;
+          d = cdata;
+          l = cl + 2;
+
+          d[0] = cl >> 8;
+          d[1] = cl;
+        }
     }
 #endif
 
@@ -450,18 +453,15 @@ struct config_packet : vpn_packet
   // field comes before this data, so peers with other
   // hmacs simply will not work.
   u8 prot_major, prot_minor, randsize, hmaclen;
-  u8 flags, challengelen, pad2, pad3;
+  u8 flags, challengelen, features, pad3;
   u32 cipher_nid, digest_nid, hmac_nid;
-
-  const u8 curflags () const
-  {
-    return 0x80
-           | (ENABLE_COMPRESSION ? 0x01 : 0x00);
-  }
 
   void setup (ptype type, int dst);
   bool chk_config () const;
 };
+
+#define FEATURES ((ENABLE_COMPRESSION ? FEATURE_COMPRESSION : 0) \
+                | (ENABLE_ROHC        ? FEATURE_ROHC        : 0))
 
 void config_packet::setup (ptype type, int dst)
 {
@@ -469,8 +469,9 @@ void config_packet::setup (ptype type, int dst)
   prot_minor = PROTOCOL_MINOR;
   randsize = RAND_SIZE;
   hmaclen = HMACLENGTH;
-  flags = curflags ();
+  flags = ENABLE_COMPRESSION ? 0x81 : 0x80;
   challengelen = sizeof (rsachallenge);
+  features = FEATURES;
 
   cipher_nid = htonl (EVP_CIPHER_nid (CIPHER));
   digest_nid = htonl (EVP_MD_type (RSA_HASH));
@@ -488,8 +489,10 @@ bool config_packet::chk_config () const
     slog (L_WARN, _("rand size mismatch (remote %d <=> local %d)"), randsize, RAND_SIZE);
   else if (hmaclen != HMACLENGTH)
     slog (L_WARN, _("hmac length mismatch (remote %d <=> local %d)"), hmaclen, HMACLENGTH);
+#if 0 // this implementation should handle all flag settings
   else if (flags != curflags ())
     slog (L_WARN, _("flag mismatch (remote %x <=> local %x)"), flags, curflags ());
+#endif
   else if (challengelen != sizeof (rsachallenge))
     slog (L_WARN, _("challenge length mismatch (remote %d <=> local %d)"), challengelen, sizeof (rsachallenge));
   else if (cipher_nid != htonl (EVP_CIPHER_nid (CIPHER)))
@@ -918,7 +921,11 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                     octx   = new crypto_ctx (k, 1);
                     oseqno = ntohl (*(u32 *)&k[CHG_SEQNO]) & 0x7fffffff;
 
+                    // compatibility code, remove when no longer required
+                    if (p->flags & 1) p->features |= FEATURE_COMPRESSION;
+
                     conf->protocols = p->protocols;
+                    features = p->features & FEATURES;
 
                     send_auth_response (rsi, p->id, k);
 

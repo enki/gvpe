@@ -111,6 +111,12 @@ class pkt_queue
     ~pkt_queue ();
   };
 
+enum
+  {
+    FEATURE_COMPRESSION = 0x01,
+    FEATURE_ROHC        = 0x02,
+  };
+
 struct connection
   {
     conf_node *conf;
@@ -125,6 +131,7 @@ struct connection
     sliding_window iseqno;
 
     u8 protocol;
+    u8 features;
 
     pkt_queue data_queue, vpn_queue;
 

@@ -191,9 +191,9 @@ int d_decode_static_ip4(const unsigned char *data, struct iphdr * dest)
 	data++;
 	dest->protocol = GET_BIT_0_7(data);
 	data++;
-	dest->saddr = *((__u32 *)data);
+	dest->saddr = *((u32 *)data);
 	data += 4;
-	dest->daddr = *((__u32 *)data);
+	dest->daddr = *((u32 *)data);
 	return 10;
 }
 
@@ -201,9 +201,9 @@ int d_decode_static_ip4(const unsigned char *data, struct iphdr * dest)
 // Return the number of used bytes
 int d_decode_static_udp(const unsigned char *data, struct udphdr * dest)
 {
-        dest-> source = *((__u16 *)data);
+        dest-> source = *((u16 *)data);
 	data += 2;
-	dest-> dest = *((__u16 *)data);
+	dest-> dest = *((u16 *)data);
 	return 4;
 }
 
@@ -216,7 +216,7 @@ int d_decode_dynamic_ip4(const unsigned char *data, struct iphdr * dest,
 	data++;
 	dest->ttl = GET_BIT_0_7(data);
 	data++;
-	dest-> id = *((__u16 *)data);
+	dest-> id = *((u16 *)data);
 	data += 2;
 	if(GET_BIT_7(data)){
 		dest->frag_off = htons(0x4000);
@@ -233,7 +233,7 @@ int d_decode_dynamic_ip4(const unsigned char *data, struct iphdr * dest,
 // Return the number of used bytes
 int d_decode_dynamic_udp(const unsigned char *data, struct udphdr * dest)
 {
-        dest-> check = *((__u16 *)data);
+        dest-> check = *((u16 *)data);
 	return 2;
 }
 
@@ -241,9 +241,9 @@ int d_decode_dynamic_udp(const unsigned char *data, struct udphdr * dest)
 // Return the number of used bytes
 int d_decode_dynamic_udp_lite(const unsigned char *data, struct udphdr * dest)
 {
-	dest-> len = *((__u16 *)data);
+	dest-> len = *((u16 *)data);
 	data += 2;
-        dest-> check = *((__u16 *)data);
+        dest-> check = *((u16 *)data);
 	return 4;
 }
 

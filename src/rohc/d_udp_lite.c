@@ -30,11 +30,10 @@
 
 // The UDP-lite profile in the decompressor
 
-#include <asm/byteorder.h>
-
 #include "rohc.h"
 #include "decomp.h"
 
+#include "d_ip.h"
 #include "d_udp_lite.h"
 #include "d_util.h"
 #include "comp.h"
@@ -321,7 +320,7 @@ int udp_lite_decode_ir(
 		rohc_debugf(2,"(decomp) coverage inferred  %d\n",pro->coverage_inferred);
 
 		// Get and set SN
-		sn = ntohs(* ((__u16 *)s));
+		sn = ntohs(* ((u16 *)s));
 		d_lsb_init(&pro->sn, sn, -1);
 		d_ip_id_init(&pro->ip_id1, ntohs(active1->ip.id), sn);
 		s += 2;
@@ -840,7 +839,7 @@ static int udp_lite_decode_irdyn(
 	//debug
 	rohc_debugf(2,"(decomp) coverage present  %d\n",pro->coverage_present);
 	rohc_debugf(2,"(decomp) coverage inferred  %d\n",pro->coverage_inferred);
-	sn = ntohs(* ((__u16 *)src2));
+	sn = ntohs(* ((u16 *)src2));
 	d_lsb_init(&pro->sn, sn, -1);
 	d_ip_id_init(&pro->ip_id1,ntohs(active1->ip.id), sn);
 
@@ -904,7 +903,7 @@ static int udp_lite_do_decode_uo0_and_uo1(
 	*sn = d_lsb_decode(&pro->sn, sn_bits, number_of_sn_bits);
 
  	if (active1->rnd) {
-		*id = ntohs(*((__u16 *)src));
+		*id = ntohs(*((u16 *)src));
 		src += 2; field_counter +=2; *payload_size -= 2;
 
 	} else {
@@ -918,7 +917,7 @@ static int udp_lite_do_decode_uo0_and_uo1(
 	if (pro->multiple_ip){
 
 		if (active2->rnd) {
-			*id2 = ntohs(*((__u16 *)src));
+			*id2 = ntohs(*((u16 *)src));
 
 			src +=2; field_counter +=2; *payload_size -= 2;
 		} else {
@@ -928,9 +927,9 @@ static int udp_lite_do_decode_uo0_and_uo1(
 
 	// coverage checksum field
 	if ((pro->coverage_present)||(pro->ce_packet)){
-		coverage = ntohs(* ((__u16 *)src));
+		coverage = ntohs(* ((u16 *)src));
 		if(pro->ce_packet == PACKAGE_CE_OFF){
-			active1->udp.len = * ((__u16 *)src);
+			active1->udp.len = * ((u16 *)src);
 			pro->coverage_inferred = ((*payload_size - 4 + sizeof(struct udphdr)) == ntohs(active1->udp.len));
 		}
 		src += 2; field_counter +=2; *payload_size -= 2;
@@ -941,7 +940,7 @@ static int udp_lite_do_decode_uo0_and_uo1(
 	rohc_debugf(2,"(decomp) coverage inferred  %d\n",pro->coverage_inferred);
 
 	//checksum
-	checksum = *((__u16 *)src);
+	checksum = *((u16 *)src);
 	src +=2; field_counter +=2; *payload_size -= 2;
 
 	rohc_debugf(2,"(decomp) udp checksum %x payload size = %d\n",checksum,*payload_size);
@@ -1061,7 +1060,7 @@ static int udp_lite_do_decode_uor2(
 
 	// Random IP ID ?
 	if (active1->rnd) {
-		*id = ntohs(*((__u16 *)src2));
+		*id = ntohs(*((u16 *)src2));
 		src2 +=2; field_counter +=2; *payload_size -= 2;
 	}
 
@@ -1069,16 +1068,16 @@ static int udp_lite_do_decode_uor2(
 
 	if (( pro->multiple_ip )&&( active2->rnd )){
 
-		*id2 = ntohs(*((__u16 *)src2));
+		*id2 = ntohs(*((u16 *)src2));
 		src2 +=2; field_counter +=2; *payload_size -= 2;
 	}
 
 
 	// coverage checksum field
 	if ((pro->coverage_present)||(pro->ce_packet)){
-		coverage = ntohs(* ((__u16 *)src2));
+		coverage = ntohs(* ((u16 *)src2));
 		if(pro->ce_packet == PACKAGE_CE_OFF){
-			active1->udp.len = * ((__u16 *)src2);
+			active1->udp.len = * ((u16 *)src2);
 			pro->coverage_inferred = ((*payload_size - 4 + sizeof(struct udphdr)) == ntohs(active1->udp.len));
 
 		}
@@ -1091,7 +1090,7 @@ static int udp_lite_do_decode_uor2(
 	rohc_debugf(2,"(decomp) coverage inferred  %d\n",pro->coverage_inferred);
 
 
-	checksum = *((__u16 *)src2);
+	checksum = *((u16 *)src2);
 	src2 +=2; field_counter +=2; *payload_size -= 2;
 
 
@@ -1209,11 +1208,11 @@ static int udp_lite_decode_extention3(
 	}
 	if (I) {
 		if(pro->multiple_ip){
-			active2->ip.id = *((__u16 *)fields);
+			active2->ip.id = *((u16 *)fields);
 			fields += 2;
 			*update_id2 = 1;
 		}else{
-			active1->ip.id = *((__u16 *)fields);
+			active1->ip.id = *((u16 *)fields);
 			fields += 2;
 			*ip_id_changed = 1;
 		}
@@ -1343,7 +1342,7 @@ static int udp_lite_decode_outer_header_flags(
 	*rnd = GET_BIT_1(flags);
 
 	if (GET_BIT_0(flags)) {
-		ip->id = *((__u16 *)fields);
+		ip->id = *((u16 *)fields);
 		fields += 2; size += 2;
 		*updated_id = 1;
 	}

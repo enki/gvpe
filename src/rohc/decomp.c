@@ -34,6 +34,9 @@
 #include "d_uncompressed.h"
 #include "d_udp_lite.h"
 #include "feedback.h"
+
+#include "c_util.h"
+
 //----------------------------------------------------------------------------------------------------------------------------------
 extern struct s_profile d_udplite_profile, d_udp_profile, d_ip_profile, d_uncomp_profile;
 //----------------------------------------------------------------------------------------------------------------------------------

@@ -30,7 +30,6 @@
 #ifndef _D_IP_H
 #define _D_IP_H
 
-#include <linux/ip.h>
 #include "rohc.h"
 #include "decomp.h"
 #include "d_util.h"

@@ -1,5 +1,7 @@
 ## Produce this file with automake to get Makefile.in
 
+SUBDIRS = rohc
+
 sbin_PROGRAMS = vped
 bin_PROGRAMS = vpectrl
 
@@ -14,6 +16,12 @@ INCLUDES = @INCLUDES@ -I$(top_builddir) -I$(top_srcdir)/lib
 
 LIBS = @LIBS@ @LIBINTL@
 
+if ROHC
+ROHCLIB = rohc/librohc.a
+else
+ROHCLIB =
+endif
+
 COMMON = global.h conf.h conf.C util.h util.C \
          slog.h slog.C netcompat.h
 
@@ -21,7 +29,7 @@ vped_SOURCES = vped.C hash_map.h vpn.h vpn.C vpn_tcp.C sockinfo.h sockinfo.C \
                lzf/lzf.h lzf/lzfP.h iom.h iom_conf.h iom.C \
                connection.h connection.C callback.h device.h device.C \
                $(COMMON)
-vped_LDADD = $(top_builddir)/lib/libvpe.a
+vped_LDADD = $(top_builddir)/lib/libvpe.a $(ROHCLIB)
 vpectrl_SOURCES = vpectrl.C \
                   $(COMMON)
 vpectrl_LDADD = $(top_builddir)/lib/libvpe.a

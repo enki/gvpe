@@ -15,8 +15,9 @@ mkdir -p $TARGET
 
 BASE=/tmp
 MAKE=make
+ARCH="$1"
 
-case "$1" in
+case "$ARCH" in
    gnu-linux )
       HOST=root@localhost
       CONFIGURE="$CONFIGURE --enable-icmp"
@@ -25,20 +26,24 @@ case "$1" in
       HOST=root@192.168.108.4
       CONFIGURE="$CONFIGURE --enable-icmp"
       MAKE=gmake
+      ARCH="$ARCH-x86"
    ;;
    openbsd )
       HOST=root@192.168.108.6
       CONFIGURE="$CONFIGURE --enable-icmp"
+      ARCH="$ARCH-x86"
    ;;
    netbsd )
       HOST=root@192.168.108.5
       CONFIGURE="$CONFIGURE --enable-icmp --with-openssl-include=/usr/local/ssl/include --with-openssl-lib=/usr/local/ssl/lib"
+      ARCH="$ARCH-x86"
    ;;
    darwin )
       HOST=root@imac.laendle
       BASE=/Users/schmorp
       CONFIGURE="$CONFIGURE --enable-icmp --with-openssl-include=$BASE/include --with-libintl-prefix=/sw"
       MAKE="make LIBS='$BASE/lib/libcrypto.a -L/sw/lib -lintl'"
+      ARCH="$ARCH-x86"
    ;;
    cygwin )
       HOST=vm
@@ -56,6 +61,7 @@ rm -rf $TARGET/vpe
 echo "$CONFIGURE" >$TARGET/configure
 
 ssh $HOST "
+   set -x
    cd $BASE/vpe || exit 1;
    ./configure $CONFIGURE || exit 2;
    rm -rf $BASE/dist;
@@ -83,5 +89,6 @@ rsync -avzPessh $HOST:$BASE/dist/. $TARGET/opt/. --delete
 )
 
 mkdir -p bindist
-tar cCf $TARGET - . | gzip -9 >bindist/vpe-$VERSION-$1.tar.gz
+tar cCf $TARGET - . | gzip -9 >bindist/vpe-$VERSION-$ARCH.tar.gz
+rm -rf $TARGET
 

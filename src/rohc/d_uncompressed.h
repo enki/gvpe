@@ -30,7 +30,6 @@
 #ifndef _D_UNCOMPRESSED_H
 #define _D_UNCOMPRESSED_H
 
-//#include <linux/ip.h>
 #include "rohc.h"
 #include "decomp.h"
 #include "d_util.h"

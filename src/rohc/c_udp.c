@@ -31,8 +31,6 @@
 Implementation of the udp profile (compressor)
 */
 
-#include <linux/ip.h>
-
 #include "rohc.h"
 #include "comp.h"
 #include "c_util.h"

@@ -32,8 +32,6 @@
  * Description: Implementation of the IP profile (compressor-side).
  */
 
-#include <linux/ip.h>
-
 #include "rohc.h"
 #include "comp.h"
 #include "c_util.h"

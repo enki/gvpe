@@ -30,6 +30,14 @@
 #ifndef _ROHC_H
 #define _ROHC_H
 
+#include <netinet/ip.h>
+#include <netinet/udp.h>
+
+#include <inttypes.h>
+
+uint16_t typedef u16;
+uint32_t typedef u32;
+
 // ROHC_DEBUG_LEVEL determines the level of output produced by ROHC module
 // 0 == error messages only (useable in kernel module)
 // 1 == a few informative messages also
@@ -141,7 +149,7 @@ typedef unsigned char boolean;
 #define PACKAGE_CE		6
 #define PACKAGE_CE_OFF		7
 
-// DO NOT CHANGE THIS NUMBERS!
+// DO NOT CHANGE THESE NUMBERS!
 #define PACKAGE_EXT_0		0
 #define PACKAGE_EXT_1		1
 #define PACKAGE_EXT_2		2
@@ -157,30 +165,29 @@ typedef unsigned char boolean;
 #define WEIGHT_OLD            	1
 #define WEIGHT_NEW		1
 
-#ifdef USER_SPACE
-	#include <stdio.h>
-	#include <stdlib.h>
-	#include <time.h>
-	#include <sys/time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <sys/time.h>
 
-	#define KERN_DEBUG	stderr
-	#define GFP_KERNEL	0
-	#define GFP_ATOMIC	1
-	#define printk		printf
-	#define kfree		free
+#define KERN_DEBUG	stderr
+#define GFP_KERNEL	0
+#define GFP_ATOMIC	1
+#define printk		printf
+#define kfree		free
 
-        static inline void * kmalloc(int size, int type) {
-		if (type != GFP_ATOMIC) {
-		  printf("wrong kmalloc type..\n");
-		  exit(0);
-		}
-		return malloc(size);
-	}
+static inline void * kmalloc(int size, int type) {
+        if (type != GFP_ATOMIC) {
+          printf("wrong kmalloc type..\n");
+          exit(0);
+        }
+        return malloc(size);
+}
 
-	#include <stdarg.h>
-	#define rohc_debugf(level, format...) if (level<=ROHC_DEBUG_LEVEL) { printf(format); } else
+#include <stdarg.h>
+#define rohc_debugf(level, format...) if (level<=ROHC_DEBUG_LEVEL) { printf(format); } else
 
-
+#if defined(__i386__) && defined(__GNUC__)
 /*
  *      This is a version of ip_compute_csum() optimized for IP headers,
  *      which always checksum on 4 octet boundaries.
@@ -218,43 +225,23 @@ static inline unsigned short ip_fast_csum(unsigned char * iph,
         : "1" (iph), "2" (ihl));
         return(sum);
 }
+#else
+# error "non-asm version of ip_fast_csum is required but not yet coded"
+#endif
 
-	static inline int get_microseconds(void) {
-		struct timeval tv;
-		gettimeofday(&tv, NULL);
-		return tv.tv_sec * 1000000 + tv.tv_usec;
-	}
+static inline int get_microseconds(void) {
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+        return tv.tv_sec * 1000000 + tv.tv_usec;
+}
 
 
-	static inline int get_milliseconds(void) {
-		struct timeval tv;
-		gettimeofday(&tv, NULL);
-		return tv.tv_sec * 1000 + tv.tv_usec/1000;
-	}
+static inline int get_milliseconds(void) {
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+        return tv.tv_sec * 1000 + tv.tv_usec/1000;
+}
 
-     
-
-	#define simple_strtol strtol
-
-// End of userspace defines..
-#else 
-// Start of kernel mode defines..
-
-	#define rohc_debugf(level, format...) if (level<=ROHC_DEBUG_LEVEL) { printk(KERN_INFO format); } else
-
-	static inline int get_microseconds(void) {
-		struct timeval tv;
-		do_gettimeofday(&tv);
-		return tv.tv_sec * 1000000 + tv.tv_usec;
-	}
-
-	static inline int get_milliseconds(void) {
-		struct timeval tv;
-		do_gettimeofday(&tv);
-		return tv.tv_sec * 1000 + tv.tv_usec/1000;
-	}
-
-#endif // End of kernelsapce defines
-
+#define simple_strtol strtol
 
 #endif

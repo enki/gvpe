@@ -30,8 +30,6 @@
 #ifndef _D_UDP_LITE_H
 #define _D_UDP_LITE_H
 
-#include <linux/ip.h>
-#include <linux/udp.h>
 #include "rohc.h"
 #include "decomp.h"
 #include "d_util.h"

@@ -39,8 +39,6 @@
 #include "decomp.h"
 #include "d_util.h"
 
-#include "proc_rohc.h"
-
 ///////////////////////////////////////////////////////////////////////
 // Profile definitions and variables
 
