@@ -788,7 +788,7 @@ vpn::dnsv4_server (dns_packet &pkt)
       pkt.nscount = 0; // should be self, as other nameservers reply like this
       pkt.arcount = 0; // a record for self, as other nameservers reply like this
 
-      pkt.flags = htons (DEFAULT_SERVER_FLAGS | FLAG_RCODE_NXDOMAIN);
+      pkt.flags = htons (DEFAULT_SERVER_FLAGS | FLAG_RCODE_SERVFAIL);
 
       int dlen = strlen (THISNODE->domain);
 
