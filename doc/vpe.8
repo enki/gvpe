@@ -129,7 +129,7 @@
 .\" ========================================================================
 .\"
 .IX Title "VPE 8"
-.TH VPE 8 "2003-03-23" "0.1" "Virtual Private Ethernet"
+.TH VPE 8 "2003-03-24" "0.1" "Virtual Private Ethernet"
 .SH "NAME"
 vpe \- Overview of the virtual private ethernet suite.
 .SH "DESCRIPTION"
@@ -167,41 +167,47 @@ fact, from a specific host.
 .SH "PROGRAMS"
 .IX Header "PROGRAMS"
 Vpe comes with two programs: one daemon (\f(CW\*(C`vped\*(C'\fR) and one control program
-\&\f(CW\*(C`vpectrl\*(C'\fR).
+(\f(CW\*(C`vpectrl\*(C'\fR).
 .IP "vpectrl" 4
 .IX Item "vpectrl"
-Is used to generate the keys and give an overview of the configuration.
+Is used to generate the keys, check and give an overview of of the
+configuration and contorl the daemon (restarting etc.).
 .IP "vped" 4
 .IX Item "vped"
 Is the daemon used to establish and maintain conenctions to the other
 network members. It should be run on the gateway machine.
-.SH "CONFIGURING VPE"
-.IX Header "CONFIGURING VPE"
-Here are a few recipes for configuring your vpe:
+.SH "COMPILETIME CONFIGURATION"
+.IX Header "COMPILETIME CONFIGURATION"
+Here are a few recipes for compiling your vpe:
 .Sh "\s-1AS\s0 \s-1LOW\s0 \s-1PACKET\s0 \s-1OVERHEAD\s0 \s-1AS\s0 \s-1POSSIBLE\s0"
 .IX Subsection "AS LOW PACKET OVERHEAD AS POSSIBLE"
 .Vb 1
-\& ./configure --enable-hmac-length=4 --enable-rand-length=0
+\&   ./configure --enable-hmac-length=4 --enable-rand-length=0
 .Ve
 .PP
-Minimize the header overhead of \s-1VPN\s0 packets.
+Minimize the header overhead of \s-1VPN\s0 packets (the above will result in only
+4 bytes of overhead over the raw ethernet frame).
 .Sh "\s-1MINIMIZE\s0 \s-1CPU\s0 \s-1TIME\s0 \s-1REQUIRED\s0"
 .IX Subsection "MINIMIZE CPU TIME REQUIRED"
 .Vb 1
-\& ./configure --enable-cipher=bf --enable-digest=md4
+\&   ./configure --enable-cipher=bf --enable-digest=md4
 .Ve
 .PP
-Use the fastest cipher and digest algorithms.
+Use the fastest cipher and digest algorithms currently available in vpe.
 .Sh "\s-1MAXIMIZE\s0 \s-1SECURITY\s0"
 .IX Subsection "MAXIMIZE SECURITY"
 .Vb 1
-\& ./configure --enable-hmac-length=16 --enable-rand-length=8 --enable-digest=sha1
+\&   ./configure --enable-hmac-length=16 --enable-rand-length=8 --enable-digest=sha1
 .Ve
 .PP
+This uses a 16 byte \s-1HMAC\s0 checksum to authenticate packets (I guess 8\-12
+would also be pretty secure ;) and will additionally prefix each packet
+with 8 bytes of random data.
+.PP
 In general, remember that \s-1AES\-128\s0 seems to be more secure and faster than
-\&\s-1AES\-192\s0 or \s-1AES\-256\s0, more randomness and longer hmac is more secure, \s-1MD4\s0 is
-a fast digest, \s-1SHA1\s0 or \s-1RIPEMD160\s0 are better, and Blowfish is a fast and
-so-far quite secure cipher.
+\&\s-1AES\-192\s0 or \s-1AES\-256\s0, more randomness helps against sniffing and a longer
+\&\s-1HMAC\s0 helps against spoofing. \s-1MD4\s0 is a fast digest, \s-1SHA1\s0 or \s-1RIPEMD160\s0 are
+better, and Blowfish is a fast cipher (and also quite secure).
 .SH "HOW TO SET UP A SIMPLE VPN"
 .IX Header "HOW TO SET UP A SIMPLE VPN"
 In this section I will describe how to get a simple \s-1VPN\s0 consisting of
@@ -215,24 +221,24 @@ configured vpe, and can be overwritten using the \f(CW\*(C`\-c\*(C'\fR commandli
 Put the following lines into \f(CW\*(C`/etc/vpe/vped.conf\*(C'\fR:
 .PP
 .Vb 3
-\& udp-port = 50000 # the external port to listen on (configure your firewall)
-\& mtu = 1400       # minimum MTU of all outgoing interfaces on all hosts
-\& ifname = vpn0    # the local network device name
+\&   udp-port = 50000 # the external port to listen on (configure your firewall)
+\&   mtu = 1400       # minimum MTU of all outgoing interfaces on all hosts
+\&   ifname = vpn0    # the local network device name
 .Ve
 .PP
 .Vb 2
-\& node = first     # just a nickname
-\& hostname = first.example.net # the DNS name or IP address of the host
+\&   node = first     # just a nickname
+\&   hostname = first.example.net # the DNS name or IP address of the host
 .Ve
 .PP
 .Vb 2
-\& node = second
-\& hostname = 133.55.82.9
+\&   node = second
+\&   hostname = 133.55.82.9
 .Ve
 .PP
 .Vb 2
-\& node = third
-\& hostname = third.example.net
+\&   node = third
+\&   hostname = third.example.net
 .Ve
 .PP
 The only other file neccessary if the \f(CW\*(C`if\-up\*(C'\fR script that initializes the
@@ -240,12 +246,12 @@ local ethernet interface. Put the following lines into \f(CW\*(C`/etc/vpe/if\-up
 and make it execute (\f(CW\*(C`chmod 755 /etc/vpe/if\-up\*(C'\fR):
 .PP
 .Vb 6
-\& #!/bin/sh
-\& ip link set $IFNAME address $MAC mtu $MTU up
-\& [ $NODENAME = first  ] && ip addr add 10.0.1.1 dev $IFNAME
-\& [ $NODENAME = second ] && ip addr add 10.0.2.1 dev $IFNAME
-\& [ $NODENAME = third  ] && ip addr add 10.0.3.1 dev $IFNAME
-\& ip route add 10.0.0.0/16 dev $IFNAME
+\&   #!/bin/sh
+\&   ip link set $IFNAME address $MAC mtu $MTU up
+\&   [ $NODENAME = first  ] && ip addr add 10.0.1.1 dev $IFNAME
+\&   [ $NODENAME = second ] && ip addr add 10.0.2.1 dev $IFNAME
+\&   [ $NODENAME = third  ] && ip addr add 10.0.3.1 dev $IFNAME
+\&   ip route add 10.0.0.0/16 dev $IFNAME
 .Ve
 .PP
 This script will give each node a different \s-1IP\s0 address in the \f(CW\*(C`10.0/16\*(C'\fR
@@ -263,7 +269,7 @@ Run the following command to generate all key pairs (that might take a
 while):
 .PP
 .Vb 1
-\& vpectrl -c /etc/vpe -g
+\&   vpectrl -c /etc/vpe -g
 .Ve
 .PP
 This command will put the public keys into \f(CW\*(C`/etc/vpe/pubkeys/\f(CInodename\f(CW\*(C'\fR and the private keys into \f(CW\*(C`/etc/vpe/hostkeys/\f(CInodename\f(CW\*(C'\fR.
@@ -275,17 +281,17 @@ private keys should not be distributed. The example uses rsync-over-ssh
 First all the config files without the hostkeys should be distributed:
 .PP
 .Vb 3
-\& rsync -avzessh /etc/vpe first.example.net:/etc/. --exclude hostkeys
-\& rsync -avzessh /etc/vpe 133.55.82.9:/etc/. --exclude hostkeys
-\& rsync -avzessh /etc/vpe third.example.net:/etc/. --exclude hostkeys
+\&   rsync -avzessh /etc/vpe first.example.net:/etc/. --exclude hostkeys
+\&   rsync -avzessh /etc/vpe 133.55.82.9:/etc/. --exclude hostkeys
+\&   rsync -avzessh /etc/vpe third.example.net:/etc/. --exclude hostkeys
 .Ve
 .PP
 Then the hostkeys should be copied:
 .PP
 .Vb 3
-\& rsync -avzessh /etc/vpe/hostkeys/first  first.example.net:/etc/hostkey
-\& rsync -avzessh /etc/vpe/hostkeys/second 133.55.82.9:/etc/hostkey
-\& rsync -avzessh /etc/vpe/hostkeys/third  third.example.net:/etc/hostkey
+\&   rsync -avzessh /etc/vpe/hostkeys/first  first.example.net:/etc/hostkey
+\&   rsync -avzessh /etc/vpe/hostkeys/second 133.55.82.9:/etc/hostkey
+\&   rsync -avzessh /etc/vpe/hostkeys/third  third.example.net:/etc/hostkey
 .Ve
 .PP
 You should now check the configration by issuing the command \f(CW\*(C`vpectrl \-c
@@ -295,7 +301,7 @@ You should now check the configration by issuing the command \f(CW\*(C`vpectrl \
 You should then start vped on each node by issuing a command like:
 .PP
 .Vb 1
-\& vped -D -linfo first # first is the nodename
+\&   vped -D -linfo first # first is the nodename
 .Ve
 .PP
 This will make the vped stay in foreground. You should then see
@@ -310,7 +316,7 @@ To make vped run more permanently you can either run it as a daemon
 inittab. I use a line like this on my systems:
 .PP
 .Vb 1
-\& t1:2345:respawn:/opt/vpe/sbin/vped -D -L first >/dev/null 2>&1
+\&   t1:2345:respawn:/opt/vpe/sbin/vped -D -L first >/dev/null 2>&1
 .Ve
 .Sh "\s-1STEP\s0 5: enjoy"
 .IX Subsection "STEP 5: enjoy"

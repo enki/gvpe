@@ -129,7 +129,7 @@
 .\" ========================================================================
 .\"
 .IX Title "VPED.CONF 5"
-.TH VPED.CONF 5 "2003-03-23" "0.1" "Virtual Private Ethernet"
+.TH VPED.CONF 5 "2003-03-24" "0.1" "Virtual Private Ethernet"
 .SH "NAME"
 vped.conf \- vpe daemon configuration file
 .SH "SYNOPSIS"
@@ -168,9 +168,9 @@ The only exception to the above is the \*(L"on\*(R" directive that can prefix an
 (if the nodename starts with \*(L"!\*(R") on all nodes except the named one.
 .PP
 .Vb 3
-\& name = value
-\& on branch1 loglevel = noise
-\& on !branch2 connect = ondemand
+\&   name = value
+\&   on branch1 loglevel = noise
+\&   on !branch2 connect = ondemand
 .Ve
 .PP
 All settings are executed \*(L"in order\*(R", that is, later settings of the same
@@ -271,7 +271,7 @@ The \s-1MAC\s0 address to set the interface to. The script *must* set the
 interface \s-1MAC\s0 to this value. On GNU/Linux you will most likely use this:
 .Sp
 .Vb 1
-\& ip link set $IFNAME address $MAC mtu $MTU up
+\&   ip link set $IFNAME address $MAC mtu $MTU up
 .Ve
 .IP "NODENAME=branch1" 4
 .IX Item "NODENAME=branch1"
@@ -286,11 +286,11 @@ config file gets \s-1ID\s0 1, the second \s-1ID\s0 2 and so on.
 Here is a simple if-up script:
 .Sp
 .Vb 5
-\& #!/bin/sh
-\& ip link set $IFNAME address $MAC mtu $MTU up
-\& [ $NODENAME = branch1 ] && ip addr add 10.0.0.1 dev $IFNAME
-\& [ $NODENAME = branch2 ] && ip addr add 10.1.0.1 dev $IFNAME
-\& ip route add 10.0.0.0/8 dev $IFNAME
+\&   #!/bin/sh
+\&   ip link set $IFNAME address $MAC mtu $MTU up
+\&   [ $NODENAME = branch1 ] && ip addr add 10.0.0.1 dev $IFNAME
+\&   [ $NODENAME = branch2 ] && ip addr add 10.1.0.1 dev $IFNAME
+\&   ip route add 10.0.0.0/8 dev $IFNAME
 .Ve
 .Sp
 More complicated examples (using routing to reduce arp traffic) can be
@@ -327,12 +327,12 @@ Here is a nontrivial example that uses nsupdate to update the name => ip
 mapping in some dns zone:
 .Sp
 .Vb 6
-\& #!/bin/sh
-\& {
-\&   echo update delete $DESTNODE.lowttl.example.net. a
-\&   echo update add $DESTNODE.lowttl.example.net. 1 in a $DESTIP
-\&   echo   
-\& } | nsupdate -d -k $CONFBASE:key.example.net.
+\&   #!/bin/sh
+\&   {
+\&     echo update delete $DESTNODE.lowttl.example.net. a
+\&     echo update add $DESTNODE.lowttl.example.net. 1 in a $DESTIP
+\&     echo   
+\&   } | nsupdate -d -k $CONFBASE:key.example.net.
 .Ve
 .RE
 .IP "node-down = relative-or-absolute-path" 4

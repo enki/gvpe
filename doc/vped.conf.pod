@@ -30,9 +30,9 @@ The only exception to the above is the "on" directive that can prefix any
 C<name = value> setting and will only "execute" it on the named node, or
 (if the nodename starts with "!") on all nodes except the named one.
 
- name = value
- on branch1 loglevel = noise
- on !branch2 connect = ondemand
+   name = value
+   on branch1 loglevel = noise
+   on !branch2 connect = ondemand
 
 All settings are executed "in order", that is, later settings of the same
 variable overwrite earlier ones.
@@ -149,7 +149,7 @@ consistently on all hosts), but this is usually ineffective.
 The MAC address to set the interface to. The script *must* set the
 interface MAC to this value. On GNU/Linux you will most likely use this:
 
- ip link set $IFNAME address $MAC mtu $MTU up
+   ip link set $IFNAME address $MAC mtu $MTU up
 
 =item NODENAME=branch1
 
@@ -164,11 +164,11 @@ config file gets ID 1, the second ID 2 and so on.
 
 Here is a simple if-up script:
 
- #!/bin/sh
- ip link set $IFNAME address $MAC mtu $MTU up
- [ $NODENAME = branch1 ] && ip addr add 10.0.0.1 dev $IFNAME
- [ $NODENAME = branch2 ] && ip addr add 10.1.0.1 dev $IFNAME
- ip route add 10.0.0.0/8 dev $IFNAME
+   #!/bin/sh
+   ip link set $IFNAME address $MAC mtu $MTU up
+   [ $NODENAME = branch1 ] && ip addr add 10.0.0.1 dev $IFNAME
+   [ $NODENAME = branch2 ] && ip addr add 10.1.0.1 dev $IFNAME
+   ip route add 10.0.0.0/8 dev $IFNAME
 
 More complicated examples (using routing to reduce arp traffic) can be
 found in the etc/ subdirectory of the distribution.
@@ -209,12 +209,12 @@ with STATE=DOWN.
 Here is a nontrivial example that uses nsupdate to update the name => ip
 mapping in some dns zone:
 
- #!/bin/sh
- {
-   echo update delete $DESTNODE.lowttl.example.net. a
-   echo update add $DESTNODE.lowttl.example.net. 1 in a $DESTIP
-   echo   
- } | nsupdate -d -k $CONFBASE:key.example.net.
+   #!/bin/sh
+   {
+     echo update delete $DESTNODE.lowttl.example.net. a
+     echo update add $DESTNODE.lowttl.example.net. 1 in a $DESTIP
+     echo   
+   } | nsupdate -d -k $CONFBASE:key.example.net.
 
 =item node-down = relative-or-absolute-path
 
