@@ -199,12 +199,12 @@ struct net_rateinfo {
 // but low on resources.
 struct net_rate_limiter : list<net_rateinfo>
 {
-  static const double ALPHA  = 1. - 1. / 180.; // allow bursts
+  static const double ALPHA  = 1. - 1. / 600.; // allow bursts
   static const double CUTOFF = 10.;            // one event every CUTOFF seconds
   static const double EXPIRE = CUTOFF * 30.;   // expire entries after this time
   static const double MAXDIF = CUTOFF * (1. / (1. - ALPHA)); // maximum diff /count value
 
-  bool can (const sockinfo &si) { return can((u32)si.host);             }
+  bool can (const sockinfo &si) { return can((u32)si.host); }
   bool can (u32 host);
 };
 
