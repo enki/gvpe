@@ -322,7 +322,7 @@ tcp_connection::tcpv4_ev (io_watcher &w, short revents)
 
           if (i < 12)
             {
-              slog (L_ERR, _("%s: unable to do proxy-forwarding, short response"),
+              slog (L_ERR, _("(%s): unable to do proxy-forwarding, short response"),
                     (const char *)si);
               error ();
             }
@@ -330,7 +330,7 @@ tcp_connection::tcpv4_ev (io_watcher &w, short revents)
                    || r[5] != '1' // http-major
                    || r[9] != '2') // response
             {
-              slog (L_ERR, _("%s: malformed or unexpected proxy response (%.12s)"),
+              slog (L_ERR, _("(%s): malformed or unexpected proxy response (%.12s)"),
                     (const char *)si, r);
               error ();
             }
