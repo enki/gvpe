@@ -351,7 +351,7 @@ not use by default" switch.
 
 Sets the connect mode (default: C<always>). It can be C<always> (always
 try to establish and keep a connection to the given host), C<never>
-(nevr initiate a connection to the given host, but accept connections),
+(never initiate a connection to the given host, but accept connections),
 C<ondemand> (try to establish a connection on the first packet sent, and
 take it down after the keepalive interval) or C<disabled> (node is bad,
 don't talk to it).
