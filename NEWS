@@ -4,6 +4,7 @@
    - very minor bugfixes
    - warnings when choosing insecure ciphers/hashes
    - reduced default hmac length to 12.
+   - cvs now contains configure, Makefile.in and other generated files.
 
 1.0
    - tweaked various timeouts to help very slow (486) class
