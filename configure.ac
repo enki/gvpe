@@ -3,7 +3,7 @@ dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.57)
 AC_INIT(src/vped.C)
 AC_CANONICAL_TARGET
-AM_INIT_AUTOMAKE(vpe, 1.2)
+AM_INIT_AUTOMAKE(vpe, 1.4)
 AM_CONFIG_HEADER(config.h)
 AM_MAINTAINER_MODE
 
@@ -148,7 +148,7 @@ AC_CHECK_HEADERS(ext/hash_map)
 dnl Checks for header files.
 AC_CHECK_HEADERS([fcntl.h inttypes.h limits.h malloc.h stdint.h strings.h syslog.h unistd.h \
 	sys/file.h sys/ioctl.h sys/param.h sys/time.h netinet/in_systm.h sys/cygwin.h arpa/inet.h \
-        sys/poll.h sys/mman.h netinet/in.h])
+        sys/mman.h netinet/in.h])
 AC_CHECK_HEADERS([net/ethernet.h net/if.h netinet/ip.h netinet/tcp.h netinet/in_systm.h], [], [],
 [
 #include <sys/types.h>
@@ -206,7 +206,7 @@ AC_LANG_PUSH(C)
 AC_HEADER_STDC
 
 dnl argl, could somebody catapult darwin into the 21st century???
-AC_CHECK_FUNCS(asprintf daemon get_current_dir_name putenv select strerror strsignal strtol unsetenv mlockall poll)
+AC_CHECK_FUNCS(asprintf daemon get_current_dir_name putenv select strerror strsignal strtol unsetenv mlockall)
 
 AC_FUNC_ALLOCA
 

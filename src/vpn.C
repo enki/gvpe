@@ -1,6 +1,6 @@
 /*
     vpn.C -- handle the protocol, encryption, handshaking etc.
-    Copyright (C) 2003 Marc Lehmann <pcg@goof.com>
+    Copyright (C) 2003-2004 Marc Lehmann <pcg@goof.com>
  
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -103,7 +103,7 @@ vpn::setup ()
           exit (1);
         }
 
-      ipv4_ev_watcher.start (ipv4_fd, POLLIN);
+      ipv4_ev_watcher.start (ipv4_fd, EVENT_READ);
     }
 
   udpv4_fd = -1;
@@ -141,7 +141,7 @@ vpn::setup ()
           exit (1);
         }
 
-      udpv4_ev_watcher.start (udpv4_fd, POLLIN);
+      udpv4_ev_watcher.start (udpv4_fd, EVENT_READ);
     }
 
   icmpv4_fd = -1;
@@ -185,7 +185,7 @@ vpn::setup ()
           exit (1);
         }
 
-      icmpv4_ev_watcher.start (icmpv4_fd, POLLIN);
+      icmpv4_ev_watcher.start (icmpv4_fd, EVENT_READ);
     }
 #endif
 
@@ -221,7 +221,7 @@ vpn::setup ()
           exit (1);
         }
 
-      tcpv4_ev_watcher.start (tcpv4_fd, POLLIN);
+      tcpv4_ev_watcher.start (tcpv4_fd, EVENT_READ);
     }
 #endif
 
@@ -234,7 +234,7 @@ vpn::setup ()
   
   run_script (run_script_cb (this, &vpn::script_if_up), true);
 
-  tap_ev_watcher.start (tap->fd, POLLIN);
+  tap_ev_watcher.start (tap->fd, EVENT_READ);
 
   reconnect_all ();
 
@@ -398,7 +398,7 @@ vpn::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 void
 vpn::ipv4_ev (io_watcher &w, short revents)
 {
-  if (revents & (POLLIN | POLLERR))
+  if (revents & EVENT_READ)
     {
       vpn_packet *pkt = new vpn_packet;
       struct sockaddr_in sa;
@@ -427,12 +427,6 @@ vpn::ipv4_ev (io_watcher &w, short revents)
 
       delete pkt;
     }
-  else if (revents & POLLHUP)
-    {
-      // this cannot ;) happen on udp sockets
-      slog (L_ERR, _("FATAL: POLLHUP on ipv4 fd, terminating."));
-      exit (1);
-    }
   else
     {
       slog (L_ERR,
@@ -446,7 +440,7 @@ vpn::ipv4_ev (io_watcher &w, short revents)
 void
 vpn::icmpv4_ev (io_watcher &w, short revents)
 {
-  if (revents & (POLLIN | POLLERR))
+  if (revents & EVENT_READ)
     {
       vpn_packet *pkt = new vpn_packet;
       struct sockaddr_in sa;
@@ -481,12 +475,6 @@ vpn::icmpv4_ev (io_watcher &w, short revents)
 
       delete pkt;
     }
-  else if (revents & POLLHUP)
-    {
-      // this cannot ;) happen on udp sockets
-      slog (L_ERR, _("FATAL: POLLHUP on icmpv4 fd, terminating."));
-      exit (1);
-    }
   else
     {
       slog (L_ERR,
@@ -500,7 +488,7 @@ vpn::icmpv4_ev (io_watcher &w, short revents)
 void
 vpn::udpv4_ev (io_watcher &w, short revents)
 {
-  if (revents & (POLLIN | POLLERR))
+  if (revents & EVENT_READ)
     {
       vpn_packet *pkt = new vpn_packet;
       struct sockaddr_in sa;
@@ -525,12 +513,6 @@ vpn::udpv4_ev (io_watcher &w, short revents)
 
       delete pkt;
     }
-  else if (revents & POLLHUP)
-    {
-      // this cannot ;) happen on udp sockets
-      slog (L_ERR, _("FATAL: POLLHUP on udp v4 fd, terminating."));
-      exit (1);
-    }
   else
     {
       slog (L_ERR,
@@ -543,7 +525,7 @@ vpn::udpv4_ev (io_watcher &w, short revents)
 void
 vpn::tap_ev (io_watcher &w, short revents)
 {
-  if (revents & POLLIN)
+  if (revents & EVENT_READ)
     {
       /* process data */
       tap_packet *pkt;
@@ -578,11 +560,6 @@ vpn::tap_ev (io_watcher &w, short revents)
 
       delete pkt;
     }
-  else if (revents & (POLLHUP | POLLERR))
-    {
-      slog (L_ERR, _("FATAL: POLLHUP or POLLERR on network device fd, terminating."));
-      exit (1);
-    }
   else
     abort ();
 }
@@ -597,11 +574,8 @@ vpn::event_cb (time_watcher &w)
           slog (L_INFO, _("preparing shutdown..."));
 
           shutdown_all ();
-
           remove_pid (pidfilename);
-
           slog (L_INFO, _("terminating"));
-
           exit (0);
         }
 
@@ -614,8 +588,6 @@ vpn::event_cb (time_watcher &w)
 
       events = 0;
     }
-
-  w.at = TSTAMP_CANCEL;
 }
 
 void

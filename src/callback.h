@@ -7,7 +7,7 @@
 
 /*
     callback.h -- C++ callback mechanism
-    Copyright (C) 2003 Marc Lehmann <pcg@goof.com>
+    Copyright (C) 2003-2004 Marc Lehmann <pcg@goof.com>
  
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -24,8 +24,8 @@
     Foundation, Inc. 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef VPE_CALLBACK_H__
-#define VPE_CALLBACK_H__
+#ifndef CALLBACK_H__
+#define CALLBACK_H__
 
 template<class R>
 class callback0 {

@@ -1,6 +1,6 @@
 /*
     iom.C -- generic I/O multiplexor
-    Copyright (C) 2003 Marc Lehmann <pcg@goof.com>
+    Copyright (C) 2003, 2004 Marc Lehmann <pcg@goof.com>
  
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -17,149 +17,76 @@
     Foundation, Inc. 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include "config.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cerrno>
 
+#include <sys/select.h>
 #include <sys/time.h>
 
-#include <algorithm>
-#include <functional>
-
-#include "gettext.h"
-
-#include "slog.h"
 #include "iom.h"
 
+// TSTAMP_MAX must still fit into a positive struct timeval
+#define TSTAMP_MAX (double)(1UL<<31)
+
 tstamp NOW;
-bool iom_valid;
+static bool iom_valid;
 io_manager iom;
 
-inline bool earliest_first (const time_watcher *a, const time_watcher *b)
+template<class watcher>
+void io_manager::reg (watcher *w, io_manager_vec<watcher> &queue)
 {
-  return a->at > b->at;
+  if (!iom_valid)
+    abort ();
+
+  if (!w->active)
+    {
+      queue.push_back (w);
+      w->active = queue.size ();
+    }
 }
 
-void time_watcher::set (tstamp when)
+template<class watcher>
+void io_manager::unreg (watcher *w, io_manager_vec<watcher> &queue)
 {
-  at = when;
+  if (!iom_valid)
+    return;
 
-  if (registered)
-    iom.reschedule_time_watchers ();
+  if (w->active)
+    {
+      queue [w->active - 1] = 0;
+      w->active = 0;
+    }
 }
 
+#if IOM_TIME
 void time_watcher::trigger ()
 {
   call (*this);
 
-  if (registered)
-    iom.reschedule_time_watchers ();
-  else
-    iom.reg (this);
+  iom.reg (this);
 }
 
-time_watcher::~time_watcher ()
-{
-  if (iom_valid)
-    iom.unreg (this);
-}
+void io_manager::reg (time_watcher *w) { reg (w, tw); }
+void io_manager::unreg (time_watcher *w) { unreg (w, tw); }
+#endif
 
-void io_watcher::set(int fd_, short events_)
-{
-  fd     = fd_;
-  events = events_;
+#if IOM_IO
+void io_manager::reg (io_watcher *w) { reg (w, iow); } 
+void io_manager::unreg (io_watcher *w) { unreg (w, iow); }
+#endif
 
-  if (registered)
-    {
-      iom.unreg (this);
-      iom.reg (this);
-    }
-}
+#if IOM_CHECK
+void io_manager::reg (check_watcher *w) { reg (w, cw); }
+void io_manager::unreg (check_watcher *w) { unreg (w, cw); }
+#endif
 
-io_watcher::~io_watcher ()
-{
-  if (iom_valid)
-    iom.unreg (this);
-}
+#if IOM_IDLE
+void io_manager::reg (idle_watcher *w) { reg (w, iw); }
+void io_manager::unreg (idle_watcher *w) { unreg (w, iw); }
+#endif
 
-void io_manager::reg (io_watcher *w)
-{
-  if (!w->registered)
-    {
-      w->registered = true;
-
-      pollfd pfd;
-
-      pfd.fd     = w->fd;
-      pfd.events = w->events;
-
-      pfs.push_back (pfd);
-      iow.push_back (w);
-    }
-}
-
-void io_manager::unreg (io_watcher *w)
-{
-  if (w->registered)
-    {
-      w->registered = false;
-
-      unsigned int sz = iow.size ();
-      unsigned int i = find (iow.begin (), iow.end (), w) - iow.begin ();
-
-      assert (i != sz);
-
-      if (sz == 1)
-        {
-          pfs.clear ();
-          iow.clear ();
-        }
-      else if (i == sz - 1)
-        {
-          iow.pop_back ();
-          pfs.pop_back ();
-        }
-      else
-        {
-          iow[i] = iow[sz - 1]; iow.pop_back ();
-          pfs[i] = pfs[sz - 1]; pfs.pop_back ();
-        }
-    }
-}
-
-void io_manager::reschedule_time_watchers ()
-{
-  make_heap (tw.begin (), tw.end (), earliest_first);
-}
-
-void io_manager::reg (time_watcher *w)
-{
-  if (!w->registered)
-    {
-      w->registered = true;
-
-      tw.push_back (w);
-      push_heap (tw.begin (), tw.end (), earliest_first);
-    }
-}
-
-void io_manager::unreg (time_watcher *w)
-{
-  if (w->registered)
-    {
-      w->registered = false;
-
-      unsigned int sz = tw.size ();
-      unsigned int i = find (tw.begin (), tw.end (), w) - tw.begin ();
-
-      assert (i != sz);
-      
-      if (i != sz - 1)
-        tw[i] = tw[sz - 1];
-
-      tw.pop_back ();
-      reschedule_time_watchers ();
-    }
-}
-
+#if IOM_TIME
 inline void set_now (void)
 {
   struct timeval tv;
@@ -167,71 +94,161 @@ inline void set_now (void)
   gettimeofday (&tv, 0);
 
   NOW = (tstamp)tv.tv_sec + (tstamp)tv.tv_usec / 1000000;
+#endif
 }
 
 void io_manager::loop ()
 {
+#if IOM_TIME
   set_now ();
+#endif
 
   for (;;)
     {
-      while (tw[0]->at <= NOW)
+      struct timeval *to = 0;
+      struct timeval tval;
+
+#if IOM_IDLE
+      if (iw.size ())
         {
-          // remove the first watcher
-          time_watcher *w = tw[0];
+          tval.tv_sec  = 0;
+          tval.tv_usec = 0;
+          to = &tval;
+        }
+      else
+#endif
+        {
+#if IOM_TIME
+          time_watcher *next;
 
-          pop_heap (tw.begin (), tw.end (), earliest_first);
-          tw.pop_back ();
+          for (;;)
+            {
+              next = tw[0]; // the first time-watcher must exist at ALL times
 
-          w->registered = false;
+              for (int i = tw.size (); i--; )
+                if (!tw[i])
+                  tw.erase_unordered (i);
+                else if (tw[i]->at < next->at)
+                  next = tw[i];
 
-          // call it
-          w->call (*w);
-
-          // re-add it if necessary
-          if (w->at >= 0 && !w->registered)
-            reg (w);
+              if (next->at > NOW)
+                {
+                  if (next != tw[0])
+                    {
+                      double diff = next->at - NOW;
+                      tval.tv_sec  = (int)diff;
+                      tval.tv_usec = (int)((diff - tval.tv_sec) * 1000000);
+                      to = &tval;
+                    }
+                  break;
+                }
+              else
+                {
+                  unreg (next);
+                  next->call (*next);
+                }
+            }
+#endif
         }
 
-      int timeout = (int) ((tw[0]->at - NOW) * 1000);
+#if IOM_CHECK
+      for (int i = cw.size (); i--; )
+        if (!cw[i])
+          cw.erase_unordered (i);
+        else
+          cw[i]->call (*cw[i]);
+#endif
 
-      int fds = poll (&pfs[0], pfs.size (), timeout);
+#if IOM_IO
+      fd_set rfd, wfd, efd;
 
-      set_now ();
+      FD_ZERO (&rfd);
+      FD_ZERO (&wfd);
 
-      vector<io_watcher *>::iterator w;
-      vector<pollfd>::iterator p;
+      int fds = 0;
 
-      for (w = iow.begin (), p = pfs.begin ();
-           fds > 0 && w < iow.end ();
-           ++w, ++p)
-        if (p->revents)
+      for (io_manager_vec<io_watcher>::iterator i = iow.end (); i-- > iow.begin (); )
+        if (*i)
           {
-            --fds;
+            if ((*i)->events & EVENT_READ ) FD_SET ((*i)->fd, &rfd);
+            if ((*i)->events & EVENT_WRITE) FD_SET ((*i)->fd, &wfd);
 
-            if (p->revents & POLLNVAL)
-              {
-                slog (L_ERR, _("io_watcher started on illegal file descriptor, disabling."));
-                (*w)->stop ();
-              }
-            else
-              (*w)->call (**w, p->revents);
+            if ((*i)->fd >= fds) fds = (*i)->fd + 1;
           }
+
+      if (!to && !fds) //TODO: also check idle_watchers and check_watchers
+        break; // no events
+
+      fds = select (fds, &rfd, &wfd, &efd, to);
+# if IOM_TIME
+      set_now ();
+# endif
+
+      if (fds > 0)
+        for (int i = iow.size (); i--; )
+          if (!iow[i])
+            iow.erase_unordered (i);
+          else
+            {
+              short revents = iow[i]->events;
+
+              if (!FD_ISSET (iow[i]->fd, &rfd)) revents &= ~EVENT_READ;
+              if (!FD_ISSET (iow[i]->fd, &wfd)) revents &= ~EVENT_WRITE;
+
+              if (revents)
+                iow[i]->call (*iow[i], revents);
+            }
+      else if (fds < 0 && errno != EINTR)
+        {
+          perror ("Error while waiting for I/O or time event");
+          abort ();
+        }
+#if IOM_IDLE
+      else
+        for (int i = iw.size (); i--; )
+          if (!iw[i])
+            iw.erase_unordered (i);
+          else
+            iw[i]->call (*iw[i]);
+#endif
+
+#elif IOM_TIME
+      if (!to)
+        break;
+
+      select (0, 0, 0, 0, &to);
+      set_now ();
+#else
+      break;
+#endif
     }
 }
 
-void io_manager::idle_cb (time_watcher &w)
-{
-  w.at = NOW + 86400; // wake up every day, for no good reason
-}
+// this is a dummy time watcher to ensure that the first
+// time watcher is _always_ valid, this gets rid of a lot
+// of null-pointer-checks
+static struct tw0 : time_watcher {
+  void cb (time_watcher &w)
+  {
+    // should never get called
+    // reached end-of-time, or tstamp has a bogus definition :)
+    abort ();
+  }
+
+  tw0()
+  : time_watcher (this, &tw0::cb)
+  { }
+} tw0;
 
 io_manager::io_manager ()
 {
   iom_valid = true;
 
+#if IOM_TIME
   set_now ();
-  idle = new time_watcher (this, &io_manager::idle_cb);
-  idle->start (0);
+
+  tw0.start (TSTAMP_MAX);
+#endif
 }
 
 io_manager::~io_manager ()

@@ -1,6 +1,6 @@
 /*
     device-cygwin.C -- Stub for Cygwin environment
-    Copyright (C) 2003 Marc Lehmann <ocg@goof.com>
+    Copyright (C) 2003-2004 Marc Lehmann <ocg@goof.com>
     Copyright (C) 2002-2003 Ivo Timmermans <ivo@o2w.nl>,
                   2002-2003 Guus Sliepen <guus@sliepen.eu.org>
 

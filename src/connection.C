@@ -1,6 +1,6 @@
 /*
     connection.C -- manage a single connection
-    Copyright (C) 2003 Marc Lehmann <pcg@goof.com>
+    Copyright (C) 2003-2004 Marc Lehmann <pcg@goof.com>
  
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -22,6 +22,8 @@
 extern "C" {
 # include "lzf/lzf.h"
 }
+
+#include <cassert>
 
 #include <list>
 
@@ -136,11 +138,9 @@ struct rsa_cache : list<rsa_entry>
 
 void rsa_cache::cleaner_cb (time_watcher &w)
 {
-  if (empty ())
-    w.at = TSTAMP_CANCEL;
-  else
+  if (!empty ())
     {
-      w.at = NOW + RSA_TTL;
+      w.start (NOW + RSA_TTL);
 
       for (iterator i = begin (); i != end (); )
         if (i->expire <= NOW)
@@ -600,8 +600,8 @@ connection::connection_established ()
     {
       retry_cnt = 0;
       establish_connection.start (NOW + 5);
-      keepalive.reset ();
-      rekey.reset ();
+      keepalive.stop ();
+      rekey.stop ();
     }
 }
 
@@ -722,18 +722,18 @@ connection::send_connect_info (int rid, const sockinfo &rsi, u8 rprotocols)
 void
 connection::establish_connection_cb (time_watcher &w)
 {
-  if (ictx || conf == THISNODE
-      || connectmode == conf_node::C_NEVER
-      || connectmode == conf_node::C_DISABLED)
-    w.at = TSTAMP_CANCEL;
-  else if (w.at <= NOW)
+  if (!ictx
+      && conf != THISNODE
+      && connectmode != conf_node::C_NEVER
+      && connectmode != conf_node::C_DISABLED
+      && w.at <= NOW)
     {
       double retry_int = double (retry_cnt & 3 ? (retry_cnt & 3) : 1 << (retry_cnt >> 2)) * 0.6;
 
       if (retry_int < 3600 * 8)
         retry_cnt++;
 
-      w.at = NOW + retry_int;
+      w.start (NOW + retry_int);
 
       reset_si ();
 
@@ -774,9 +774,9 @@ connection::reset_connection ()
   last_activity = 0;
   retry_cnt = 0;
 
-  rekey.reset ();
-  keepalive.reset ();
-  establish_connection.reset ();
+  rekey.stop ();
+  keepalive.stop ();
+  establish_connection.stop ();
 }
 
 void
@@ -791,8 +791,6 @@ connection::shutdown ()
 void
 connection::rekey_cb (time_watcher &w)
 {
-  w.at = TSTAMP_CANCEL;
-
   reset_connection ();
   establish_connection ();
 }
@@ -1116,17 +1114,17 @@ void connection::keepalive_cb (time_watcher &w)
       establish_connection ();
     }
   else if (NOW < last_activity + ::conf.keepalive)
-    w.at = last_activity + ::conf.keepalive;
+    w.start (last_activity + ::conf.keepalive);
   else if (conf->connectmode != conf_node::C_ONDEMAND
            || THISNODE->connectmode != conf_node::C_ONDEMAND)
     {
       send_ping (si);
-      w.at = NOW + 5;
+      w.start (NOW + 5);
     }
   else if (NOW < last_activity + ::conf.keepalive + 10)
     // hold ondemand connections implicitly a few seconds longer
     // should delete octx, though, or something like that ;)
-    w.at = last_activity + ::conf.keepalive + 10;
+    w.start (last_activity + ::conf.keepalive + 10);
   else
     reset_connection ();
 }

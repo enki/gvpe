@@ -1,7 +1,13 @@
+TODO send sha1hash of public key for better error reporting(?)
+TODO check own keypair for correctness for better error reporting
+TODO vpn::tap_ev does not handle EOF well
+TODO vpn::tcpv4_ev does not handle EOF well
+TODO tcp_connection::tcpv4_ev does not handle EOF well
 
-TODO send sha1hash of public key
-TODO check own keypair for correctness
+1.4
    - better retry behaviour on key mismatch.
+   - use select-based io_manager instead of poll-based one.
+   - share io manager between rxvt-unicode and vpe
 
 1.2 Fri Oct 17 03:44:44 CEST 2003
    - protocol version 0.1

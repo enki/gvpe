@@ -1,6 +1,6 @@
 /*
     vpn_tcp.C -- handle the tcp part of the protocol.
-    Copyright (C) 2003 Marc Lehmann <pcg@goof.com>
+    Copyright (C) 2003-2004 Marc Lehmann <pcg@goof.com>
  
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -103,7 +103,8 @@ struct tcp_connection : io_watcher {
 
 void tcp_si_map::cleaner_cb (time_watcher &w)
 {
-  w.at = NOW + 600;
+  w.start (NOW + 600);
+
   tstamp to = NOW - ::conf.keepalive - 30 - 60;
 
   for (iterator i = begin (); i != end(); )
@@ -119,7 +120,7 @@ void tcp_si_map::cleaner_cb (time_watcher &w)
 void
 vpn::tcpv4_ev (io_watcher &w, short revents)
 {
-  if (revents & (POLLIN | POLLERR))
+  if (revents & EVENT_READ)
     {
       struct sockaddr_in sa;
       socklen_t sa_len = sizeof (sa);
@@ -201,23 +202,23 @@ tcp_connection::tcpv4_ev (io_watcher &w, short revents)
 {
   last_activity = NOW;
 
-  if (revents & (POLLERR | POLLHUP))
-    {
-      error ();
-      return;
-    }
-
-  if (revents & POLLOUT)
+  if (revents & EVENT_WRITE)
     {
       if (state == CONNECTING)
         {
           state = ESTABLISHED;
-          set (POLLIN);
+          set (EVENT_READ);
 #if ENABLE_HTTP_PROXY
           if (::conf.proxy_host && ::conf.proxy_port)
             {
               state = CONNECTING_PROXY;
-              write (fd, proxy_req, proxy_req_len);
+
+              if (write (fd, proxy_req, proxy_req_len) == 0)
+                {
+                  error ();
+                  return;
+                }
+
               free (proxy_req); proxy_req = 0;
             }
 #endif
@@ -230,17 +231,17 @@ tcp_connection::tcpv4_ev (io_watcher &w, short revents)
                 {
                   delete w_pkt; w_pkt = 0;
 
-                  set (POLLIN);
+                  set (EVENT_READ);
                 }
             }
           else
-            set (POLLIN);
+            set (EVENT_READ);
         }
       else
-        set (POLLIN);
+        set (EVENT_READ);
     }
 
-  if (revents & POLLIN)
+  if (revents & EVENT_READ)
     {
       if (state == ESTABLISHED)
         for (;;)
@@ -284,6 +285,7 @@ tcp_connection::tcpv4_ev (io_watcher &w, short revents)
             else if (len < 0 && (errno == EINTR || errno == EAGAIN))
               break;
 
+            // len == 0 <-> EOF
             error ();
             break;
           }
@@ -388,7 +390,7 @@ tcp_connection::send_packet (vpn_packet *pkt, int tos)
               || errno == EINPROGRESS)
             {
               state = CONNECTING;
-              start (fd, POLLOUT);
+              start (fd, EVENT_WRITE);
             }
           else
             close (fd);
@@ -417,7 +419,7 @@ tcp_connection::send_packet (vpn_packet *pkt, int tos)
               w_pkt = new vpn_packet;
               w_pkt->set (*pkt);
 
-              set (POLLIN | POLLOUT);
+              set (EVENT_READ | EVENT_WRITE);
             }
         }
     }
@@ -463,7 +465,7 @@ tcp_connection::tcp_connection (int fd_, const sockinfo &si_, vpn &v_)
     {
       active = false;
       state = ESTABLISHED;
-      start (fd, POLLIN);
+      start (fd, EVENT_READ);
     }
 }
 
