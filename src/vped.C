@@ -268,7 +268,7 @@ main (int argc, char **argv, char **envp)
 
   if (!network.setup ())
     {
-      iom.loop ();
+      io_manager::loop ();
       cleanup_and_exit (EXIT_FAILURE);
     }
 
