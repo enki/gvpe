@@ -94,7 +94,9 @@ Use the fastest cipher and digest algorithms currently available in gvpe.
 
 This uses a 16 byte HMAC checksum to authenticate packets (I guess 8-12
 would also be pretty secure ;) and will additionally prefix each packet
-with 8 bytes of random data.
+with 8 bytes of random data. In the long run, people should move to
+SHA-224 and beyond, but support in openssl is missing as of writing this
+document.
 
 In general, remember that AES-128 seems to be more secure and faster than
 AES-192 or AES-256, more randomness helps against sniffing and a longer
