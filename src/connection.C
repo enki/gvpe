@@ -591,7 +591,9 @@ connection::connection_established ()
     {
       connectmode = conf->connectmode;
 
-      rekey.start (NOW + ::conf.rekey);
+      // make sure rekeying timeouts are slightly asymmetric
+      rekey.start (NOW + ::conf.rekey
+                   + (conf->id > THISNODE->id ? 10 : 0));
       keepalive.start (NOW + ::conf.keepalive);
 
       // send queued packets

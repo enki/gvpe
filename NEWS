@@ -1,53 +1,56 @@
+1.7
+	- asymmetric rekeying behaviour, so hosts don't rekey simultaneously.
+
 1.6.1 Wed May 12 14:48:20 CEST 2004
-   - fix -c switch that has been broken due to a last-minute fix
-     to option and config file parsing.
+	- fix -c switch that has been broken due to a last-minute fix
+	  to option and config file parsing.
 
 1.6 Mon May 10 20:55:10 CEST 2004
-   - protocol version 0.1, compatible with older releases.
-   - do not RESET on out-of-sequence packets (good for wireless).
-   - various non-security-related bugfixes.
-   - c++ify (at least make it compile with g++-3.4, which should make
-     it a little bit more standard c++).
+	- protocol version 0.1, compatible with older releases.
+	- do not RESET on out-of-sequence packets (good for wireless).
+	- various non-security-related bugfixes.
+	- c++ify (at least make it compile with g++-3.4, which should make
+	  it a little bit more standard c++).
 
 1.5 Fri Jan 30 00:50:04 CET 2004
-   - protocol version 0.1, compatible with older releases.
-   - vped will refuse to start when hostkey and public key do not match.
-   - updated lzf code to version 1.2.
-   - better error reporting for "unusual" conditions, like failing
-     to allocate memory, that should not normally happen and
-     will otherwise result in spurious other error messages. Also
-     adds paranoid checks in case openssl's API changes in a bad way.
-   - fix a bug where queued vpn packets were cleared to zero. while
-     this doesn't affect security, it did cause warning messages and
-     unnecessary connectivity delays.
+	- protocol version 0.1, compatible with older releases.
+	- vped will refuse to start when hostkey and public key do not match.
+	- updated lzf code to version 1.2.
+	- better error reporting for "unusual" conditions, like failing
+	  to allocate memory, that should not normally happen and
+	  will otherwise result in spurious other error messages. Also
+	  adds paranoid checks in case openssl's API changes in a bad way.
+	- fix a bug where queued vpn packets were cleared to zero. while
+	  this doesn't affect security, it did cause warning messages and
+	  unnecessary connectivity delays.
 
 1.4 Sat Jan 17 15:49:21 CET 2004
-   - protocol version 0.1, compatible with older releases.
-   - better retry behaviour on key mismatch.
-   - use select-based io_manager instead of poll-based one.
-   - share io manager between rxvt-unicode and vpe.
-   - sooo many *BSD workarounds because no BSD I could find is even
-     remotely POSIX-compatible.
+	- protocol version 0.1, compatible with older releases.
+	- better retry behaviour on key mismatch.
+	- use select-based io_manager instead of poll-based one.
+	- share io manager between rxvt-unicode and vpe.
+	- sooo many *BSD workarounds because no BSD I could find is even
+	  remotely POSIX-compatible.
 
 1.2 Fri Oct 17 03:44:44 CEST 2003
-   - protocol version 0.1.
-   - tincd kernel interface code imported, more supported platforms
-     (native/linux (2.4), tincd/linux (2.2 and 2.4), tincd/freebsd,
-     native/cygwin).
-   - added primitive ethernet emulation (ipv4 only), which allows
-     the following platforms that only have tun drivers to work:
-     /* none yet tested */
-   - portability workarounds, especially for unfriendly freebsd
-   - very minor bugfixes
-   - warnings when choosing insecure ciphers/hashes
-   - reduced default hmac length to 8.
-   - cvs now contains configure, Makefile.in and other generated files.
-   - added doc/complex-example to the distribution.
+	- protocol version 0.1.
+	- tincd kernel interface code imported, more supported platforms
+	  (native/linux (2.4), tincd/linux (2.2 and 2.4), tincd/freebsd,
+	  native/cygwin).
+	- added primitive ethernet emulation (ipv4 only), which allows
+	  the following platforms that only have tun drivers to work:
+	  /* none yet tested */
+	- portability workarounds, especially for unfriendly freebsd
+	- very minor bugfixes
+	- warnings when choosing insecure ciphers/hashes
+	- reduced default hmac length to 8.
+	- cvs now contains configure, Makefile.in and other generated files.
+	- added doc/complex-example to the distribution.
 
-1.0
-   - protocol version 0.1.
-   - tweaked various timeouts to help very slow (486) class
-     machines or nets with many hosts.
-   - tweaked rate-limiting to be more forgiving for hosts
-     connecting through routers (not a fix).
+1.0 distant past
+	- protocol version 0.1.
+	- tweaked various timeouts to help very slow (486) class
+	  machines or nets with many hosts.
+	- tweaked rate-limiting to be more forgiving for hosts
+	  connecting through routers (not a fix).
 
