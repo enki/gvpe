@@ -940,8 +940,11 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
               rsachallenge chg;
 
               if (!rsa_cache.find (p->id, chg))
-                slog (L_ERR, _("%s(%s): unrequested auth response"),
-                      conf->nodename, (const char *)rsi);
+                {
+                  slog (L_ERR, _("%s(%s): unrequested auth response"),
+                        conf->nodename, (const char *)rsi);
+                  break;
+                }
               else
                 {
                   crypto_ctx *cctx = new crypto_ctx (chg, 0);
