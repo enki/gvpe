@@ -124,7 +124,7 @@ void configuration::init ()
   default_node.max_retry   = DEFAULT_MAX_RETRY;
 
 #if ENABLE_DNS
-  default_node.dns_port    = 53;
+  default_node.dns_port    = 0; // default is 0 == client
   dns_forw_port            = 53;
 #endif
 
