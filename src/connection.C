@@ -1050,6 +1050,8 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                 c->send_connect_info (conf->id, si, conf->protocols);
                 send_connect_info (c->conf->id, c->si, c->conf->protocols);
               }
+            else
+              c->establish_connection ();
           }
 
         break;

@@ -440,7 +440,7 @@ configuration::print ()
   printf (_("keepalive interval: %d\n"), keepalive);
   printf (_("interface:          %s\n"), ifname);
   printf (_("primary rsa key:    %s\n"), prikeyfile ? prikeyfile : "<default>");
-  printf (_("rsa key size:       %d\n"), rsa_key ? RSA_size (rsa_key) : -1);
+  printf (_("rsa key size:       %d\n"), rsa_key ? RSA_size (rsa_key) * 8 : -1);
   printf ("\n");
 
   printf ("%4s  %-17s %s %-8.8s  %-10.10s  %s\n",

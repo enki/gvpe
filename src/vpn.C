@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <time.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/ip_icmp.h>
@@ -83,6 +84,8 @@ vpn::setup ()
       if (ipv4_fd < 0)
         return -1;
 
+      fcntl (ipv4_fd, F_SETFL, O_NONBLOCK);
+
 #ifdef IP_MTU_DISCOVER
       // this I really consider a linux bug. I am neither connected
       // nor do I fragment myself. Linux still sets DF and doesn't
@@ -112,6 +115,8 @@ vpn::setup ()
 
       if (udpv4_fd < 0)
         return -1;
+
+      fcntl (udpv4_fd, F_SETFL, O_NONBLOCK);
 
       // standard daemon practise...
       {
@@ -149,6 +154,8 @@ vpn::setup ()
 
       if (icmpv4_fd < 0)
         return -1;
+
+      fcntl (icmpv4_fd, F_SETFL, O_NONBLOCK);
 
 #ifdef ICMP_FILTER
       {
@@ -192,6 +199,8 @@ vpn::setup ()
 
       if (tcpv4_fd < 0)
         return -1;
+
+      fcntl (tcpv4_fd, F_SETFL, O_NONBLOCK);
 
       // standard daemon practise...
       {
@@ -633,9 +642,11 @@ connection *vpn::find_router ()
       connection *c = *i;
 
       if (c->conf->routerprio > prio
-          && c->connectmode == conf_node::C_ALWAYS
-          && c->conf != THISNODE
-          && c->ictx && c->octx)
+          && c->connectmode == conf_node::C_ALWAYS // so we don't drop the connection if in use
+          && c->ictx && c->octx
+          && c->conf != THISNODE                   // redundant, since ictx==octx==0 always on thisnode
+          && (!THISNODE->routerprio
+              || c->conf->routerprio <= THISNODE->routerprio))
         {
           prio = c->conf->routerprio;
           router = c;
