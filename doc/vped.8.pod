@@ -69,7 +69,7 @@ Closes/resets all connections and exits.
 =item USR1
 
 Dump current network status into the syslog (at loglevel C<notice>, so make
-sure your lgolevel allows this).
+sure your loglevel allows this).
 
 =back
 

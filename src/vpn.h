@@ -35,7 +35,7 @@ struct vpn
       EVENT_SHUTDOWN  = 2,
     };
 
-    void event_cb (tstamp &ts); time_watcher event;
+    void event_cb (time_watcher &w); time_watcher event;
 
     tap_device *tap;
 
@@ -50,18 +50,17 @@ struct vpn
 
     void recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi);
 
-    void tap_ev (int fd, short revents); io_watcher tap_ev_watcher;
+    void tap_ev (io_watcher &w, short revents); io_watcher tap_ev_watcher;
 
 #if ENABLE_TCP
-    void tcpv4_ev (int fd, short revents);
-    void tcpv4_accept (int fd, short revents); io_watcher tcpv4_accept_watcher;
+    void tcpv4_ev (io_watcher &w, short revents); io_watcher tcpv4_ev_watcher;
     void send_tcpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos = IPTOS_RELIABILITY);
 #endif
 
-    void udpv4_ev (int fd, short revents); io_watcher udpv4_ev_watcher;
+    void udpv4_ev (io_watcher &w, short revents); io_watcher udpv4_ev_watcher;
     void send_udpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos = IPTOS_RELIABILITY);
 
-    void ipv4_ev (int fd, short revents); io_watcher ipv4_ev_watcher;
+    void ipv4_ev (io_watcher &w, short revents); io_watcher ipv4_ev_watcher;
     void send_ipv4_packet (vpn_packet *pkt, const sockinfo &si, int tos = IPTOS_RELIABILITY);
 
     vpn ();

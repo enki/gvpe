@@ -87,7 +87,7 @@ struct rsa_entry {
 
 struct rsa_cache : list<rsa_entry>
 {
-  void cleaner_cb (tstamp &ts); time_watcher cleaner;
+  void cleaner_cb (time_watcher &w); time_watcher cleaner;
   
   bool find (const rsaid &id, rsachallenge &chg)
     {
@@ -131,13 +131,13 @@ struct rsa_cache : list<rsa_entry>
 
 } rsa_cache;
 
-void rsa_cache::cleaner_cb (tstamp &ts)
+void rsa_cache::cleaner_cb (time_watcher &w)
 {
   if (empty ())
-    ts = TSTAMP_CANCEL;
+    w.at = TSTAMP_CANCEL;
   else
     {
-      ts = NOW + RSA_TTL;
+      w.at = NOW + RSA_TTL;
 
       for (iterator i = begin (); i != end (); )
         if (i->expire <= NOW)
@@ -643,20 +643,20 @@ connection::send_connect_info (int rid, const sockinfo &rsi, u8 rprotocols)
 }
 
 void
-connection::establish_connection_cb (tstamp &ts)
+connection::establish_connection_cb (time_watcher &w)
 {
   if (ictx || conf == THISNODE
       || connectmode == conf_node::C_NEVER
       || connectmode == conf_node::C_DISABLED)
-    ts = TSTAMP_CANCEL;
-  else if (ts <= NOW)
+    w.at = TSTAMP_CANCEL;
+  else if (w.at <= NOW)
     {
       double retry_int = double (retry_cnt & 3 ? (retry_cnt & 3) : 1 << (retry_cnt >> 2)) * 0.6;
 
       if (retry_int < 3600 * 8)
         retry_cnt++;
 
-      ts = NOW + retry_int;
+      w.at = NOW + retry_int;
 
       if (conf->hostname)
         {
@@ -709,9 +709,9 @@ connection::shutdown ()
 }
 
 void
-connection::rekey_cb (tstamp &ts)
+connection::rekey_cb (time_watcher &w)
 {
-  ts = TSTAMP_CANCEL;
+  w.at = TSTAMP_CANCEL;
 
   reset_connection ();
   establish_connection ();
@@ -1018,7 +1018,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
     }
 }
 
-void connection::keepalive_cb (tstamp &ts)
+void connection::keepalive_cb (time_watcher &w)
 {
   if (NOW >= last_activity + ::conf.keepalive + 30)
     {
@@ -1026,12 +1026,12 @@ void connection::keepalive_cb (tstamp &ts)
       establish_connection ();
     }
   else if (NOW < last_activity + ::conf.keepalive)
-    ts = last_activity + ::conf.keepalive;
+    w.at = last_activity + ::conf.keepalive;
   else if (conf->connectmode != conf_node::C_ONDEMAND
            || THISNODE->connectmode != conf_node::C_ONDEMAND)
     {
       send_ping (si);
-      ts = NOW + 5;
+      w.at = NOW + 5;
     }
   else
     reset_connection ();

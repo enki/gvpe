@@ -89,6 +89,12 @@ vpn::setup ()
       if (udpv4_fd < 0)
         return -1;
 
+      // standard daemon practise...
+      {
+        int oval = 1;
+        setsockopt (udpv4_fd, SOL_SOCKET, SO_REUSEADDR, &oval, sizeof oval);
+      }
+
       sockinfo si (THISNODE, PROT_UDPv4);
 
       if (bind (udpv4_fd, si.sav4 (), si.salenv4 ()))
@@ -106,12 +112,6 @@ vpn::setup ()
         setsockopt (udpv4_fd, SOL_IP, IP_MTU_DISCOVER, &oval, sizeof oval);
       }
 #endif
-
-      // standard daemon practise...
-      {
-        int oval = 1;
-        setsockopt (udpv4_fd, SOL_SOCKET, SO_REUSEADDR, &oval, sizeof oval);
-      }
 
       udpv4_ev_watcher.start (udpv4_fd, POLLIN);
     }
@@ -153,6 +153,12 @@ vpn::setup ()
       if (tcpv4_fd < 0)
         return -1;
 
+      // standard daemon practise...
+      {
+        int oval = 1;
+        setsockopt (tcpv4_fd, SOL_SOCKET, SO_REUSEADDR, &oval, sizeof oval);
+      }
+
       sockinfo si (THISNODE, PROT_TCPv4);
 
       if (bind (tcpv4_fd, si.sav4 (), si.salenv4 ()))
@@ -167,13 +173,7 @@ vpn::setup ()
           exit (1);
         }
 
-      // standard daemon practise...
-      {
-        int oval = 1;
-        setsockopt (tcpv4_fd, SOL_SOCKET, SO_REUSEADDR, &oval, sizeof oval);
-      }
-
-      tcpv4_accept_watcher.start (tcpv4_fd, POLLIN);
+      tcpv4_ev_watcher.start (tcpv4_fd, POLLIN);
     }
 #endif
 
@@ -241,7 +241,7 @@ vpn::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 }
 
 void
-vpn::udpv4_ev (int fd, short revents)
+vpn::udpv4_ev (io_watcher &w, short revents)
 {
   if (revents & (POLLIN | POLLERR))
     {
@@ -250,7 +250,7 @@ vpn::udpv4_ev (int fd, short revents)
       socklen_t sa_len = sizeof (sa);
       int len;
 
-      len = recvfrom (fd, &((*pkt)[0]), MAXSIZE, 0, (sockaddr *)&sa, &sa_len);
+      len = recvfrom (w.fd, &((*pkt)[0]), MAXSIZE, 0, (sockaddr *)&sa, &sa_len);
 
       sockinfo si(sa);
 
@@ -284,7 +284,7 @@ vpn::udpv4_ev (int fd, short revents)
 }
 
 void
-vpn::ipv4_ev (int fd, short revents)
+vpn::ipv4_ev (io_watcher &w, short revents)
 {
   if (revents & (POLLIN | POLLERR))
     {
@@ -293,7 +293,7 @@ vpn::ipv4_ev (int fd, short revents)
       socklen_t sa_len = sizeof (sa);
       int len;
 
-      len = recvfrom (fd, &((*pkt)[0]), MAXSIZE, 0, (sockaddr *)&sa, &sa_len);
+      len = recvfrom (w.fd, &((*pkt)[0]), MAXSIZE, 0, (sockaddr *)&sa, &sa_len);
 
       sockinfo si(sa, PROT_IPv4);
 
@@ -332,71 +332,101 @@ vpn::ipv4_ev (int fd, short revents)
 
 #if ENABLE_TCP
 
-struct tcp_info {
-  int fd;
-  bool ok;
-  io_watcher r;
+struct tcp_connection;
 
-  tcp_info (vpn *v)
-    : r(v, &vpn::tcpv4_ev)
-    {
-      fd = -1;
-    }
-
-  ~tcp_info () { close (fd); }
+struct lt_sockinfo
+{
+  bool operator()(const sockinfo *a, const sockinfo *b) const
+  {
+    return *a < *b;
+  }
 };
 
-typedef map<sockinfo, tcp_info *> tcp_si_map;
-typedef map<int, tcp_info *> tcp_fd_map; // unneecssary if iom would be cooler
-static tcp_si_map tcp_si;
-static tcp_fd_map tcp_fd;
+struct tcp_si_map : public map<const sockinfo *, tcp_connection *, lt_sockinfo> {
+  void cleaner_cb (time_watcher &w); time_watcher cleaner;
+
+  tcp_si_map ()
+    : cleaner(this, &tcp_si_map::cleaner_cb)
+    {
+      cleaner.start (0);
+    }
+} tcp_si;
+
+struct tcp_connection : io_watcher {
+  tstamp last_activity;
+  const sockinfo si;
+  vpn &v;
+  bool ok;
+
+  void tcpv4_ev (io_watcher &w, short revents);
+
+  operator tcp_si_map::value_type()
+    {
+      return tcp_si_map::value_type (&si, this);
+    }
+
+  tcp_connection (int fd_, const sockinfo &si_, vpn &v_)
+    : v(v_), si(si_), io_watcher(this, &tcp_connection::tcpv4_ev), ok(false)
+    {
+      last_activity = NOW;
+      start (fd_, POLLOUT);
+    }
+
+  ~tcp_connection () { close (fd); }
+};
+
+void tcp_si_map::cleaner_cb (time_watcher &w)
+{
+  w.at = NOW + 600;
+  tstamp to = NOW - ::conf.keepalive - 30;
+
+  for (iterator i = begin (); i != end(); )
+    if (i->second->last_activity >= to)
+      ++i;
+    else
+      {
+        erase (i);
+        i = begin ();
+      }
+}
 
 void
 vpn::send_tcpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
-  tcp_si_map::iterator info = tcp_si.find (si);
+  tcp_si_map::iterator info = tcp_si.find (&si);
 
   if (info == tcp_si.end ())
     {
       // woaw, the first lost packet ;)
-      tcp_info *i = new tcp_info (this);
+      int fd = socket (PF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-      i->ok = false;
-      i->fd = socket (PF_INET, SOCK_STREAM, IPPROTO_TCP);
-
-      if (i->fd >= 0)
+      if (fd >= 0)
         {
-          fcntl (i->fd, F_SETFL, O_NONBLOCK);
+          fcntl (fd, F_SETFL, O_NONBLOCK);
           
-          if (connect (i->fd, si.sav4 (), si.salenv4 ()) >= 0
+          if (connect (fd, si.sav4 (), si.salenv4 ()) >= 0
               || errno == EINPROGRESS)
             {
-              tcp_si.insert (tcp_si_map::value_type (si, i));
-              tcp_fd.insert (tcp_fd_map::value_type (i->fd, i));
-              return;
-            }
+              tcp_connection *i = new tcp_connection (fd, si, *this);
 
-          delete i;
+              tcp_si.insert (*i);
+            }
+          else
+            close (fd);
         }
     }
   else
     {
-      tcp_info *i = info->second;
+      tcp_connection *i = info->second;
+
+      i->last_activity = NOW;
 
       if (i->ok)
         {
           setsockopt (i->fd, SOL_IP, IP_TOS, &tos, sizeof tos);
 
-          if (write (i->fd, (void *)pkt, pkt->len + sizeof (u32)) != pkt->len + sizeof (u32))
-            {
-              // error, close socket, forget it and retry immediately
-              tcp_si.erase (info);
-              tcp_fd.erase (i->fd);
-              delete i;
-
-              // tail recursion is... better than goto(?)
-              send_tcpv4_packet (pkt, si, tos);
-            }
+          // we use none of the advantages of tcp
+          write (i->fd, (void *)pkt, pkt->len + sizeof (u32)) != pkt->len + sizeof (u32);
         }
     }
   
@@ -407,7 +437,44 @@ vpn::send_tcpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 }
 
 void
-vpn::tcpv4_accept (int fd, short revents)
+tcp_connection::tcpv4_ev (io_watcher &w, short revents)
+{
+  last_activity = NOW;
+
+  if (!ok) // just established?
+    {
+      ok = true;
+      fcntl (fd, F_SETFL, 0);
+      stop ();
+      start (fd, POLLIN);
+    }
+
+  if (revents & (POLLIN | POLLERR))
+    {
+      u32 len;
+
+      if (sizeof (len) == read (fd, &len, sizeof (len)))
+        {
+          vpn_packet *pkt = new vpn_packet;
+
+          if (len == read (fd, &((*pkt)[0]), len))
+            {
+              pkt->len = len;
+
+              v.recv_vpn_packet (pkt, si);
+              return;
+            }
+          
+          delete pkt;
+        }
+
+      tcp_si.erase (&si);
+      stop ();
+    }
+}
+
+void
+vpn::tcpv4_ev (io_watcher &w, short revents)
 {
   if (revents & (POLLIN | POLLERR))
     {
@@ -415,52 +482,18 @@ vpn::tcpv4_accept (int fd, short revents)
       socklen_t sa_len = sizeof (sa);
       int len;
 
-      fd = accept (fd, (sockaddr *)&sa, &sa_len);
+      int fd = accept (w.fd, (sockaddr *)&sa, &sa_len);
 
       if (fd >= 0)
         {
           fcntl (fd, F_SETFL, O_NONBLOCK);
 
           sockinfo si(sa, PROT_TCPv4);
-          tcp_info *i = new tcp_info (this);
+          tcp_connection *i = new tcp_connection (fd, si, *this);
 
-          i->fd = fd;
-          i->ok = true;
-          i->r.start (fd, POLLIN);
+          slog (L_ERR, "accepted %d\n", fd);//D
 
-          tcp_si.insert (tcp_si_map::value_type (si, i));
-          tcp_fd.insert (tcp_fd_map::value_type (fd, i));
-        }
-    }
-}
-
-void
-vpn::tcpv4_ev (int fd, short revents)
-{
-  if (revents & (POLLIN | POLLERR))
-    {
-      tcp_fd_map::iterator info = tcp_fd.find (fd);
-
-      if (info != tcp_fd.end ())
-        {
-          tcp_info *i = info->second;
-
-          if (!i->ok) // not yet established
-            {
-              i->ok = true;
-              fcntl (i->fd, F_SETFL, 0);
-            }
-
-          u32 len;
-
-          if (sizeof (len) == read (fd, &len, sizeof (len)))
-            {
-              slog (L_ERR, "%d bytes received\n", len);
-            }
-
-          //tcp_si.erase (i);
-          tcp_fd.erase (fd);
-          delete i;
+          tcp_si.insert (*i);
         }
     }
 }
@@ -468,7 +501,7 @@ vpn::tcpv4_ev (int fd, short revents)
 #endif
 
 void
-vpn::tap_ev (int fd, short revents)
+vpn::tap_ev (io_watcher &w, short revents)
 {
   if (revents & POLLIN)
     {
@@ -528,7 +561,7 @@ vpn::tap_ev (int fd, short revents)
 }
 
 void
-vpn::event_cb (tstamp &ts)
+vpn::event_cb (time_watcher &w)
 {
   if (events)
     {
@@ -555,7 +588,7 @@ vpn::event_cb (tstamp &ts)
       events = 0;
     }
 
-  ts = TSTAMP_CANCEL;
+  w.at = TSTAMP_CANCEL;
 }
 
 void
@@ -651,7 +684,7 @@ vpn::vpn (void)
 , ipv4_ev_watcher (this, &vpn::ipv4_ev)
 , tap_ev_watcher  (this, &vpn::tap_ev)
 #if ENABLE_TCP
-, tcpv4_accept_watcher(this, &vpn::tcpv4_accept)
+, tcpv4_ev_watcher(this, &vpn::tcpv4_ev)
 #endif
 {
 }

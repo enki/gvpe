@@ -66,6 +66,7 @@ const char *strprotocol (u8 protocol)
 {
   if (protocol & PROT_IPv4 ) return "rawip";
   if (protocol & PROT_UDPv4) return "udp";
+  if (protocol & PROT_TCPv4) return "tcp";
 
   return "<unknown>";
 }

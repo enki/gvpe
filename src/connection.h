@@ -138,9 +138,9 @@ struct connection
 
     void shutdown ();
     void reset_connection ();
-    void establish_connection_cb (tstamp &ts); time_watcher establish_connection;
-    void rekey_cb (tstamp &ts); time_watcher rekey; // next rekying (actually current reset + reestablishing)
-    void keepalive_cb (tstamp &ts); time_watcher keepalive; // next keepalive probe
+    void establish_connection_cb (time_watcher &w); time_watcher establish_connection;
+    void rekey_cb (time_watcher &w); time_watcher rekey; // next rekying (actually current reset + reestablishing)
+    void keepalive_cb (time_watcher &w); time_watcher keepalive; // next keepalive probe
 
     void send_auth_request (const sockinfo &si, bool initiate);
     void send_auth_response (const sockinfo &si, const rsaid &id, const rsachallenge &chg);

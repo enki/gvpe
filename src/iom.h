@@ -35,16 +35,16 @@ struct time_watcher;
 
 class io_manager {
   vector<pollfd> pfs;
-  vector<const io_watcher *> iow;
+  vector<io_watcher *> iow;
   vector<time_watcher *> tw; // actually a heap
 
-  void idle_cb (tstamp &ts); time_watcher *idle;
+  void idle_cb (time_watcher &w); time_watcher *idle;
 public:
 
   void reschedule_time_watchers ();
 
   // register a watcher
-  void reg (int fd, short events, io_watcher *w);
+  void reg (io_watcher *w);
   void unreg (io_watcher *w);
   void reg (time_watcher *w);
   void unreg (time_watcher *w);
@@ -57,10 +57,13 @@ public:
 
 extern io_manager iom;
 
-struct io_watcher : callback2<void, int, short> {
+struct io_watcher : callback2<void, io_watcher &, short> {
+  int fd;
+  short events;
+
   template<class O1, class O2>
-  io_watcher (O1 *object, void (O2::*method)(int fd, short revents))
-    : callback2<void, int, short>(object,method)
+  io_watcher (O1 *object, void (O2::*method)(io_watcher &, short))
+    : callback2<void, io_watcher &, short>(object,method)
     { }
 
   ~io_watcher ()
@@ -68,9 +71,11 @@ struct io_watcher : callback2<void, int, short> {
       iom.unreg (this);
     }
 
-  void start (int fd, short events)
+  void start (int fd_, short events_)
     {
-      iom.reg (fd, events, this);
+      fd = fd_;
+      events = events_;
+      iom.reg (this);
     }
 
   void stop ()
@@ -81,13 +86,13 @@ struct io_watcher : callback2<void, int, short> {
 
 #define TSTAMP_CANCEL -1.
 
-struct time_watcher : callback1<void, tstamp &> {
+struct time_watcher : callback1<void, time_watcher &> {
   bool registered; // already registered?
   tstamp at;
 
   template<class O1, class O2>
-  time_watcher (O1 *object, void (O2::*method)(tstamp &))
-    : callback1<void, tstamp &>(object,method)
+  time_watcher (O1 *object, void (O2::*method)(time_watcher &))
+    : callback1<void, time_watcher &>(object,method)
     , registered(false)
     { }
 

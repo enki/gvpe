@@ -26,7 +26,7 @@
 #include "slog.h"
 #include "iom.h"
 
-inline bool lowest_first (const time_watcher *a, const time_watcher *b)
+inline bool earliest_first (const time_watcher *a, const time_watcher *b)
 {
   return a->at > b->at;
 }
@@ -47,7 +47,7 @@ void time_watcher::set (tstamp when)
 
 void time_watcher::trigger ()
 {
-  call (at);
+  call (*this);
 
   if (registered)
     iom.reschedule_time_watchers ();
@@ -61,12 +61,12 @@ void time_watcher::start ()
     iom.reg (this);
 }
 
-void io_manager::reg (int fd, short events, io_watcher *w)
+void io_manager::reg (io_watcher *w)
 {
   pollfd pfd;
 
-  pfd.fd     = fd;
-  pfd.events = events;
+  pfd.fd     = w->fd;
+  pfd.events = w->events;
 
   pfs.push_back (pfd);
   iow.push_back (w);
@@ -99,7 +99,7 @@ void io_manager::unreg (io_watcher *w)
 
 void io_manager::reschedule_time_watchers ()
 {
-  make_heap (tw.begin (), tw.end (), lowest_first);
+  make_heap (tw.begin (), tw.end (), earliest_first);
 }
 
 void io_manager::reg (time_watcher *w)
@@ -110,7 +110,7 @@ void io_manager::reg (time_watcher *w)
   w->registered = true;
 
   tw.push_back (w);
-  push_heap (tw.begin (), tw.end (), lowest_first);
+  push_heap (tw.begin (), tw.end (), earliest_first);
 }
 
 void io_manager::unreg (time_watcher *w)
@@ -153,13 +153,13 @@ void io_manager::loop ()
           // remove the first watcher
           time_watcher *w = tw[0];
 
-          pop_heap (tw.begin (), tw.end (), lowest_first);
+          pop_heap (tw.begin (), tw.end (), earliest_first);
           tw.pop_back ();
 
           w->registered = false;
 
           // call it
-          w->call (w->at);
+          w->call (*w);
 
           // re-add it if necessary
           if (w->at >= 0 && !w->registered)
@@ -172,18 +172,23 @@ void io_manager::loop ()
 
       set_now ();
 
-      for (unsigned int i = 0; fds > 0 && i < iow.size (); ++i)
-        if (pfs[i].revents)
+      vector<io_watcher *>::iterator w;
+      vector<pollfd>::iterator p;
+
+      for (w = iow.begin (), p = pfs.begin ();
+           fds > 0 && w < iow.end ();
+           ++w, ++p)
+        if (p->revents)
           {
             --fds;
-            iow[i]->call (pfs[i].fd, pfs[i].revents);
+            (*w)->call (**w, p->revents);
           }
     }
 }
 
-void io_manager::idle_cb (tstamp &ts)
+void io_manager::idle_cb (time_watcher &w)
 {
-  ts = NOW + 86400; // wake up every day, for no good reason
+  w.at = NOW + 86400; // wake up every day, for no good reason
 }
 
 io_manager::io_manager ()
