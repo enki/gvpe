@@ -42,12 +42,12 @@ To configure the interface, use either iproute2:
   ip addr add $IFNAME 10.11.12.13
   ip route add $IFNAME 10.11.12.13/8
 
-Or ifconfig:
+Or C<ifconfig>:
 
   ifconfig $IFNAME hw ether $MAC mtu $MTU
   ifconfig $IFNAME 10.11.12.13 netmask 255.0.0.0
 
-To hardwire ARP addresses, use iproute2 (ifconfig can do it, too):
+To hardwire ARP addresses, use iproute2 (C<arp> can do it, too):
 
   MAC=fe:fd:80:00:00:$(printf "%02x" $NODEID)
   ip neighbour add 10.11.12.13 lladdr $MAC nud permanent dev $IFNAME
@@ -65,9 +65,9 @@ TAP-Win32 driver bundled with openvpn (http://openvpn.sf.net/). Just
 download and run the openvpn installer. The only option you need to select
 is the TAP driver.
 
-The MAC need not be set (and in fact I<cannot> be set). The
-MAC address is dynamically being patched into packets and ARP-requests, so
-only IPv4 works with ARP on this platform.
+The MAC need not be set (and in fact I<cannot> be set). The MAC address
+is dynamically being patched into packets and ARP-requests, so only IPv4
+works with ARP on this platform.
 
 =head2 tincd/freebsd
 

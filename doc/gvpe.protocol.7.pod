@@ -12,15 +12,97 @@ are used by GVPE to send it's data packets over the network.
 
 =head1 PART 1: Tansport protocols
 
+GVPE offers a range of transport protocols that can be used to interchange
+data between nodes. Protocols differ in their overhead, speed,
+reliability, and robustness.
+
+The following sections describe each transport protocol in more
+detail. They are sorted by overhead/efficiency, the most efficient
+transprot is listed first:
+
 =head2 RAW IP
+
+This protocol is the best choice, performance-wise, as the minimum
+overhead per packet is only 38 bytes.
+
+It works by sending the VPN payload using raw ip frames (using the
+protocol set by C<ip-proto>).
+
+Using raw ip frames has the drawback that many firewalls block "unknown"
+protocols, so this transport only works if you have full IP connectivity
+between nodes.
 
 =head2 ICMP
 
+This protocol offers very low overhead (minimum 42 bytes), and can
+sometimes tunnel through firewalls when other protocols cannot.
+
+It works by prepending a ICMP header with type C<icmp-type> and a code
+of C<255>. The default C<icmp-type> is C<echo-reply>, so the resulting
+packets look like echo replies, which looks rather strange to network
+admins.
+
+This transport should only be used if other transports (i.e. raw ip) are
+not available or undesirable (due to their overhead).
+
 =head2 UDP
+
+This is a good general choice for the transport protocol as UDP packets
+tunnel well through most firewalls and routers, and the overhead per
+packet is moderate (minimum 58 bytes).
+
+It should be used if RAW IP is not available.
 
 =head2 TCP
 
+This protocol is a very bad choice, as it not only has high overhead (more
+than 60 bytes), but the transport also retries on it's own, which leads
+to congestion when the link has moderate packet loss (as both the TCP
+transport and the tunneled traffic will retry, increasing congestion more
+and more). It also has high latency and is quite inefficient.
+
+It's only useful when tunneling through firewalls that block better
+protocols. If a node doesn't have direct internet access but a HTTP proxy
+that supports the CONNECT method it can be used to tunnel through a web
+proxy. For this to work, the C<tcp-port> should be C<443> (C<https>), as
+most proxies do not allow connections to other ports.
+
+It is an abuse of the usage a proxy was designed for, so make sure you are
+allowed to use it for GVPE.
+
+This protocol also has server and client sides. If the C<tcp-port> is set
+to zero, other nodes cannot connect to this node directly (and C<tcp-port>
+zero cannot be used). If the C<tcp-port> is non-zero, the node can act
+both as a client as well as a server.
+
 =head2 DNS
+
+B<WARNING:> Parsing and generating DNS packets is rather tricky. The code
+almost certainly contains buffer overflows and other, likely exploitable,
+bugs. You have been warned.
+
+This is the worst choice of transport protocol with respect to overhead
+(overhead can be 2-3 times higher than the transferred data), and latency
+(which can be many seconds). Some DNS servers might not be prepared to
+handle the traffic and drop or corrupt packets. The client also has to
+constantly poll the server for data, so the client will constantly create
+traffic even if it doesn't need to transport packets.
+
+In addition, the same problems as the TCP transport also plague this
+protocol.
+
+Most configuration needs to be done by editing C<src/vpn_dns.C> directly.
+
+It's only use is to tunnel through firewalls that do not allow direct
+internet access. Similar to using a HTTP proxy (as the TCP transport
+does), it uses a local DNS server/forwarder (given by the C<dns-forw-host>
+configuration value) as a proxy to send and receive data as a client,
+and a C<NS> record pointing to the GVPE server (as given by the
+C<dns-hostname> directive).
+
+The only good side of this protocol is that it can tunnel through most
+firewalls undetected, iff the local DNS server/forwarder is sane (which is
+true for most routers, wlan gateways and nameservers).
 
 =head1 PART 2: The GNU VPE protocol
 

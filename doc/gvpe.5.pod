@@ -247,8 +247,9 @@ again.
 
 =head1 SEE ALSO
 
-gvpe.osdep(5) for OS-depedendent information, gvpe.conf(5), gvpectrl(8), and
-for a description of the protocol and routing algorithms, gvpe.protocol(7).
+gvpe.osdep(5) for OS-depedendent information, gvpe.conf(5), gvpectrl(8),
+and for a description of the transports, protocol, and routing algorithm,
+gvpe.protocol(7).
 
 =head1 AUTHOR
 

@@ -390,6 +390,15 @@ NOTE: Please specify C<enable-udp = yes> if you want t use it even though
 it might get switched on automatically, as some future version might
 default to another default protocol.
 
+=item icmp-type = integer
+
+Sets the type value to be used for outgoing (and incoming) packets sent
+via the ICMP transport.
+
+The default is C<0> (which is C<echo-reply>, also known as
+"ping-replies"). Other useful values include C<8> (C<echo-request>, a.k.a.
+"ping") and C<11> (C<time-exceeded>), but any 8-bit value can be used.
+
 =item inherit-tos = yes|true|on | no|false|off
 
 Wether to inherit the TOS settings of packets sent to the tunnel when

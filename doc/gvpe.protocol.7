@@ -129,7 +129,7 @@
 .\" ========================================================================
 .\"
 .IX Title "GVPE.PROTOCOL 7"
-.TH GVPE.PROTOCOL 7 "2005-03-15" "1.8" "GNU Virtual Private Ethernet"
+.TH GVPE.PROTOCOL 7 "2005-03-17" "1.8" "GNU Virtual Private Ethernet"
 .SH "The GNU-VPE Protocols"
 .IX Header "The GNU-VPE Protocols"
 .SH "Overview"
@@ -143,16 +143,92 @@ The first part of this document describes the transport protocols which
 are used by \s-1GVPE\s0 to send it's data packets over the network.
 .SH "PART 1: Tansport protocols"
 .IX Header "PART 1: Tansport protocols"
+\&\s-1GVPE\s0 offers a range of transport protocols that can be used to interchange
+data between nodes. Protocols differ in their overhead, speed,
+reliability, and robustness.
+.PP
+The following sections describe each transport protocol in more
+detail. They are sorted by overhead/efficiency, the most efficient
+transprot is listed first:
 .Sh "\s-1RAW\s0 \s-1IP\s0"
 .IX Subsection "RAW IP"
+This protocol is the best choice, performance\-wise, as the minimum
+overhead per packet is only 38 bytes.
+.PP
+It works by sending the \s-1VPN\s0 payload using raw ip frames (using the
+protocol set by \f(CW\*(C`ip\-proto\*(C'\fR).
+.PP
+Using raw ip frames has the drawback that many firewalls block \*(L"unknown\*(R"
+protocols, so this transport only works if you have full \s-1IP\s0 connectivity
+between nodes.
 .Sh "\s-1ICMP\s0"
 .IX Subsection "ICMP"
+This protocol offers very low overhead (minimum 42 bytes), and can
+sometimes tunnel through firewalls when other protocols cannot.
+.PP
+It works by prepending a \s-1ICMP\s0 header with type \f(CW\*(C`icmp\-type\*(C'\fR and a code
+of \f(CW255\fR. The default \f(CW\*(C`icmp\-type\*(C'\fR is \f(CW\*(C`echo\-reply\*(C'\fR, so the resulting
+packets look like echo replies, which looks rather strange to network
+admins.
+.PP
+This transport should only be used if other transports (i.e. raw ip) are
+not available or undesirable (due to their overhead).
 .Sh "\s-1UDP\s0"
 .IX Subsection "UDP"
+This is a good general choice for the transport protocol as \s-1UDP\s0 packets
+tunnel well through most firewalls and routers, and the overhead per
+packet is moderate (minimum 58 bytes).
+.PP
+It should be used if \s-1RAW\s0 \s-1IP\s0 is not available.
 .Sh "\s-1TCP\s0"
 .IX Subsection "TCP"
+This protocol is a very bad choice, as it not only has high overhead (more
+than 60 bytes), but the transport also retries on it's own, which leads
+to congestion when the link has moderate packet loss (as both the \s-1TCP\s0
+transport and the tunneled traffic will retry, increasing congestion more
+and more). It also has high latency and is quite inefficient.
+.PP
+It's only useful when tunneling through firewalls that block better
+protocols. If a node doesn't have direct internet access but a \s-1HTTP\s0 proxy
+that supports the \s-1CONNECT\s0 method it can be used to tunnel through a web
+proxy. For this to work, the \f(CW\*(C`tcp\-port\*(C'\fR should be \f(CW443\fR (\f(CW\*(C`https\*(C'\fR), as
+most proxies do not allow connections to other ports.
+.PP
+It is an abuse of the usage a proxy was designed for, so make sure you are
+allowed to use it for \s-1GVPE\s0.
+.PP
+This protocol also has server and client sides. If the \f(CW\*(C`tcp\-port\*(C'\fR is set
+to zero, other nodes cannot connect to this node directly (and \f(CW\*(C`tcp\-port\*(C'\fR
+zero cannot be used). If the \f(CW\*(C`tcp\-port\*(C'\fR is non\-zero, the node can act
+both as a client as well as a server.
 .Sh "\s-1DNS\s0"
 .IX Subsection "DNS"
+\&\fB\s-1WARNING:\s0\fR Parsing and generating \s-1DNS\s0 packets is rather tricky. The code
+almost certainly contains buffer overflows and other, likely exploitable,
+bugs. You have been warned.
+.PP
+This is the worst choice of transport protocol with respect to overhead
+(overhead can be 2\-3 times higher than the transferred data), and latency
+(which can be many seconds). Some \s-1DNS\s0 servers might not be prepared to
+handle the traffic and drop or corrupt packets. The client also has to
+constantly poll the server for data, so the client will constantly create
+traffic even if it doesn't need to transport packets.
+.PP
+In addition, the same problems as the \s-1TCP\s0 transport also plague this
+protocol.
+.PP
+Most configuration needs to be done by editing \f(CW\*(C`src/vpn_dns.C\*(C'\fR directly.
+.PP
+It's only use is to tunnel through firewalls that do not allow direct
+internet access. Similar to using a \s-1HTTP\s0 proxy (as the \s-1TCP\s0 transport
+does), it uses a local \s-1DNS\s0 server/forwarder (given by the \f(CW\*(C`dns\-forw\-host\*(C'\fR
+configuration value) as a proxy to send and receive data as a client,
+and a \f(CW\*(C`NS\*(C'\fR record pointing to the \s-1GVPE\s0 server (as given by the
+\&\f(CW\*(C`dns\-hostname\*(C'\fR directive).
+.PP
+The only good side of this protocol is that it can tunnel through most
+firewalls undetected, iff the local \s-1DNS\s0 server/forwarder is sane (which is
+true for most routers, wlan gateways and nameservers).
 .SH "PART 2: The GNU VPE protocol"
 .IX Header "PART 2: The GNU VPE protocol"
 This section, unfortunately, is not yet finished, although the protocol

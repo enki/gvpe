@@ -49,10 +49,10 @@
 #define MAX_POLL_INTERVAL 5.  // how often to poll minimally when the server has no data
 #define ACTIVITY_INTERVAL 5.
 
-#define TIMEOUT_FACTOR 2.
+#define TIMEOUT_FACTOR 8.
 
 #define INITIAL_TIMEOUT     0.1 // retry timeouts
-#define INITIAL_SYN_TIMEOUT 10. // retry timeout for initial syn
+#define INITIAL_SYN_TIMEOUT 2. // retry timeout for initial syn
 
 #define MIN_SEND_INTERVAL 0.001 // wait at least this time between sending requests
 #define MAX_SEND_INTERVAL 2. // optimistic?

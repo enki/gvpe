@@ -37,7 +37,7 @@ permission notice identical to this one.
 
 @titlepage
 @title gvpe Manual
-@author Marc Lehmann, Ivo Timmermans and Guus Sliepen
+@author Marc Lehmann (with some parts by Ivo Timmermans and Guus Sliepen)
 
 @page
 @vskip 0pt plus 1filll
@@ -96,7 +96,7 @@ public networks.
 =for texinfo include pod gvpe.8.pod
 
 
-=for texinfo menu-item gvpe.protocol:: The GVPE Protocol (gvpe.protocol(7))
+=for texinfo menu-item gvpe.protocol:: The GVPE Transport and VPN Protocols (gvpe.protocol(7))
 
 =for texinfo include pod gvpe.protocol.7.pod
 

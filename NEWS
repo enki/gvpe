@@ -1,8 +1,11 @@
 
 	- enable-udp = yes is now default only when no other protocols
           are enabled. otherwise it is disabled unless explicitly enabled.
-        - dns tunneling (experimental now and in the future).
+        - implemented dns tunneling (experimental now and in the future).
         - remove support for pre-release version protocol.
+        - document icmp configuration values.
+        - document transport protocols in gvpe.protocol(7).
+        - remove unused ChangeLog file.
 
 1.7 Tue Feb 22 23:58:59 CET 2005
 	- protocol version 0.1, compatible with older releases.
