@@ -20,8 +20,7 @@
 #ifndef VPE_NETCOMPAT_H
 #define VPE_NETCOMPAT_H
 
-#include "config.h"
-
+#include <sys/types.h>
 #include <sys/socket.h>
 #ifdef HAVE_NETINET_IN_H
 # include <netinet/in.h>
