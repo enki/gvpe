@@ -652,7 +652,7 @@ vpn::reconnect_all ()
 
 connection *vpn::find_router ()
 {
-  u32 prio = 1;
+  u32 prio = 0;
   connection *router = 0;
 
   for (conns_vector::iterator i = conns.begin (); i != conns.end (); ++i)
