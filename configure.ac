@@ -3,7 +3,7 @@ dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.57)
 AC_INIT(src/vped.C)
 AC_CANONICAL_TARGET
-AM_INIT_AUTOMAKE(vpe, 1.6)
+AM_INIT_AUTOMAKE(vpe, 1.6.1)
 AM_CONFIG_HEADER(config.h)
 AM_MAINTAINER_MODE
 

@@ -99,8 +99,6 @@ conf_node::~conf_node ()
 
 void configuration::init ()
 {
-  asprintf (&confbase, "%s/vpe", CONFDIR);
-
   memset (this, 0, sizeof (*this));
 
   mtu       = DEFAULT_MTU;
@@ -489,6 +487,8 @@ configuration::print ()
 
 configuration::configuration ()
 {
+  asprintf (&confbase, "%s/vpe", CONFDIR);
+
   init ();
 }
 
