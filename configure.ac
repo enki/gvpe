@@ -183,6 +183,11 @@ tinc_TUNTAP
 tinc_OPENSSL
 dnl tinc_ZLIB
 
+AC_ARG_ENABLE(icmp,
+  [AC_HELP_STRING(--enable-icmp, [enable icmp protocol support.])],
+  AC_DEFINE_UNQUOTED(ENABLE_ICMP, 1, [ICMP protocol support.])
+)
+
 AC_ARG_ENABLE(tcp,
   [AC_HELP_STRING(--enable-tcp, [enable tcp protocol support.])],
   AC_DEFINE_UNQUOTED(ENABLE_TCP, 1, [TCP protocol support.])
