@@ -11,13 +11,18 @@
 
     "Virtual" means that no physical network is created (of course), but an
     ethernet is emulated by creating multiple tunnels between the member
-    nodes. "Private" means that non-participating nodes cannot decode
-    ("sniff)" nor inject ("spoof") packets. In the case of vpe, even
-    participating nodes cannot spoof packets from other nodes. And "network"
-    means that more than two parties - many so-called vpn solutions only
-    create point-to-point tunnels - can participate in the network, so it's
-    possible to connect multiple branches of a company into a single
-    network.
+    nodes.
+
+    "Private" means that non-participating nodes cannot decode ("sniff)" nor
+    inject ("spoof") packets.
+
+    In the case of vpe, even participating nodes cannot sniff packets send
+    to other nodes or spoof packets as if sent from other nodes.
+
+    "Network" means that more than two parties can participate in the
+    network, so for instance it's possible to connect multiple branches of a
+    company into a single network. Many so-called "vpn" solutions only
+    create point-to-point tunnels.
 
 
 ==   DESIGN GOALS   ==

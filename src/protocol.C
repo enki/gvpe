@@ -291,8 +291,6 @@ bool net_rate_limiter::can (u32 host)
       if (send)
         ri.pcnt++;
 
-      //printf ("RATE %d %f,%f = %f > %f\n", !!send, ri.pcnt, ri.diff, ri.diff / ri.pcnt, CUTOFF);
-
       push_front (ri);
 
       return send;
@@ -310,24 +308,24 @@ static void next_wakeup (time_t next)
 static unsigned char hmac_digest[EVP_MAX_MD_SIZE];
 
 struct hmac_packet:net_packet
-  {
-    u8 hmac[HMACLENGTH];		// each and every packet has a hmac field, but that is not (yet) checked everywhere
+{
+  u8 hmac[HMACLENGTH];		// each and every packet has a hmac field, but that is not (yet) checked everywhere
 
-    void hmac_set (crypto_ctx * ctx);
-    bool hmac_chk (crypto_ctx * ctx);
+  void hmac_set (crypto_ctx * ctx);
+  bool hmac_chk (crypto_ctx * ctx);
 
 private:
-    void hmac_gen (crypto_ctx * ctx)
-    {
-      unsigned int xlen;
-      HMAC_CTX *hctx = &ctx->hctx;
+  void hmac_gen (crypto_ctx * ctx)
+  {
+    unsigned int xlen;
+    HMAC_CTX *hctx = &ctx->hctx;
 
-      HMAC_Init_ex (hctx, 0, 0, 0, 0);
-      HMAC_Update (hctx, ((unsigned char *) this) + sizeof (hmac_packet),
-                   len - sizeof (hmac_packet));
-      HMAC_Final (hctx, (unsigned char *) &hmac_digest, &xlen);
-    }
-  };
+    HMAC_Init_ex (hctx, 0, 0, 0, 0);
+    HMAC_Update (hctx, ((unsigned char *) this) + sizeof (hmac_packet),
+                 len - sizeof (hmac_packet));
+    HMAC_Final (hctx, (unsigned char *) &hmac_digest, &xlen);
+  }
+};
 
 void
 hmac_packet::hmac_set (crypto_ctx * ctx)
@@ -724,7 +722,9 @@ connection::send_auth_response (SOCKADDR *sa, const rsaid &id, const rsachalleng
 void
 connection::establish_connection_cb (tstamp &ts)
 {
-  if (ictx || conf == THISNODE || connectmode == conf_node::C_NEVER)
+  if (ictx || conf == THISNODE
+      || connectmode == conf_node::C_NEVER
+      || connectmode == conf_node::C_DISABLED)
     ts = TSTAMP_CANCEL;
   else if (ts <= NOW)
     {
@@ -911,8 +911,6 @@ connection::recv_vpn_packet (vpn_packet *pkt, SOCKADDR *ssa)
                 break;
               }
           }
-
-
       }
 
       send_reset (ssa);

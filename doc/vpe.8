@@ -129,7 +129,7 @@
 .\" ========================================================================
 .\"
 .IX Title "VPE 8"
-.TH VPE 8 "2003-03-24" "0.1" "Virtual Private Ethernet"
+.TH VPE 8 "2003-03-26" "0.1" "Virtual Private Ethernet"
 .SH "NAME"
 vpe \- Overview of the virtual private ethernet suite.
 .SH "DESCRIPTION"
@@ -139,12 +139,18 @@ nodes over an untrusted network.
 .PP
 \&\*(L"Virtual\*(R" means that no physical network is created (of course), but an
 ethernet is emulated by creating multiple tunnels between the member
-nodes. \*(L"Private\*(R" means that non-participating nodes cannot decode
-(\*(L"sniff)\*(R" nor inject (\*(L"spoof\*(R") packets. In the case of vpe, even
-participating nodes cannot spoof packets from other nodes. And \*(L"network\*(R"
-means that more than two parties \- many so-called vpn solutions only
-create point-to-point tunnels \- can participate in the network, so it's
-possible to connect multiple branches of a company into a single network.
+nodes.
+.PP
+\&\*(L"Private\*(R" means that non-participating nodes cannot decode (\*(L"sniff)\*(R" nor
+inject (\*(L"spoof\*(R") packets.
+.PP
+In the case of vpe, even participating nodes cannot sniff packets send to
+other nodes or spoof packets as if sent from other nodes.
+.PP
+\&\*(L"Network\*(R" means that more than two parties can participate in the
+network, so for instance it's possible to connect multiple branches of a
+company into a single network. Many so-called \*(L"vpn\*(R" solutions only create
+point-to-point tunnels.
 .Sh "\s-1DESIGN\s0 \s-1GOALS\s0"
 .IX Subsection "DESIGN GOALS"
 .IP "\s-1SIMPLE\s0 \s-1DESIGN\s0" 4
