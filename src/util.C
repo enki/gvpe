@@ -30,8 +30,6 @@
 #include <unistd.h>
 #include <time.h>
 
-#include <sys/mman.h>
-
 #include "netcompat.h"
 
 #include "gettext.h"

@@ -163,9 +163,6 @@ AC_TYPE_SIZE_T
 AC_HEADER_TIME
 AC_STRUCT_TM
 
-dnl argl, could somebody catapult darwin into the 21st century???
-AC_CHECK_FUNCS(poll)
-
 AC_CACHE_CHECK([for socklen_t], ac_cv_type_socklen_t,
 [
   AC_TRY_COMPILE(
@@ -200,7 +197,8 @@ AC_LANG_PUSH(C)
 
 AC_HEADER_STDC
 
-AC_CHECK_FUNCS(asprintf daemon get_current_dir_name putenv select strerror strsignal strtol unsetenv mlockall)
+dnl argl, could somebody catapult darwin into the 21st century???
+AC_CHECK_FUNCS(asprintf daemon get_current_dir_name putenv select strerror strsignal strtol unsetenv mlockall poll)
 
 AC_FUNC_ALLOCA
 

@@ -33,7 +33,9 @@
 #include <signal.h>
 #include <termios.h>
 
-#include <sys/mman.h>
+#if HAVE_SYS_MMAN_H
+# include <sys/mman.h>
+#endif
 
 #include <openssl/err.h>
 #include <openssl/rand.h>
@@ -57,10 +59,8 @@ static int show_help;
 /* If nonzero, print the version on standard output and exit.  */
 static int show_version;
 
-#if HAVE_MLOCKALL
 /* If nonzero, disable swapping for this process. */
 static int do_mlock = 0;
-#endif
 
 /* If zero, don't detach from the terminal. */
 static int do_detach = 1;
@@ -72,9 +72,7 @@ static struct option const long_options[] =
       {"version", no_argument, &show_version, 1},
       {"no-detach", no_argument, &do_detach, 0},
       {"log-level", required_argument, NULL, 'l'},
-#if HAVE_MLOCKALL
       {"mlock", no_argument, &do_mlock, 1},
-#endif
       {NULL, 0, NULL, 0}
     };
 
@@ -124,11 +122,9 @@ parse_options (int argc, char **argv, char **envp)
           do_detach = 0;
           break;
 
-#if HAVE_MLOCKALL
         case 'L':		/* lock into memory */
           do_mlock = 1;
           break;
-#endif
 
         case 'l':		/* inc debug level */
           {
@@ -245,7 +241,7 @@ main (int argc, char **argv, char **envp)
 
   /* Lock all pages into memory if requested */
 
-#if HAVE_MLOCKALL
+#if HAVE_MLOCKALL && HAVE_SYS_MMAN_H
   if (do_mlock)
     if (mlockall (MCL_CURRENT | MCL_FUTURE))
       slog (L_ERR, _("system call `%s' failed: %s"), "mlockall", strerror (errno));
