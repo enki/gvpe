@@ -85,7 +85,7 @@ Since only the private key file of the current node is used and the
 private key file should be kept secret per-host to avoid spoofings, it is
 not recommended to use this feature.
 
-=item ifpersist = yes|no
+=item ifpersist = yes|true|on | no|false|off
 
 Should the tun/tap device be made persistent, that is, should the device
 stay up even when vped exits? Some versions of the tunnel device have
@@ -122,6 +122,31 @@ this information to the C<if-up> script.
 Recommended values are 1500 (ethernet), 1492 (pppoe), 1472 (pptp).
 
 This value must be the minimum of the mtu values of all hosts.
+
+=item ip-proto = numerical-ip-protocol
+
+Sets the protocol number to be used for the rawip protocol. This is a
+global option because all hosts must use the same protocol, and since
+there are no port numbers, you cannot easily run more than one vped
+instance using the same protocol, nor can you share the protocol with
+other programs.
+
+The default is 47 (GRE), which has a good chance of tunneling through
+firewalls (but note that the rawip protocol is not GRE compatible). Other
+common choices are 50 (IPSEC, ESP), 51 (IPSEC, AH), 4 (IPIP tunnels) or 98
+(ENCAP, rfc1241)
+
+=item enable-udp = yes|true|on | no|false|off
+
+Enable the UDPv4 transport using the C<udp-port> port
+(default: C<yes>). This is a good general choice since UDP tunnels well
+through many firewalls.
+
+=item enable-rawip = yes|true|on | no|false|off
+
+Enable the RAW IPv4 transport using the C<ip-proto> protocol
+(default: C<no>). This is the best choice, since the overhead per packet
+is only 38 bytes, as opposed to UDP's 58 (or TCP's 60+).
 
 =item if-up = relative-or-absolute-path
 
@@ -253,18 +278,18 @@ C<ondemand> (try to establish a connection on the first packet sent, and
 take it down after the keepalive interval) or C<disabled> (node is bad,
 don't talk to it).
 
-=item inherit-tos = yes|no
+=item inherit-tos = yes|true|on | no|false|off
 
 Wether to inherit the TOS settings of packets sent to the tunnel when
 sending packets to this node (default: C<yes>). If set to C<yes> then
 outgoing tunnel packets will have the same TOS setting as the packets sent
 to the tunnel device, which is usually what you want.
 
-=item compress = yes|no
+=item compress = yes|true|on | no|false|off
 
-Wether to compress data packets sent to this host (default: C<yes>,
-compression is really cheap even on slow computers and has no size
-overhead at all).
+Wether to compress data packets sent to this host (default: C<yes>).
+Compression is really cheap even on slow computers and has no size
+overhead at all, so enabling this is a good idea.
 
 =back
 
