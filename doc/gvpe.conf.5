@@ -129,7 +129,7 @@
 .\" ========================================================================
 .\"
 .IX Title "GVPE.CONF 5"
-.TH GVPE.CONF 5 "2004-12-04" "1.7" "GNU Virtual Private Ethernet"
+.TH GVPE.CONF 5 "2005-01-27" "1.7" "GNU Virtual Private Ethernet"
 .SH "NAME"
 gvpe.conf \- configuration file for the GNU VPE daemon
 .SH "SYNOPSIS"
@@ -482,20 +482,20 @@ assure quick reconnections.
 .SH "CONFIG DIRECTORY LAYOUT"
 .IX Header "CONFIG DIRECTORY LAYOUT"
 The default (or recommended) directory layout for the config directory is:
-.IP "gvpe.conf" 4
-.IX Item "gvpe.conf"
+.IP "\(bu" 4
+.IX Xref "gvpe.conf"
 The config file.
-.IP "if-up" 4
-.IX Item "if-up"
+.IP "\(bu" 4
+.IX Xref "if-up"
 The if-up script
-.IP "node\-up, node-down" 4
-.IX Item "node-up, node-down"
+.IP "," 4
+.IX Xref "node-up node-down"
 If used the node up or node-down scripts.
-.IP "hostkey" 4
-.IX Item "hostkey"
+.IP "\(bu" 4
+.IX Xref "hostkey"
 The private key (taken from \f(CW\*(C`hostkeys/nodename\*(C'\fR) of the current host.
-.IP "pubkey/nodename" 4
-.IX Item "pubkey/nodename"
+.IP "\(bu" 4
+.IX Xref "pubkey nodename"
 The public keys of the other nodes, one file per node.
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"

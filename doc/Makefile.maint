@@ -27,7 +27,7 @@ executable = $(patsubst %/install,%/ginstall, ../src/$(basename $@))
 %.8: %.8.pod Makefile.maint
 	pod2man -n$(shell perl -e '$$ARGV[0] =~ s/\.\d$$//; print uc $$ARGV[0]' $@) -qnone -r$(VERSION) -s8 -c "GNU Virtual Private Ethernet" $< >$@
 
-gvpe.texi: gvpe.texi.pod
+gvpe.texi: gvpe.texi.pod pod2texi
 	./pod2texi <gvpe.texi.pod >gvpe.texi
 
 ../README: gvpe.5.pod

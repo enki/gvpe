@@ -386,23 +386,23 @@ The default (or recommended) directory layout for the config directory is:
 
 =over 4
 
-=item gvpe.conf
+=item X<gvpe.conf>
 
 The config file.
 
-=item if-up
+=item X<if-up>
 
 The if-up script
 
-=item node-up, node-down
+=item X<node-up>, X<node-down>
 
 If used the node up or node-down scripts.
 
-=item hostkey
+=item X<hostkey>
 
 The private key (taken from C<hostkeys/nodename>) of the current host.
 
-=item pubkey/nodename
+=item X<pubkey/nodename>
 
 The public keys of the other nodes, one file per node.
 

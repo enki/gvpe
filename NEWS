@@ -1,4 +1,5 @@
 1.7
+	- protocol version 0.1, compatible with older releases.
 	- first gnu release.
         - documented the special value 1 for router-priority.
           priorities
@@ -11,9 +12,10 @@
         - many documentation layout fixes.
         - synced iom.[Ch] from rxvt-unicode.
         - revert to locale.h - a usual, clocale is nonfunctioning on macosx.
-        - considerably improved pod2texi.
+        - considerably improved pod2texi and the resulting texi doc.
 
 1.6.1 Wed May 12 14:48:20 CEST 2004
+	- protocol version 0.1, compatible with older releases.
 	- fix -c switch that has been broken due to a last-minute fix
 	  to option and config file parsing.
 

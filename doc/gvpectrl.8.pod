@@ -55,6 +55,7 @@ gvpe comes with ABSOLUTELY NO WARRANTY.  This is free software, and you are
 welcome to redistribute it under certain conditions; see the file COPYING
 for details.
 
-=head1 AUTHORS
+=head1 AUTHOR
 
 Marc Lehmann C<< <gvpe@plan9.de> >>.
+

@@ -1,6 +1,8 @@
 #!/usr/bin/perl
 
-use Pod::Tree;
+# TODO: texinfo fails on @cinde xin title elements etc. *sigh*
+
+use Pod::POM;
 	
 sub escape_texi($) {
    local $_ = shift;
@@ -26,84 +28,95 @@ sub out {
    $ctx[-1]{out} .= join "", @_;
 }
 
+sub TEX::view_seq_code { "\@t{$_[1]}" }
+sub TEX::view_seq_bold { "\@strong{$_[1]}" }
+sub TEX::view_seq_italic { "\@emph{$_[1]}" }
+
+sub TEX::view_seq_space { escape_texi $_[1] }
+sub TEX::view_seq_text { escape_texi $_[1] }
+
+sub TEX::view_seq_link { $_[1] }
+sub TEX::view_seq_index {
+   "\n\@cindex $_[1]\n$_[1]"
+}
+
+*TXT::view_seq_code =
+*TXT::view_seq_bold =
+*TXT::view_seq_italic =
+*TXT::view_seq_space =
+*TXT::view_seq_text =
+*TXT::view_seq_link =
+*TXT::view_seq_index = sub { $_[1] };
+
+my %ignore = (
+   "SEE ALSO" => 1,
+   "AUTHOR"   => 1,
+);
+
 sub parse_pod {
    my ($data) = @_;
    local $out;
 
-   my $pod = new Pod::Tree;
-   $pod->load_string($data);
+   local $Pod::POM::DEFAULT_VIEW = TEX::;
+
+   my $parser = new Pod::POM;
+   my $pod = $parser->parse_text ($data)
+      or die;
 
    my $walker; $walker = sub {
       my $n = $_[0];
-      if ($n->is_code) {
-         # nop
-      } elsif ($n->is_link) {
-         my $target = $n->get_target;
-         my $page    = $target->get_page;
-         my $section = $target->get_section;
+      my $t = $n->type;
+
+      if ($t eq "text") {
+         out $n->text . "\n\@refill\n";
+
+      } elsif ($t eq "pod") {
+         $walker->($_) for $n->content;
+
+      } elsif ($t eq "verbatim") {
+         out example $n->text;
+
+      } elsif ($t eq "head1") {
+
+         return if $ignore{$n->title};
          
-         $walker->($_) for @{$n->get_children};
-      } elsif ($n->is_text) {
-         out escape_texi $n->get_text;
-      } elsif ($n->is_verbatim) {
-         out example $n->get_text;
-      } elsif ($n->is_sequence) {
-         if ($n->get_letter eq "C") {
-            out "\@t{";
-            $walker->($_) for @{$n->get_children};
-            out "}";
-         } elsif ($n->get_letter eq "B") {
-            out "\@strong{";
-            $walker->($_) for @{$n->get_children};
-            out "}";
-         } elsif ($n->get_letter eq "I" or $n->get_letter eq "F") {
-            out "\@emph{";
-            $walker->($_) for @{$n->get_children};
-            out "}";
-         } else {
-            # S would mean to use nbsp
-            $walker->($_) for @{$n->get_children};
-         }
-      } elsif ($n->is_command) {
-         if ($n->is_c_head1) {
-            out "\n\@section ";
-            $walker->($_) for @{$n->get_children};
-            out "\n";
-         } elsif ($n->is_c_head2) {
-            out "\n\n\@subsection ";
-            $walker->($_) for @{$n->get_children};
-            out "\n";
-         } else {
-            # nop?
-         }
-      } elsif ($n->is_ordinary) {
-         $walker->($_) for @{$n->get_children};
-         out "\@refill\n";
-      } elsif ($n->is_root) {
-         $walker->($_) for @{$n->get_children};
-      } elsif ($n->is_list) {
+         out "\n\@section " . $n->title . "\n";
+         $walker->($_) for $n->content;
+         out "\n";
+
+      } elsif ($t eq "head2") {
+         out "\n\n\@subsection " . $n->title . "\n";
+         $walker->($_) for $n->content;
+
+      } elsif ($t eq "over") {
          out "\n\n\@itemize\n";
-         $walker->($_) for @{$n->get_children};
+         $walker->($_) for $n->content;
          out "\@end itemize\n\n";
-      } elsif ($n->is_item) {
-         out "\n\n\@item\n";
-            out "\@b{";
-            $walker->($_) for @{$n->get_children};
-            out "}\n\n";
-         $walker->($_) for @{$n->get_siblings};
-      } elsif ($n->is_for) {
-         my $text = $n->get_text;
 
-         if ($n->get_command eq "begin") {
-            if ($n->{brackets}[0] =~ / header/) {
-               $header = $text;
-            } elsif ($n->{brackets}[0] =~ / footer/) {
-               $footer = $text;
-            } else {
-               out $text;
-            }
+      } elsif ($t eq "item") {
+         out "\n\n\@item\n\@b{" . $n->title . "}\n\n";
 
-         } elsif ($text =~ /^menu-begin/) {
+         if ($n->title->present (TXT::) =~ /^\s*([a-zA-Z0-9\-\_]+)\s*=/) {
+            out "\@cindex $1\n";
+         }
+         $walker->($_) for $n->content;
+
+      } elsif ($t eq "begin") {
+         local $Pod::POM::DEFAULT_VIEW = Pod::POM::View::Pod;
+         my $format = $n->format;
+
+         if ($format =~ /texinfo\s+header/) {
+            $header = $n->content;
+         } elsif ($format =~ /texinfo\s+footer/) {
+            $footer = $n->content;
+         } else {
+            out $n->content;
+         }
+
+      } elsif ($t eq "for") {
+         my $text = $n->text;
+
+         if ($text =~ /^menu-begin/) {
             out "\n\@menu\n";
 
             push @ctx, {}; # dummy node
@@ -149,12 +162,11 @@ sub parse_pod {
          }
 
       } else {
-         die "UNKNOWN NODE $_[0]{type}\n";
-         $walker->($_) for @{$n->get_children};
+         die "UNKNOWN NODE $t\n";
       }
    };
 
-   $walker->($pod->get_root);
+   $walker->($pod);
 }
 
 @ctx = @nodes = {
@@ -170,9 +182,10 @@ for (0 .. $#nodes) {
    my $node = $nodes[$_];
    my $prev = $_ > 0 ? $nodes[$_-1] : undef;
    my $next = $nodes[$_+1];
+   my $chapter = $node->{name} eq "Top" ? "Introduction" : $node->{name};
 
    print "\@node $node->{name},$next->{name},$prev->{name},$node->{up}\n\n",
-         "\@chapter $node->{name}\n",
+         "\@chapter $chapter\n",
          "$node->{out}\n\n";
 }
 

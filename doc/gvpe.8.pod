@@ -115,11 +115,7 @@ The PID of the currently running C<gvpe> is stored in this file.
 The cryptography in gvpe has not been thoroughly checked by many people
 yet. Use it at your own risk!
 
-If you find any bugs, report them to C<vpe@plan9.de>.
-
-=head1 TODO
-
-A lot.
+If you find any bugs, report them to C<gvpe@plan9.de>.
 
 =head1 SEE ALSO
 
@@ -129,7 +125,7 @@ gvpe comes with ABSOLUTELY NO WARRANTY.  This is free software, and you are
 welcome to redistribute it under certain conditions; see the file COPYING
 for details.
 
-=head1 AUTHORS
+=head1 AUTHOR
 
 Marc Lehmann C<< <gvpe@plan9.de> >>.
 

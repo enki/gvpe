@@ -121,7 +121,7 @@ The config file (C<gvpe.conf>) is the same on all hosts:
 
    node = wheelery
    # no hostname, will be determinded dynamically using router1 or router2
- 
+
 C<gvpe> will execute the C<if-up> script on every hosts, which, for linux,
 could look like this for all three hosts:
 
@@ -166,6 +166,13 @@ network to each other.
 =for texinfo menu-end
 
 
+=for texinfo menu-item Index:: Keyword and Concept index
+
+=begin texinfo
+
+@printindex cp
+
+=end texinfo
 
 =for texinfo menu-end
 
