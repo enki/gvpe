@@ -1,0 +1,28 @@
+#!/bin/sh
+
+# Some environment variables will be set (in addition the ones
+# set in if-up, too):
+#
+# DESTNODE=doom		# others nodename
+# DESTID=5		# others node id
+# DESTIP=188.13.66.8	# others ip
+# DESTPORT=407		# others port
+# STATE=up/down		# node-up gets UP, node-down script gets DOWN
+
+if [ $STATE = up ]; then
+   {
+     echo update delete $DESTNODE.lowttl.example.com. a
+     echo update delete $DESTNODE-last.lowttl.example.com. a
+     echo update add $DESTNODE.lowttl.example.com. 1 in a $DESTIP
+     echo update add $DESTNODE-last.lowttl.example.com. 1 in a $DESTIP
+     echo
+   } | nsupdate -d -k $CONFBASE:marc.example.net.
+else
+   {
+     echo update delete $DESTNODE.lowttl.example.com. a
+     echo update delete $DESTNODE-last.lowttl.example.com. a
+     echo update add $DESTNODE-last.lowttl.example.com. 1 in a $DESTIP
+     echo
+   } | nsupdate -d -k $CONFBASE:marc.example.net.
+fi
+

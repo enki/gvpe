@@ -1,11 +1,14 @@
-This directory contains the configuration files for "our" internal
-network.
+These files are configuration files for "our" internal network.
 
 It is highly non-trivial, so don't use this configuration as the basis of
 your network unless you know what you are doing.
 
 It features: around 15 hosts, many of them have additional networks behind
-them. The vpn is fully routed, no arp is used at all.
+them and use an assortment of different tunneling protocols. The vpn is
+fully routed, no arp is used at all.
+
+The public IP addresses of connecting nodes are automatically registered
+via dns on the node ruth, using a node-up/node-down script.
 
 And last not least: the if-up script can generate information to be used
 in firewall rules (IP-net/MAC-address pairs) so ensure packet integrity so
