@@ -390,7 +390,7 @@ void io_manager::loop ()
               while (read (sigpipe[0], &ch, 1) > 0)
                 ;
 
-              for (sig_vec **svp = sw.end (); svp-- > sw.begin (); )
+              for (vector<sig_vec *>::iterator svp = sw.end (); svp-- > sw.begin (); )
                 if (*svp && (*svp)->pending)
                   {
                     sig_vec &sv = **svp;
