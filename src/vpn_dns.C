@@ -877,64 +877,66 @@ vpn::dnsv4_server (dns_packet &pkt)
                       dns->receive_rep (rcv);
                     }
 
-                  pkt [offs++] = 0xc0; pkt [offs++] = 6 * 2; // refer to name in query section
+                  {
+                    pkt [offs++] = 0xc0; pkt [offs++] = 6 * 2; // refer to name in query section
 
-                  int rtype = dns ? dns->cfg.rrtype : RR_TYPE_A;
-                  pkt [offs++] = rtype       >> 8; pkt [offs++] = rtype;       // type
-                  pkt [offs++] = RR_CLASS_IN >> 8; pkt [offs++] = RR_CLASS_IN; // class
-                  pkt [offs++] = 0; pkt [offs++] = 0;
-                  pkt [offs++] = 0; pkt [offs++] = dns ? dns->cfg.def_ttl : 0; // TTL
+                    int rtype = dns ? dns->cfg.rrtype : RR_TYPE_A;
+                    pkt [offs++] = rtype       >> 8; pkt [offs++] = rtype;       // type
+                    pkt [offs++] = RR_CLASS_IN >> 8; pkt [offs++] = RR_CLASS_IN; // class
+                    pkt [offs++] = 0; pkt [offs++] = 0;
+                    pkt [offs++] = 0; pkt [offs++] = dns ? dns->cfg.def_ttl : 0; // TTL
 
-                  int rdlen_offs = offs += 2;
+                    int rdlen_offs = offs += 2;
 
-                  int dlen = (dns ? ntohs (dns->cfg.max_size) : MAX_PKT_SIZE) - offs;
-                  // bind doesn't compress well, so reduce further by one label length
-                  dlen -= qlen;
+                    int dlen = (dns ? ntohs (dns->cfg.max_size) : MAX_PKT_SIZE) - offs;
+                    // bind doesn't compress well, so reduce further by one label length
+                    dlen -= qlen;
 
-                  if (dns)
-                    {
-                      // only put data into in-order sequence packets, if
-                      // we receive out-of-order packets we generate empty
-                      // replies
-                      while (dlen > 1 && !dns->snddq.empty () && in_seq)
-                        {
-                          int txtlen = dlen <= 255 ? dlen - 1 : 255;
+                    if (dns)
+                      {
+                        // only put data into in-order sequence packets, if
+                        // we receive out-of-order packets we generate empty
+                        // replies
+                        while (dlen > 1 && !dns->snddq.empty () && in_seq)
+                          {
+                            int txtlen = dlen <= 255 ? dlen - 1 : 255;
 
-                          if (txtlen > dns->snddq.size ())
-                            txtlen = dns->snddq.size ();
+                            if (txtlen > dns->snddq.size ())
+                              txtlen = dns->snddq.size ();
 
-                          pkt[offs++] = txtlen;
-                          memcpy (pkt.at (offs), dns->snddq.begin (), txtlen);
-                          offs += txtlen;
-                          dns->snddq.remove (txtlen);
+                            pkt[offs++] = txtlen;
+                            memcpy (pkt.at (offs), dns->snddq.begin (), txtlen);
+                            offs += txtlen;
+                            dns->snddq.remove (txtlen);
 
-                          dlen -= txtlen + 1;
-                        }
+                            dlen -= txtlen + 1;
+                          }
 
-                      // avoid empty TXT rdata
-                      if (offs == rdlen_offs)
-                        pkt[offs++] = 0;
+                        // avoid empty TXT rdata
+                        if (offs == rdlen_offs)
+                          pkt[offs++] = 0;
 
-                      slog (L_NOISE, "DNS: snddq %d", dns->snddq.size ());
-                    }
-                  else
-                    {
-                      // send RST
-                      pkt [offs++] = CMD_IP_1; pkt [offs++] = CMD_IP_2; pkt [offs++] = CMD_IP_3;
-                      pkt [offs++] = CMD_IP_RST;
-                    }
+                        slog (L_NOISE, "DNS: snddq %d", dns->snddq.size ());
+                      }
+                    else
+                      {
+                        // send RST
+                        pkt [offs++] = CMD_IP_1; pkt [offs++] = CMD_IP_2; pkt [offs++] = CMD_IP_3;
+                        pkt [offs++] = CMD_IP_RST;
+                      }
 
-                  int rdlen = offs - rdlen_offs;
+                    int rdlen = offs - rdlen_offs;
 
-                  pkt [rdlen_offs - 2] = rdlen >> 8;
-                  pkt [rdlen_offs - 1] = rdlen;
+                    pkt [rdlen_offs - 2] = rdlen >> 8;
+                    pkt [rdlen_offs - 1] = rdlen;
 
-                  if (dns)
-                    {
-                      // now update dns_rcv copy
-                      rcv->pkt->len = offs;
-                      memcpy (rcv->pkt->at (0), pkt.at (0), offs);
-                    }
+                    if (dns)
+                      {
+                        // now update dns_rcv copy
+                        rcv->pkt->len = offs;
+                        memcpy (rcv->pkt->at (0), pkt.at (0), offs);
+                      }
+                  }
 
                   duplicate_request: ;
                 }
