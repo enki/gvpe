@@ -24,7 +24,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
-#include <clocale>
+#include <locale.h>
 
 #include <errno.h>
 #include <fcntl.h>
