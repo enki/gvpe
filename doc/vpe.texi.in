@@ -69,6 +69,7 @@ you are most probably... right ;)
 
 @menu
 * vpe(5)::            Introduction and tutorial for vpe.
+* vpe.osdep(5)::      OS-dependent notes.
 * vped.conf(5)::      The main configuration file.
 * vpectrl(8)::        Config/Control programm reference.
 * vped(8)::           Networking daemon reference.
@@ -80,11 +81,15 @@ you are most probably... right ;)
 @contents
 
 @c ==================================================================
-@node    vpe(5), vped.conf(5), Top, Top
+@node    vpe(5), vpe.osdep(5), Top, Top
 @c INCLUDE-POD vpe.5
 
 @c ==================================================================
-@node    vped.conf(5), vpectrl(8), vpe(5), Top
+@node    vpe.osdep(5), vped.conf(5), vpe(5), Top
+@c INCLUDE-POD vpe.osdep.5
+
+@c ==================================================================
+@node    vped.conf(5), vpectrl(8), vpe.osdep(5), Top
 @c INCLUDE-POD vped.conf.5
 
 @c ==================================================================
