@@ -19,6 +19,8 @@
 #ifndef VPE_VPN_H__
 #define VPE_VPN_H__
 
+#include <netinet/ip.h>
+
 #include "global.h"
 #include "conf.h"
 #include "device.h"
@@ -52,16 +54,18 @@ struct vpn
 
     void tap_ev (io_watcher &w, short revents); io_watcher tap_ev_watcher;
 
+    void send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos = IPTOS_RELIABILITY);
+
 #if ENABLE_TCP
     void tcpv4_ev (io_watcher &w, short revents); io_watcher tcpv4_ev_watcher;
-    void send_tcpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos = IPTOS_RELIABILITY);
+    void send_tcpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
 #endif
 
     void udpv4_ev (io_watcher &w, short revents); io_watcher udpv4_ev_watcher;
-    void send_udpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos = IPTOS_RELIABILITY);
+    void send_udpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
 
     void ipv4_ev (io_watcher &w, short revents); io_watcher ipv4_ev_watcher;
-    void send_ipv4_packet (vpn_packet *pkt, const sockinfo &si, int tos = IPTOS_RELIABILITY);
+    void send_ipv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
 
     vpn ();
     ~vpn ();

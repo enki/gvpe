@@ -19,8 +19,6 @@
 #ifndef VPE_CONNECTION_H__
 #define VPE_CONNECTION_H__
 
-#include <netinet/ip.h> // for tos etc.
-
 #include <openssl/hmac.h>
 
 #include "global.h"
@@ -77,7 +75,7 @@ struct vpn_packet : hmac_packet
     u8 type;
     u8 srcdst, src1, dst1;
 
-    void set_hdr (ptype type, unsigned int dst);
+    void set_hdr (ptype type_, unsigned int dst);
 
     unsigned int src () const
     {
@@ -151,7 +149,6 @@ struct connection
     void inject_data_packet (tap_packet *pkt, bool broadcast = false);
     void connect_request (int id);
 
-    void send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos = IPTOS_RELIABILITY);
     void recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi);
 
     void script_node ();

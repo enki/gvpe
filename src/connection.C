@@ -287,9 +287,9 @@ hmac_packet::hmac_chk (crypto_ctx *ctx)
   return !memcmp (hmac, hmac_digest, HMACLENGTH);
 }
 
-void vpn_packet::set_hdr (ptype type, unsigned int dst)
+void vpn_packet::set_hdr (ptype type_, unsigned int dst)
 {
-  this->type = type;
+  type = type_;
 
   int src = THISNODE->id;
 
@@ -550,7 +550,13 @@ struct connect_info_packet : vpn_packet
 void
 connection::reset_dstaddr ()
 {
-  si.set (conf);
+  protocol = best_protocol (THISNODE->protocols & conf->protocols);
+
+  // mask out protocols we cannot establish
+  if (!conf->udp_port) protocol &= ~PROT_UDPv4;
+  if (!conf->tcp_port) protocol &= ~PROT_TCPv4;
+
+  si.set (conf, protocol);
 }
 
 void
@@ -559,7 +565,7 @@ connection::send_ping (const sockinfo &si, u8 pong)
   ping_packet *pkt = new ping_packet;
 
   pkt->setup (conf->id, pong ? ping_packet::PT_PONG : ping_packet::PT_PING);
-  send_vpn_packet (pkt, si, IPTOS_LOWDELAY);
+  vpn->send_vpn_packet (pkt, si, IPTOS_LOWDELAY);
 
   delete pkt;
 }
@@ -572,7 +578,7 @@ connection::send_reset (const sockinfo &si)
       config_packet *pkt = new config_packet;
 
       pkt->setup (vpn_packet::PT_RESET, conf->id);
-      send_vpn_packet (pkt, si, IPTOS_MINCOST);
+      vpn->send_vpn_packet (pkt, si, IPTOS_MINCOST);
 
       delete pkt;
     }
@@ -583,31 +589,20 @@ connection::send_auth_request (const sockinfo &si, bool initiate)
 {
   auth_req_packet *pkt = new auth_req_packet (conf->id, initiate, THISNODE->protocols);
 
-  protocol = best_protocol (THISNODE->protocols & conf->protocols);
+  rsachallenge chg;
 
-  // mask out protocols we cannot establish
-  if (!conf->udp_port) protocol &= ~PROT_UDPv4;
-  if (!conf->tcp_port) protocol &= ~PROT_TCPv4;
+  rsa_cache.gen (pkt->id, chg);
 
-  if (protocol)
-    {
-      rsachallenge chg;
+  if (0 > RSA_public_encrypt (sizeof chg,
+                              (unsigned char *)&chg, (unsigned char *)&pkt->encr,
+                              conf->rsa_key, RSA_PKCS1_OAEP_PADDING))
+    fatal ("RSA_public_encrypt error");
 
-      rsa_cache.gen (pkt->id, chg);
+  slog (L_TRACE, ">>%d PT_AUTH_REQ [%s]", conf->id, (const char *)si);
 
-      if (0 > RSA_public_encrypt (sizeof chg,
-                                  (unsigned char *)&chg, (unsigned char *)&pkt->encr,
-                                  conf->rsa_key, RSA_PKCS1_OAEP_PADDING))
-        fatal ("RSA_public_encrypt error");
+  vpn->send_vpn_packet (pkt, si, IPTOS_RELIABILITY); // rsa is very very costly
 
-      slog (L_TRACE, ">>%d PT_AUTH_REQ [%s]", conf->id, (const char *)si);
-
-      send_vpn_packet (pkt, si, IPTOS_RELIABILITY); // rsa is very very costly
-
-      delete pkt;
-    }
-  else
-    ; // silently fail
+  delete pkt;
 }
 
 void
@@ -623,7 +618,7 @@ connection::send_auth_response (const sockinfo &si, const rsaid &id, const rsach
 
   slog (L_TRACE, ">>%d PT_AUTH_RES [%s]", conf->id, (const char *)si);
 
-  send_vpn_packet (pkt, si, IPTOS_RELIABILITY); // rsa is very very costly
+  vpn->send_vpn_packet (pkt, si, IPTOS_RELIABILITY); // rsa is very very costly
 
   delete pkt;
 }
@@ -637,7 +632,7 @@ connection::send_connect_info (int rid, const sockinfo &rsi, u8 rprotocols)
   connect_info_packet *r = new connect_info_packet (conf->id, rid, rsi, rprotocols);
 
   r->hmac_set (octx);
-  send_vpn_packet (r, si);
+  vpn->send_vpn_packet (r, si);
 
   delete r;
 }
@@ -661,7 +656,8 @@ connection::establish_connection_cb (time_watcher &w)
       if (conf->hostname)
         {
           reset_dstaddr ();
-          if (si.host && auth_rate_limiter.can (si))
+
+          if (si.valid () && auth_rate_limiter.can (si))
            {
             if (retry_cnt < 4)
               send_auth_request (si, true);
@@ -729,7 +725,7 @@ connection::send_data_packet (tap_packet *pkt, bool broadcast)
     tos = (*pkt)[15] & IPTOS_TOS_MASK;
 
   p->setup (this, broadcast ? 0 : conf->id, &((*pkt)[6 + 6]), pkt->len - 6 - 6, ++oseqno); // skip 2 macs
-  send_vpn_packet (p, si, tos);
+  vpn->send_vpn_packet (p, si, tos);
 
   delete p;
 
@@ -822,7 +818,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                 else
                   {
                     retry_cnt = 0;
-                    establish_connection.set (NOW + 8); //? ;)
+                    establish_connection.start (NOW + 8); //? ;)
                     keepalive.reset ();
                     rekey.reset ();
 
@@ -888,8 +884,8 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 
                           si = rsi;
 
-                          rekey.set (NOW + ::conf.rekey);
-                          keepalive.set (NOW + ::conf.keepalive);
+                          rekey.start (NOW + ::conf.rekey);
+                          keepalive.start (NOW + ::conf.keepalive);
 
                           // send queued packets
                           while (tap_packet *p = queue.get ())
@@ -1043,7 +1039,7 @@ void connection::connect_request (int id)
 
   slog (L_TRACE, ">>%d PT_CONNECT_REQ(%d)", conf->id, id);
   p->hmac_set (octx);
-  send_vpn_packet (p, si);
+  vpn->send_vpn_packet (p, si);
 
   delete p;
 }
@@ -1075,28 +1071,6 @@ const char *connection::script_node_down ()
   putenv ("STATE=down");
 
   return ::conf.script_node_up ? ::conf.script_node_down : "node-down";
-}
-
-// send a vpn packet out to other hosts
-void
-connection::send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos)
-{
-  switch (protocol)
-    {
-      case PROT_IPv4:
-        vpn->send_ipv4_packet (pkt, si, tos);
-        break;
-
-      case PROT_UDPv4:
-        vpn->send_udpv4_packet (pkt, si, tos);
-        break;
-
-#if ENABLE_TCP
-      case PROT_TCPv4:
-        vpn->send_tcpv4_packet (pkt, si, tos);
-        break;
-#endif
-    }
 }
 
 connection::connection(struct vpn *vpn_)

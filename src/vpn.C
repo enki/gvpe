@@ -40,13 +40,6 @@
 #include "util.h"
 #include "vpn.h"
 
-#if ENABLE_TCP
-# include <map>
-# include <unistd.h>
-# include <fcntl.h>
-# include <sys/poll.h>
-#endif
-
 /////////////////////////////////////////////////////////////////////////////
 
 const char *vpn::script_if_up ()
@@ -193,6 +186,32 @@ vpn::setup ()
   return 0;
 }
 
+// send a vpn packet out to other hosts
+void
+vpn::send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos)
+{
+  switch (si.prot)
+    {
+      case PROT_IPv4:
+        send_ipv4_packet (pkt, si, tos);
+        break;
+
+      case PROT_UDPv4:
+        send_udpv4_packet (pkt, si, tos);
+        break;
+
+#if ENABLE_TCP
+      case PROT_TCPv4:
+        send_tcpv4_packet (pkt, si, tos);
+        break;
+#endif
+
+      default:
+        slog (L_CRIT, _("%s: FATAL: trying to send packet with unsupported protocol"), (const char *)si);
+        abort ();
+    }
+}
+
 void
 vpn::send_ipv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
@@ -250,9 +269,9 @@ vpn::udpv4_ev (io_watcher &w, short revents)
       socklen_t sa_len = sizeof (sa);
       int len;
 
-      len = recvfrom (w.p->fd, &((*pkt)[0]), MAXSIZE, 0, (sockaddr *)&sa, &sa_len);
+      len = recvfrom (w.fd, &((*pkt)[0]), MAXSIZE, 0, (sockaddr *)&sa, &sa_len);
 
-      sockinfo si(sa);
+      sockinfo si(sa, PROT_UDPv4);
 
       if (len > 0)
         {
@@ -263,7 +282,7 @@ vpn::udpv4_ev (io_watcher &w, short revents)
       else
         {
           // probably ECONNRESET or somesuch
-          slog (L_DEBUG, _("%s: %s"), (const char *)si, strerror (errno));
+          slog (L_DEBUG, _("%s: fd %d, %s"), (const char *)si, w.fd, strerror (errno));
         }
 
       delete pkt;
@@ -293,7 +312,7 @@ vpn::ipv4_ev (io_watcher &w, short revents)
       socklen_t sa_len = sizeof (sa);
       int len;
 
-      len = recvfrom (w.p->fd, &((*pkt)[0]), MAXSIZE, 0, (sockaddr *)&sa, &sa_len);
+      len = recvfrom (w.fd, &((*pkt)[0]), MAXSIZE, 0, (sockaddr *)&sa, &sa_len);
 
       sockinfo si(sa, PROT_IPv4);
 
@@ -329,180 +348,6 @@ vpn::ipv4_ev (io_watcher &w, short revents)
       exit (1);
     }
 }
-
-#if ENABLE_TCP
-
-struct tcp_connection;
-
-struct lt_sockinfo
-{
-  bool operator()(const sockinfo *a, const sockinfo *b) const
-  {
-    return *a < *b;
-  }
-};
-
-struct tcp_si_map : public map<const sockinfo *, tcp_connection *, lt_sockinfo> {
-  void cleaner_cb (time_watcher &w); time_watcher cleaner;
-
-  tcp_si_map ()
-    : cleaner(this, &tcp_si_map::cleaner_cb)
-    {
-      cleaner.start (0);
-    }
-} tcp_si;
-
-struct tcp_connection : io_watcher {
-  tstamp last_activity;
-  const sockinfo si;
-  vpn &v;
-  bool ok;
-
-  vpn_packet *r_pkt;
-  u32 r_len, r_ofs;
-
-  void tcpv4_ev (io_watcher &w, short revents);
-
-  operator tcp_si_map::value_type()
-    {
-      return tcp_si_map::value_type (&si, this);
-    }
-
-  tcp_connection (int fd, const sockinfo &si_, vpn &v_)
-    : v(v_), si(si_), io_watcher(this, &tcp_connection::tcpv4_ev)
-    {
-      last_activity = NOW;
-      ok = false;
-      r_pkt = 0;
-      start (fd, POLLOUT);
-    }
-
-  ~tcp_connection () { if (p) close (p->fd); }
-};
-
-void tcp_si_map::cleaner_cb (time_watcher &w)
-{
-  w.at = NOW + 600;
-  tstamp to = NOW - ::conf.keepalive - 30;
-
-  for (iterator i = begin (); i != end(); )
-    if (i->second->last_activity >= to)
-      ++i;
-    else
-      {
-        erase (i);
-        i = begin ();
-      }
-}
-
-void
-vpn::send_tcpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
-{
-  tcp_si_map::iterator info = tcp_si.find (&si);
-
-  if (info == tcp_si.end ())
-    {
-      // woaw, the first lost packet ;)
-      int fd = socket (PF_INET, SOCK_STREAM, IPPROTO_TCP);
-
-      if (fd >= 0)
-        {
-          fcntl (fd, F_SETFL, O_NONBLOCK);
-          
-          if (connect (fd, si.sav4 (), si.salenv4 ()) >= 0
-              || errno == EINPROGRESS)
-            {
-              tcp_connection *i = new tcp_connection (fd, si, *this);
-
-              tcp_si.insert (*i);
-            }
-          else
-            close (fd);
-        }
-    }
-  else
-    {
-      tcp_connection *i = info->second;
-
-      i->last_activity = NOW;
-
-      if (i->ok)
-        {
-          setsockopt (i->p->fd, SOL_IP, IP_TOS, &tos, sizeof tos);
-
-          // we use none of the advantages of tcp
-          write (i->p->fd, (void *)pkt, pkt->len + sizeof (u32)) != pkt->len + sizeof (u32);
-        }
-    }
-  
-#if 0
-  setsockopt (udpv4_fd, SOL_IP, IP_TOS, &tos, sizeof tos);
-  sendto (udpv4_fd, &((*pkt)[0]), pkt->len, 0, si.sav4 (), si.salenv4 ());
-#endif
-}
-
-void
-tcp_connection::tcpv4_ev (io_watcher &w, short revents)
-{
-  last_activity = NOW;
-
-  if (!ok) // just established?
-    {
-      ok = true;
-      set (POLLIN);
-    }
-
-  if (revents & (POLLIN | POLLERR))
-    {
-      u32 len;
-
-      if (sizeof (len) == read (p->fd, &len, sizeof (len)))
-        {
-          vpn_packet *pkt = new vpn_packet;
-
-          if (len == read (p->fd, &((*pkt)[0]), len))
-            {
-              pkt->len = len;
-
-              v.recv_vpn_packet (pkt, si);
-              return;
-            }
-          
-          delete pkt;
-        }
-
-      tcp_si.erase (&si);
-
-      set (0);//D
-    }
-}
-
-void
-vpn::tcpv4_ev (io_watcher &w, short revents)
-{
-  if (revents & (POLLIN | POLLERR))
-    {
-      struct sockaddr_in sa;
-      socklen_t sa_len = sizeof (sa);
-      int len;
-
-      int fd = accept (w.p->fd, (sockaddr *)&sa, &sa_len);
-
-      if (fd >= 0)
-        {
-          fcntl (fd, F_SETFL, O_NONBLOCK);
-
-          sockinfo si(sa, PROT_TCPv4);
-          tcp_connection *i = new tcp_connection (fd, si, *this);
-
-          slog (L_DEBUG, _("accepted tcp connection from %s\n"), (const char *)si);//D
-
-          tcp_si.insert (*i);
-        }
-    }
-}
-
-#endif
 
 void
 vpn::tap_ev (io_watcher &w, short revents)

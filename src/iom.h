@@ -60,34 +60,29 @@ public:
 extern io_manager iom; // a singleton, together with it's construction/destruction problems.
 
 struct io_watcher : callback2<void, io_watcher &, short> {
-  pollfd *p;
+  bool registered; // already registered?
+  int fd;
+  short events;
 
   template<class O1, class O2>
   io_watcher (O1 *object, void (O2::*method)(io_watcher &, short))
     : callback2<void, io_watcher &, short>(object,method)
+    , registered(false)
     { }
 
   ~io_watcher ();
 
-  void set(int fd, short events)
+  void set(int fd_, short events_);
+
+  void set(short events_)
     {
-      assert (p);
-      p->fd     = fd;
-      p->events = events;
+      set (fd, events_);
     }
 
-  void set(short events)
+  void start (int fd_, short events_)
     {
-      assert (p);
-      p->events = events;
-    }
-
-  void start (int fd, short events)
-    {
-      iom.reg (this); // make sure pfd is set
-
-      p->fd     = fd;
-      p->events = events;
+      set (fd_, events_);
+      iom.reg (this);
     }
 
   void stop ()
@@ -118,10 +113,15 @@ struct time_watcher : callback1<void, time_watcher &> {
       trigger ();
     }
 
-  void start ();
+  void start ()
+    {
+      iom.reg (this);
+    }
+
   void start (tstamp when)
     {
       set (when);
+      iom.reg (this);
     }
 
   void stop ()
@@ -132,7 +132,6 @@ struct time_watcher : callback1<void, time_watcher &> {
   void reset (tstamp when = TSTAMP_CANCEL)
     {
       stop ();
-
       at = when;
     }
 };

@@ -35,8 +35,8 @@ struct sockinfo
     u8 prot;
     u8 pad1;
 
-    void set (const sockaddr_in *sa, u8 prot_ = PROT_UDPv4);
-    void set (const conf_node *conf, u8 prot_ = PROT_UDPv4);
+    void set (const sockaddr_in *sa, u8 prot_);
+    void set (const conf_node *conf, u8 prot_);
 
     operator const char *() const;
 
@@ -46,20 +46,20 @@ struct sockinfo
 
     const char *ntoa () const;
 
+    bool valid () const
+      { return prot != 0 && host != 0; }
+
     sockinfo() { prot = 0; }
 
-    sockinfo(const sockaddr_in &sa, u8 prot_ = PROT_UDPv4)
-      { set (&sa, prot_); }
+    sockinfo(const sockaddr_in &sa, u8 prot)
+      { set (&sa, prot); }
 
-    sockinfo(const conf_node *conf, u8 prot_ = PROT_UDPv4)
-      { set (conf, prot_); }
+    sockinfo(const conf_node *conf, u8 prot)
+      { set (conf, prot); }
   };
 
-inline bool
-operator == (const sockinfo &a, const sockinfo &b)
-{
-  return a.host == b.host && a.port == b.port && a.prot == b.prot;
-}
+bool operator == (const sockinfo &a, const sockinfo &b);
+bool operator < (const sockinfo &a, const sockinfo &b);
 
 #endif
 

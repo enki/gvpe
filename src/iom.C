@@ -23,6 +23,8 @@
 #include <algorithm>
 #include <functional>
 
+#include "gettext.h"
+
 #include "slog.h"
 #include "iom.h"
 
@@ -41,8 +43,6 @@ void time_watcher::set (tstamp when)
 
   if (registered)
     iom.reschedule_time_watchers ();
-  else
-    iom.reg (this);
 }
 
 void time_watcher::trigger ()
@@ -55,16 +55,22 @@ void time_watcher::trigger ()
     iom.reg (this);
 }
 
-void time_watcher::start ()
-{
-  if (!registered)
-    iom.reg (this);
-}
-
 time_watcher::~time_watcher ()
 {
   if (iom_valid)
     iom.unreg (this);
+}
+
+void io_watcher::set(int fd_, short events_)
+{
+  fd     = fd_;
+  events = events_;
+
+  if (registered)
+    {
+      iom.unreg (this);
+      iom.reg (this);
+    }
 }
 
 io_watcher::~io_watcher ()
@@ -75,18 +81,26 @@ io_watcher::~io_watcher ()
 
 void io_manager::reg (io_watcher *w)
 {
-  pollfd pfd;
+  if (!w->registered)
+    {
+      w->registered = true;
 
-  pfs.push_back (pfd);
-  iow.push_back (w);
+      pollfd pfd;
 
-  w->p = &(*(pfs.end () - 1));
+      pfd.fd     = w->fd;
+      pfd.events = w->events;
+
+      pfs.push_back (pfd);
+      iow.push_back (w);
+    }
 }
 
 void io_manager::unreg (io_watcher *w)
 {
-  if (w->p)
+  if (w->registered)
     {
+      w->registered = false;
+
       unsigned int sz = iow.size ();
       unsigned int i = find (iow.begin (), iow.end (), w) - iow.begin ();
 
@@ -107,8 +121,6 @@ void io_manager::unreg (io_watcher *w)
           iow[i] = iow[sz - 1]; iow.pop_back ();
           pfs[i] = pfs[sz - 1]; pfs.pop_back ();
         }
-
-      w->p = 0;
     }
 }
 
@@ -119,16 +131,21 @@ void io_manager::reschedule_time_watchers ()
 
 void io_manager::reg (time_watcher *w)
 {
-  w->registered = true;
+  if (!w->registered)
+    {
+      w->registered = true;
 
-  tw.push_back (w);
-  push_heap (tw.begin (), tw.end (), earliest_first);
+      tw.push_back (w);
+      push_heap (tw.begin (), tw.end (), earliest_first);
+    }
 }
 
 void io_manager::unreg (time_watcher *w)
 {
   if (w->registered)
     {
+      w->registered = false;
+
       unsigned int sz = tw.size ();
       unsigned int i = find (tw.begin (), tw.end (), w) - tw.begin ();
 
@@ -139,8 +156,6 @@ void io_manager::unreg (time_watcher *w)
 
       tw.pop_back ();
       reschedule_time_watchers ();
-
-      w->registered = false;
     }
 }
 
@@ -192,7 +207,14 @@ void io_manager::loop ()
         if (p->revents)
           {
             --fds;
-            (*w)->call (**w, p->revents);
+
+            if (p->revents & POLLNVAL)
+              {
+                slog (L_ERR, _("io_watcher started on illegal file descriptor, disabling."));
+                (*w)->stop ();
+              }
+            else
+              (*w)->call (**w, p->revents);
           }
     }
 }

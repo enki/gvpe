@@ -1,5 +1,5 @@
 /*
-    sockinfo.c -- socket address management
+    sockinfo.C -- socket address management
     
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -38,11 +38,11 @@ sockinfo::set (const conf_node *conf, u8 prot_)
 {
   prot = prot_;
   host = 0;
-  port = prot_ == PROT_UDPv4 ? htons (conf->udp_port)
-       : prot_ == PROT_TCPv4 ? htons (conf->tcp_port)
+  port = prot == PROT_UDPv4 ? htons (conf->udp_port)
+       : prot == PROT_TCPv4 ? htons (conf->tcp_port)
        : 0;
 
-  if (conf->hostname)
+  if (prot && conf->hostname)
     {
       struct hostent *he = gethostbyname (conf->hostname);
 
@@ -71,7 +71,7 @@ sockinfo::sav4() const
   return (const sockaddr *)&sa;
 }
 
-static char hostport[15 + 1 + 5 + 1]; // IPv4 : port
+static char hostport[10 + 15 + 1 + 5 + 1]; // protype / IPv4 : port
 
 const char *
 sockinfo::ntoa () const
@@ -87,8 +87,22 @@ sockinfo::operator const char *() const
 {
   in_addr ia = { host };
 
-  sprintf (hostport, "%.15s:%d", inet_ntoa (ia), ntohs (port) & 0xffff);
+  sprintf (hostport, "%s/%.15s:%d", strprotocol (prot), inet_ntoa (ia), ntohs (port) & 0xffff);
 
   return hostport;
+}
+
+bool
+operator == (const sockinfo &a, const sockinfo &b)
+{
+  return a.host == b.host && a.port == b.port && a.prot == b.prot;
+}
+
+bool
+operator < (const sockinfo &a, const sockinfo &b)
+{
+  return a.host < b.host
+         || (a.host == b.host && (a.port < b.port
+                                  || (a.port == b.port && a.prot < b.prot)));
 }
 

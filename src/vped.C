@@ -202,6 +202,7 @@ setup_signals (void)
   act.sa_handler = sigusr1_handler; sigaction (SIGUSR1, &act, NULL);
   act.sa_handler = sigusr2_handler; sigaction (SIGUSR2, &act, NULL);
   act.sa_handler = SIG_IGN;         sigaction (SIGCHLD, &act, NULL);
+  act.sa_handler = SIG_IGN;         sigaction (SIGPIPE, &act, NULL);
   act.sa_flags = SA_RESETHAND;
   act.sa_handler = sigterm_handler; sigaction (SIGINT , &act, NULL);
   act.sa_handler = sigterm_handler; sigaction (SIGTERM, &act, NULL);

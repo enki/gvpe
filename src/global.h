@@ -60,7 +60,7 @@
 #define ETH_OVERHEAD 14			// the size of an ethernet header
 #define MAXSIZE (MAX_MTU + VPE_OVERHEAD)// slightly too large, but who cares
 
-#define PKTCACHESIZE 4			// the size of the memory pool for packets
+#define PKTCACHESIZE 5			// the size of the memory pool for packets
 
 #define QUEUEDEPTH 16			// the number of packets that will be queued (should be low)
 
