@@ -183,6 +183,11 @@ tinc_TUNTAP
 tinc_OPENSSL
 dnl tinc_ZLIB
 
+AC_ARG_ENABLE(tcp,
+  [AC_HELP_STRING(--enable-tcp, [enable tcp protocol support.])],
+  AC_DEFINE_UNQUOTED(ENABLE_TCP, 1, [TCP protocol support.])
+)
+
 HMAC=16    dnl see also the AC_HELP_STRING
 AC_ARG_ENABLE(hmac-length,
   [AC_HELP_STRING(--enable-hmac-length=BYTES, [use a hmac of length BYTES bytes (default 16). Allowed values are 4, 8, 12, 16.])],
