@@ -7,8 +7,8 @@ EXTRA_DIST = device-linux.C device-cygwin.C device-tincd.C callback.pl	\
    tincd/apply tincd/fixit	\
    tincd/cygwin/device.c tincd/darwin/device.c tincd/freebsd/device.c	\
    tincd/linux/device.c tincd/mingw/device.c tincd/netbsd/device.c	\
-   tincd/openbsd/device.c tincd/raw_socket/device.c tincd/solaris/device.c
-
+   tincd/openbsd/device.c tincd/raw_socket/device.c tincd/solaris/device.c \
+   ether_emu.C
 
 INCLUDES = @INCLUDES@ -I$(top_builddir) -I$(top_srcdir)/lib
 

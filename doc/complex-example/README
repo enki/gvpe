@@ -3,7 +3,7 @@ These files are configuration files for "our" internal network.
 It is highly non-trivial, so don't use this configuration as the basis of
 your network unless you know what you are doing.
 
-It features: around 15 hosts, many of them have additional networks behind
+It features: around 30 hosts, many of them have additional networks behind
 them and use an assortment of different tunneling protocols. The vpn is
 fully routed, no arp is used at all.
 

@@ -1,0 +1,58 @@
+#!/bin/bash
+
+TARGET="dist-$1"
+
+#autoconf
+#autoheader
+#automake
+#./configure
+
+CONFIGURE="--prefix=/opt/vpe --sysconfdir=/etc --localstatedir=/var --enable-tcp --enable-http-proxy"
+
+eval $(grep VERSION= distdir/configure)
+
+mkdir -p $TARGET
+
+case "$1" in
+   linux )
+      HOST=root@localhost
+      BASE=/tmp
+      CONFIGURE="$CONFIGURE --enable-icmp"
+   ;;
+   darwin )
+      HOST=root@imac.laendle
+      BASE=/Users/schmorp
+      CONFIGURE="$CONFIGURE --enable-icmp --with-openssl-include=$BASE/include"
+      MAKE="LIBS='$BASE/lib/libcrypto.a -lintl'"
+   ;;
+esac
+
+make distdir="$TARGET/vpe" distdir
+rsync -avzPessh $TARGET/vpe $HOST:$BASE/. --delete
+rm -rf $TARGET/vpe
+
+echo "$CONFIGURE" >$TARGET/configure
+
+ssh $HOST "
+   cd $BASE/vpe || exit 1;
+   ./configure $CONFIGURE || exit 2;
+   rm -rf $BASE/dist;
+   make $MAKE all || exit 3;
+   make $MAKE prefix=$BASE/dist install || exit 4;
+   strip $BASE/dist/sbin/vped $BASE/dist/bin/vpectrl;
+" 2>&1 | tee $TARGET/buildlog
+
+mkdir -p $TARGET/opt
+rsync -avzPessh $HOST:$BASE/dist/. $TARGET/opt/. --delete
+(
+   cd $TARGET || exit 99
+   mkdir opt/doc
+   mkdir opt/doc/vped
+   mv buildlog opt/doc/vped/README.buildlog
+   mv configure opt/doc/vped/README.configure
+   chmod u=rwX,go=rX -R opt
+)
+
+mkdir -p bindist
+tar cCf $TARGET - . | gzip -9 >bindist/vpe-$VERSION-$1.tar.gz
+

@@ -10,7 +10,9 @@ MAINTAINERCLEANFILES = vpe.texi vpe.5 vped.8 vpectrl.8 vped.conf.5 vpe.protocol.
 
 EXTRA_DIST = $(man_MANS) vpe.texi \
   Makefile.maint GNUmakefile Makefile.summ \
-  vpe.texi.in vpe.5.pod vped.8.pod vpectrl.8.pod vped.conf.5.pod vpe.protocol.7.pod
+  vpe.texi.in vpe.5.pod vped.8.pod vpectrl.8.pod vped.conf.5.pod vpe.protocol.7.pod \
+  complex-example/README complex-example/if-up complex-example/node-up complex-example/vped.conf
+
 
 # Use `ginstall' in the definition of man_MANS to avoid
 # confusion with the `install' target.  The install rule transforms `ginstall'

@@ -56,9 +56,6 @@
 /* Cygwin */
 #undef HAVE_CYGWIN
 
-/* Define to 1 if you have the <cygwin.h> header file. */
-#undef HAVE_CYGWIN_H
-
 /* Define to 1 if you have the `daemon' function. */
 #undef HAVE_DAEMON
 
@@ -207,6 +204,9 @@
 
 /* Define to 1 if you have the <syslog.h> header file. */
 #undef HAVE_SYSLOG_H
+
+/* Define to 1 if you have the <sys/cygwin.h> header file. */
+#undef HAVE_SYS_CYGWIN_H
 
 /* Define to 1 if you have the <sys/file.h> header file. */
 #undef HAVE_SYS_FILE_H

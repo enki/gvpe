@@ -10,6 +10,7 @@
    - warnings when choosing insecure ciphers/hashes
    - reduced default hmac length to 8.
    - cvs now contains configure, Makefile.in and other generated files.
+   - added doc/complex-example to the distribution.
 
 1.0
    - tweaked various timeouts to help very slow (486) class

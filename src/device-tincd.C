@@ -136,15 +136,17 @@ tap_device::info ()
 
 tap_device::tap_device ()
 {
+  device = "(null)";
+
   if (setup_device ())
     {
-      slog (L_DEBUG, _("interface %s initialized"), info ());
+      slog (L_DEBUG, _("interface %s on %s initialized"), info (), device);
       fd = device_fd;
       strcpy (ifrname, iface);
     }
   else
     {
-      slog (L_ERR, _("error while configuring tincd device (%s)"), info ());
+      slog (L_ERR, _("error while configuring tincd device %s on %s"), info (), device);
       exit (1);
     }
 }
