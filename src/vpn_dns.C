@@ -60,7 +60,7 @@
 #define LATENCY_FACTOR   0.5 // RTT * LATENCY_FACTOR == sending rate
 #define MAX_OUTSTANDING  100 // max. outstanding requests
 #define MAX_WINDOW      1000 // max. for MAX_OUTSTANDING, and backlog
-#define MAX_BACKLOG     (32*1024) // size of gvpe protocol backlog (bytes), must be > MAXSIZE
+#define MAX_BACKLOG     (64*1024) // size of gvpe protocol backlog (bytes), must be > MAXSIZE
 
 #define MAX_DOMAIN_SIZE 240 // 255 is legal limit, but bind doesn't compress well
 // 240 leaves about 4 bytes of server reply data
