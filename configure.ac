@@ -70,12 +70,13 @@ AC_ARG_ENABLE(iftype,
         "native/linux"
         "tincd/linux"
         "tincd/freebsd"
+        "tincd/openbsd"
         "native/cygwin";
      Untested combinations are:
         "tincd/netbsd"
         "tincd/darwin"
         "tincd/solaris"
-        "tincd/openbsd";
+        "tincd/mingw";
      Broken combinations are:
         "tincd/cygwin";
      The default is to autodetect.

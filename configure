@@ -870,9 +870,10 @@ Optional Features:
   --enable-iftype=TYPE/SUBTYPE
                           Use kernel/net device interface TYPE/SUBTYPE.
                           Working combinations are: "native/linux"
-                          "tincd/linux" "tincd/freebsd"; Untested combinations
-                          are: "tincd/netbsd" "tincd/darwin" "tincd/solaris"
-                          "tincd/openbsd"; Broken combinations are:
+                          "tincd/linux" "tincd/freebsd" "tincd/openbsd"
+                          "native/cygwin"; Untested combinations are:
+                          "tincd/netbsd" "tincd/darwin" "tincd/solaris"
+                          "tincd/mingw"; Broken combinations are:
                           "tincd/cygwin"; The default is to autodetect.
   --enable-rohc           enable robust header compression (rfc3095).
   --enable-icmp           enable icmp protocol support (default disabled).
