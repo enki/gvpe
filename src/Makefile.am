@@ -1,6 +1,6 @@
 ## Produce this file with automake to get Makefile.in
 
-SUBDIRS = rohc
+#SUBDIRS = rohc
 
 sbin_PROGRAMS = gvpe
 bin_PROGRAMS = gvpectrl
