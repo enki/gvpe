@@ -315,7 +315,9 @@ retry:
           // all these bool options really really cost a lot of executable size!
           else if (!strcmp (var, "enable-tcp"))
             {
+#if ENABLE_TCP
               u8 v; parse_bool (v, "enable-tcp" , PROT_TCPv4, 0); node->protocols = (node->protocols & ~PROT_TCPv4) | v;
+#endif
             }
           else if (!strcmp (var, "enable-udp"))
             {

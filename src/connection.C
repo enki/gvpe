@@ -1091,9 +1091,11 @@ connection::send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos)
         vpn->send_udpv4_packet (pkt, si, tos);
         break;
 
+#if ENABLE_TCP
       case PROT_TCPv4:
         vpn->send_tcpv4_packet (pkt, si, tos);
         break;
+#endif
     }
 }
 
