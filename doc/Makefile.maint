@@ -19,17 +19,17 @@ $(regular-men): %.8: $(top_srcdir)/src/%.c
 executable = $(patsubst %/install,%/ginstall, ../src/$(basename $@))
 
 %.5: %.5.pod Makefile.maint
-	pod2man -n$(shell perl -e '$$ARGV[0] =~ s/\.\d$$//; print uc $$ARGV[0]' $@) -qnone -r$(VERSION) -s5 -c "Virtual Private Ethernet" $< >$@
+	pod2man -n$(shell perl -e '$$ARGV[0] =~ s/\.\d$$//; print uc $$ARGV[0]' $@) -qnone -r$(VERSION) -s5 -c "GNU Virtual Private Ethernet" $< >$@
 
 %.7: %.7.pod Makefile.maint
-	pod2man -n$(shell perl -e '$$ARGV[0] =~ s/\.\d$$//; print uc $$ARGV[0]' $@) -qnone -r$(VERSION) -s7 -c "Virtual Private Ethernet" $< >$@
+	pod2man -n$(shell perl -e '$$ARGV[0] =~ s/\.\d$$//; print uc $$ARGV[0]' $@) -qnone -r$(VERSION) -s7 -c "GNU Virtual Private Ethernet" $< >$@
 
 %.8: %.8.pod Makefile.maint
-	pod2man -n$(shell perl -e '$$ARGV[0] =~ s/\.\d$$//; print uc $$ARGV[0]' $@) -qnone -r$(VERSION) -s8 -c "Virtual Private Ethernet" $< >$@
+	pod2man -n$(shell perl -e '$$ARGV[0] =~ s/\.\d$$//; print uc $$ARGV[0]' $@) -qnone -r$(VERSION) -s8 -c "GNU Virtual Private Ethernet" $< >$@
 
-vpe.texi: vpe.texi.in
-	./pod2texi <vpe.texi.in >vpe.texi
+gvpe.texi: gvpe.texi.in
+	./pod2texi <gvpe.texi.in >gvpe.texi
 
-../README: vpe.5.pod
-	pod2text -q\\\" -a vpe.5.pod >../README
+../README: gvpe.5.pod
+	pod2text -q\\\" -a gvpe.5.pod >../README
 

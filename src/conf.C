@@ -115,8 +115,9 @@ void configuration::init ()
   default_node.connectmode = conf_node::C_ALWAYS;
   default_node.compress    = true;
   default_node.protocols   = PROT_UDPv4;
+  default_node.max_retry   = DEFAULT_MAX_RETRY;
 
-  conf.pidfilename = strdup (LOCALSTATEDIR "/run/vped.pid");
+  conf.pidfilename = strdup (LOCALSTATEDIR "/run/gvpe.pid");
 }
 
 void configuration::cleanup()
@@ -165,7 +166,7 @@ void configuration::read_config (bool need_keys)
 
   clear_config ();
 
-  asprintf (&fname, "%s/vped.conf", confbase);
+  asprintf (&fname, "%s/gvpe.conf", confbase);
   f = fopen (fname, "r");
 
   if (f)
@@ -340,6 +341,8 @@ retry:
             node->dns_port = atoi (val);
           else if (!strcmp (var, "router-priority"))
             node->routerprio = atoi (val);
+          else if (!strcmp (var, "max-retry"))
+            node->max_retry = atoi (val);
           else if (!strcmp (var, "connect"))
             {
               if (!strcmp (val, "ondemand"))
@@ -352,8 +355,8 @@ retry:
                 node->connectmode = conf_node::C_DISABLED;
               else
                 slog (L_WARN,
-                        _("illegal value for 'connectmode', use one of 'ondemand', 'never', 'always' or 'disabled', at '%s' line %d"),
-                        var, fname, lineno);
+                      _("illegal value for 'connectmode', use one of 'ondemand', 'never', 'always' or 'disabled', at '%s' line %d"),
+                      var, fname, lineno);
             }
           else if (!strcmp (var, "inherit-tos"))
             {
@@ -487,7 +490,7 @@ configuration::print ()
 
 configuration::configuration ()
 {
-  asprintf (&confbase, "%s/vpe", CONFDIR);
+  asprintf (&confbase, "%s/gvpe", CONFDIR);
 
   init ();
 }

@@ -84,7 +84,7 @@ hosts).
 
 =head2 Routing and Protocol translation
 
-The vpe routing algorithm is easy: there isn't any routing. Vped always
+The gvpe routing algorithm is easy: there isn't any routing. GVPE always
 tries to establish direct connections, if the protocol abilities of the
 two hosts allow it.
 

@@ -1,6 +1,6 @@
 =head1 NAME
 
-vpe.osdep - os dependent information
+gvpe.osdep - os dependent information
 
 =head1 DESCRIPTION
 
@@ -11,29 +11,29 @@ quirks and platform limitations, as known.
 
 Most operating systems nowadays support something called a
 I<tunnel>-device, which makes it possible to divert IPv4 (and often other
-protocols, too) into a userspace daemon like C<vped>. This is being
+protocols, too) into a userspace daemon like C<gvpe>. This is being
 referred to as a TUN-device.
 
 This is fine for point-to-point tunnels, but for a virtual ethernet, an
 additional ethernet header is needed. This functionality (called a TAP
 device here) is only provided by a subset of the configurations.
 
-On platforms only supporting a TUN-device, vped will invoke it's magical
+On platforms only supporting a TUN-device, gvpe will invoke it's magical
 ethernet emulation package, which currently only handles ARP requests for
 the IPv4 protocol (but more could be added, bu the tincd network drivers
 might need to be modified for this to work). This means that on those
 platforms, only IPv4 will be supported.
 
-Also, since there is no way (currently) to tell vped which IP subnets are
+Also, since there is no way (currently) to tell gvpe which IP subnets are
 found on a specific host, you will either need to hardwire the MAC address
 for TUN-style hosts on all networks (and avoid ARP altogether, which is
 possible), or you need to send a packet from these hosts into the vpn
-network to tell vpe the local interface address.
+network to tell gvpe the local interface address.
 
 =head2 native/linux
 
 TAP-device is already part of the kernel (only 2.4 supported, but see
-tincd/linux). This is the configuration tested best, as vpe is being
+tincd/linux). This is the configuration tested best, as gvpe is being
 developed on this platform.
 
 To configure the interface, use either iproute2:
@@ -84,7 +84,7 @@ vpn (the exact address doesn't matter), like this:
   ifconfig $IFNAME mtu $MTU up
   ifconfig $IFNAME 10.11.12.13 10.55.66.77
   route add -net 10.0.0.0 10.55.66.77 255.0.0.0
-  ping -c1 10.55.66.77 # ping once to tell vped your gw ip
+  ping -c1 10.55.66.77 # ping once to tell gvpe your gw ip
 
 =head2 tincd/openbsd
 
@@ -113,9 +113,9 @@ Known to be broken.
 
 =head1 SEE ALSO
 
-vpe(5).
+gvpe(5).
 
 =head1 AUTHOR
 
-Marc Lehmann <vpe@plan9.de>
+Marc Lehmann <gvpe@plan9.de>
 

@@ -1,6 +1,6 @@
 /*
     util.C -- process management and other utility functions
-    Copyright (C) 2003 Marc Lehmann <pcg@goof.com>
+    Copyright (C) 2003-2004 Marc Lehmann <pcg@goof.com>
     
     Some of these are taken from tinc, see the AUTHORS file.
  
@@ -52,7 +52,7 @@ write_pidfile (void)
 
   if (pid)
     {
-      fprintf (stderr, _("A vped is already running with pid %d.\n"), pid);
+      fprintf (stderr, _("A gvpe daemon is already running with pid %d.\n"), pid);
       return 1;
     }
 
@@ -72,7 +72,7 @@ kill_other (int signal)
 
   if (!pid)
     {
-      fprintf (stderr, _("No other vped is running.\n"));
+      fprintf (stderr, _("No other gvpe daemon is running.\n"));
       return 1;
     }
 
@@ -81,7 +81,7 @@ kill_other (int signal)
   /* ESRCH is returned when no process with that pid is found */
   if (kill (pid, signal) && errno == ESRCH)
     {
-      fprintf (stderr, _("The vped is no longer running. "));
+      fprintf (stderr, _("The gvpe daemon is no longer running. "));
 
       fprintf (stderr, _("Removing stale lock file.\n"));
       remove_pid (conf.pidfilename);
@@ -122,7 +122,7 @@ detach (int do_detach)
   else
     log_to (LOGTO_SYSLOG | LOGTO_STDERR);
 
-  slog (L_INFO, _("vped %s (%s %s) starting"), VERSION, __DATE__, __TIME__);
+  slog (L_INFO, _("gvpe daemon %s (%s %s) starting"), VERSION, __DATE__, __TIME__);
 
   return 0;
 }

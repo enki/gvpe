@@ -1,6 +1,6 @@
 =head1 NAME
 
-vped.conf - configuration file for the GNU VPE daemon
+gvpe.conf - configuration file for the GNU VPE daemon
 
 =head1 SYNOPSIS
 
@@ -21,7 +21,7 @@ vped.conf - configuration file for the GNU VPE daemon
 
 =head1 DESCRIPTION
 
-The vpe config file consists of a series of lines that contain C<variable
+The gvpe config file consists of a series of lines that contain C<variable
 = value> pairs. Empty lines are ignored. Comments start with a C<#> and
 extend to the end of the line. They can be used on their own lines, or
 after any directives. Spaces are allowed before or after the C<=> sign or
@@ -56,10 +56,10 @@ node section they will set the default values for all following nodes.
 
 =head2 GLOBAL SETTINGS
 
-Global settings will affect the behaviour of the running vped daemon, that
+Global settings will affect the behaviour of the running gvpe daemon, that
 is, they are in some sense node-specific (config files can set different
 values on different nodes using C<on>), but will affect the behaviour of
-the vped daemon and all connections it creates.
+the gvpe daemon and all connections it creates.
 
 =over 4
 
@@ -72,7 +72,7 @@ C<info>, notable errors are logged with C<error>. Default is C<info>.
 
 Not really a config setting but introduces a node section. The nickname is
 used to select the right configuration section and must be passed as an
-argument to the vped daemon.
+argument to the gvpe daemon.
 
 =item private-key = relative-path-to-key
 
@@ -80,7 +80,7 @@ Sets the path (relative to the config directory) to the private key
 (default: C<hostkey>). This is a printf format string so every C<%> must
 be doubled. A single C<%s> is replaced by the hostname, so you could
 use paths like C<hostkeys/%s> to fetch the files at the location where
-C<vpectrl> puts them.
+C<gvpectrl> puts them.
 
 Since only the private key file of the current node is used and the
 private key file should be kept secret per-host to avoid spoofings, it is
@@ -89,8 +89,8 @@ not recommended to use this feature.
 =item ifpersist = yes|true|on | no|false|off
 
 Should the tun/tap device be made persistent, that is, should the device
-stay up even when vped exits? Some versions of the tunnel device have
-problems sending packets when vped is restarted in persistent mode, so
+stay up even when gvpe exits? Some versions of the tunnel device have
+problems sending packets when gvpe is restarted in persistent mode, so
 if the connections can be established but you cannot send packets from
 the local node, try to set this to C<off> and do an ifconfig down on the
 device.
@@ -128,7 +128,7 @@ This value must be the minimum of the mtu values of all hosts.
 
 Sets the protocol number to be used for the rawip protocol. This is a
 global option because all hosts must use the same protocol, and since
-there are no port numbers, you cannot easily run more than one vped
+there are no port numbers, you cannot easily run more than one gvpe
 instance using the same protocol, nor can you share the protocol with
 other programs.
 
@@ -145,7 +145,7 @@ environment variables are passed to it (the values are just examples):
 
 =over 4
 
-=item CONFBASE=/etc/vpe
+=item CONFBASE=/etc/gvpe
 
 The configuration base directory.
 
@@ -166,19 +166,19 @@ interface MAC to this value. You will most likely use one of these:
    ip link set $IFNAME address $MAC mtu $MTU up # GNU/Linux
    ifconfig $IFNAME ether $MAC mtu $MTU up      # FreeBSD
 
-Please see the C<vpe.osdep(5)> manpage for platform-specific information.
+Please see the C<gvpe.osdep(5)> manpage for platform-specific information.
 
 =item IFTYPE=native # or tincd
 
 =item IFSUBTYPE=linux # or freebsd, darwin etc..
 
 The interface type (C<native> or C<tincd>) and the subtype (usually the os
-name in lowercase) that this vpe was configured for. Can be used to select
+name in lowercase) that this gvpe was configured for. Can be used to select
 the correct syntax to use for network-related commands.
 
 =item NODENAME=branch1
 
-The nickname of the current node, as passed to the vped daemon.
+The nickname of the current node, as passed to the gvpe daemon.
 
 =item NODEID=1
 
@@ -217,7 +217,7 @@ The node id of the remote node.
 
 =item DESTIP=188.13.66.8
 
-The numerical IP address of the remote host (vped accepts connections from
+The numerical IP address of the remote host (gvpe accepts connections from
 everywhere, as long as the other host can authenticate itself).
 
 =item DESTPORT=655 # deprecated
@@ -247,7 +247,7 @@ Same as C<node-up>, but gets called whenever a connection is lost.
 
 =item http-proxy-host = hostname/ip
 
-The C<http-proxy-*> family of options are only available if vpe was
+The C<http-proxy-*> family of options are only available if gvpe was
 compiled with the C<--enable-http-proxy> option and enable tunneling of
 tcp connections through a http proxy server.
 
@@ -255,7 +255,7 @@ C<http-proxy-host> and C<http-proxy-port> should specify the hostname and
 port number of the proxy server. See C<http-proxy-loginpw> if your proxy
 requires authentication.
 
-Please note that vpe will still try to resolve all hostnames in the
+Please note that gvpe will still try to resolve all hostnames in the
 configuration file, so if you are behind a proxy without access to a dns
 server better use numerical IP addresses.
 
@@ -291,7 +291,7 @@ The path to the pid file to check and create (Default:
 =head2 NODE SPECIFIC SETTINGS
 
 The following settings are node-specific, that is, every node can have
-different settings, even within the same vped instance. Settings that are
+different settings, even within the same gvpe instance. Settings that are
 executed before the first node section set the defaults, settings that are
 executed within a node section only apply to the given node.
 
@@ -325,7 +325,7 @@ some future version will have all protocols disabled by default.
 
 Enable the TCPv4 transport using the C<tcp-port> port
 (default: C<no>). Support for this horribly unsuitable protocol is only
-available when vpe was compiled using the C<--enable-tcp> option. Never
+available when gvpe was compiled using the C<--enable-tcp> option. Never
 use this transport unless you really must, it is horribly ineffiecent and
 resource-intensive compared to the other transports.
 
@@ -359,6 +359,15 @@ Wether to compress data packets sent to this host (default: C<yes>).
 Compression is really cheap even on slow computers and has no size
 overhead at all, so enabling this is a good idea.
 
+=item max-retry = positive-number
+
+The maximum interval in seconds (default: C<28800>, 8 hours) between
+retries to establish a connection to this node. When a connection cannot
+be established, gvpe uses exponential backoff capped at this value. It's
+sometimes useful to set this to a much lower value (e.g. C<120>) on
+connections to routers that usually are stable but sometimes are down, to
+assure quick reconnections.
+
 =back
 
 =head1 CONFIG DIRECTORY LAYOUT
@@ -367,7 +376,7 @@ The default (or recommended) directory layout for the config directory is:
 
 =over 4
 
-=item vped.conf
+=item gvpe.conf
 
 The config file.
 
@@ -391,9 +400,9 @@ The public keys of the other nodes, one file per node.
 
 =head1 SEE ALSO
 
-vpe(5), vped(8), vpectrl(8).
+gvpe(5), gvpe(8), gvpectrl(8).
 
 =head1 AUTHOR
 
-Marc Lehmann <vpe@plan9.de>
+Marc Lehmann <gvpe@plan9.de>
 

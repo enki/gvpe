@@ -31,6 +31,7 @@
 #define DEFAULT_KEEPALIVE	60	// one keepalive/minute (it's just 8 bytes...)
 #define DEFAULT_UDPPORT		655	// same as tinc, conflicts would be rare
 #define DEFAULT_MTU		1500	// let's ether-net
+#define DEFAULT_MAX_RETRY	28800	// retry at least this often
 
 enum {
   PROT_UDPv4  = 0x01, // udp over ipv4
@@ -54,6 +55,7 @@ struct conf_node {
 
   u8 protocols;   // protocols this host can send & receive
   u16 udp_port, tcp_port, dns_port;   // the port to bind to
+  int max_retry;
 
   enum connectmode { C_ONDEMAND, C_NEVER, C_ALWAYS, C_DISABLED } connectmode;
   bool compress;

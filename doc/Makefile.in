@@ -155,18 +155,17 @@ target_cpu = @target_cpu@
 target_os = @target_os@
 target_vendor = @target_vendor@
 
-# commented out, no use to distribute yet
-info_TEXINFOS = vpe.texi
+info_TEXINFOS = gvpe.texi
 
-man_MANS = vpe.5 vped.8 vpectrl.8 vped.conf.5 vpe.protocol.7 vpe.osdep.5
+man_MANS = gvpe.5 gvpe.8 gvpectrl.8 gvpe.conf.5 gvpe.protocol.7 gvpe.osdep.5
 
 PERL = @PERL@
-MAINTAINERCLEANFILES = vpe.texi vpe.5 vped.8 vpectrl.8 vped.conf.5 vpe.protocol.7 vpe.osdep.5
+MAINTAINERCLEANFILES = gvpe.texi gvpe.5 gvpe.8 gvpectrl.8 gvpe.conf.5 gvpe.protocol.7 gvpe.osdep.5
 
-EXTRA_DIST = $(man_MANS) vpe.texi \
+EXTRA_DIST = $(man_MANS) gvpe.texi \
   Makefile.maint GNUmakefile Makefile.summ \
-  vpe.texi.in vpe.5.pod vped.8.pod vpectrl.8.pod vped.conf.5.pod vpe.protocol.7.pod vpe.osdep.5.pod \
-  complex-example/README complex-example/if-up complex-example/node-up complex-example/vped.conf
+  gvpe.texi.in gvpe.5.pod gvpe.8.pod gvpectrl.8.pod gvpe.conf.5.pod gvpe.protocol.7.pod gvpe.osdep.5.pod \
+  complex-example/README complex-example/if-up complex-example/node-up complex-example/gvpe.conf
 
 subdir = doc
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -176,10 +175,10 @@ CONFIG_CLEAN_FILES =
 DIST_SOURCES =
 am__TEXINFO_TEX_DIR = $(srcdir)
 INFO_DEPS = vpe.info
-DVIS = vpe.dvi
-PDFS = vpe.pdf
-PSS = vpe.ps
-TEXINFOS = vpe.texi
+DVIS = gvpe.dvi
+PDFS = gvpe.pdf
+PSS = gvpe.ps
+TEXINFOS = gvpe.texi
 
 NROFF = nroff
 MANS = $(man_MANS)
@@ -208,9 +207,9 @@ Makefile: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.in  $(top_builddir)/config.s
 	TEXINPUTS="$(am__TEXINFO_TEX_DIR)$(PATH_SEPARATOR)$$TEXINPUTS" \
 	MAKEINFO='$(MAKEINFO) $(AM_MAKEINFOFLAGS) $(MAKEINFOFLAGS) -I $(srcdir)' \
 	$(TEXI2PDF) `test -f '$<' || echo '$(srcdir)/'`$<
-vpe.info: vpe.texi 
-vpe.dvi: vpe.texi 
-vpe.pdf: vpe.texi 
+vpe.info: gvpe.texi 
+vpe.dvi: gvpe.texi 
+vpe.pdf: gvpe.texi 
 TEXI2DVI = texi2dvi
 
 TEXI2PDF = $(TEXI2DVI) --pdf --batch
@@ -252,9 +251,9 @@ dist-info: $(INFO_DEPS)
 	done
 
 mostlyclean-aminfo:
-	-rm -f vpe.aux vpe.cp vpe.cps vpe.fn vpe.fns vpe.ky vpe.kys vpe.log vpe.pg \
-	  vpe.pgs vpe.tmp vpe.toc vpe.tp vpe.tps vpe.vr vpe.vrs vpe.dvi \
-	  vpe.pdf vpe.ps
+	-rm -f gvpe.aux gvpe.cp gvpe.cps gvpe.fn gvpe.fns gvpe.ky gvpe.kys gvpe.log \
+	  gvpe.pg gvpe.pgs gvpe.tmp gvpe.toc gvpe.tp gvpe.tps gvpe.vr \
+	  gvpe.vrs vpe.dvi vpe.pdf vpe.ps
 
 maintainer-clean-aminfo:
 	@list='$(INFO_DEPS)'; for i in $$list; do \

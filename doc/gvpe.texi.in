@@ -24,7 +24,7 @@
 
 This is the info manual for vpe, a Virtual Private Ethernet daemon.
 
-Copyright @copyright{} 2003 Marc Lehmann <vpe@@plan9.de>.
+Copyright @copyright{} 2003,2004 Marc Lehmann <gvpe@@plan9.de>.
 
 Permission is granted to make and distribute verbatim copies of this
 manual provided the copyright notice and this permission notice are
@@ -38,14 +38,14 @@ permission notice identical to this one.
 @end ifinfo
 
 @titlepage
-@title vpe Manual
+@title gvpe Manual
 @author Marc Lehmann, Ivo Timmermans and Guus Sliepen
 
 @page
 @vskip 0pt plus 1filll
 @cindex copyright
 
-Copyright @copyright{} 2003 Marc Lehmann <vpe@@plan9.de.
+Copyright @copyright{} 2003,2004 Marc Lehmann <gvpe@@plan9.de>.
 
 Permission is granted to make and distribute verbatim copies of this
 manual provided the copyright notice and this permission notice are
@@ -59,7 +59,7 @@ permission notice identical to this one.
 @end titlepage
 
 @c ==================================================================
-@node Top, vpe(5), (dir), (dir)
+@node Top, Introduction, (dir), (dir)
 
 This is the documentation for the Virtual Private Ethernet suite.
 
@@ -68,62 +68,62 @@ files. If you think it looks like a bunch of manpages glued together then
 you are most probably... right ;)
 
 @menu
-* vpe(5)::            Introduction and tutorial for vpe.
-* vpe.osdep(5)::      OS-dependent notes.
-* vped.conf(5)::      The main configuration file.
-* vpectrl(8)::        Config/Control programm reference.
-* vped(8)::           Networking daemon reference.
-* vpe.protocol(7)::   The network protocol explained.
-* complex-example::   A nontrivial example from the real world. Read vpe(5).
+* Introduction::      Introduction and tutorial for vpe.
+* OS Dependencies::   OS-dependent notes.
+* gvpe.conf::         The main configuration file.
+* gvpectrl::          Config/Control programm reference.
+* gvpe::              Networking daemon reference.
+* Protocol::          The network protocol explained.
+* Complex Example::   A nontrivial example from the real world.
 @end menu
 
 
 @contents
 
 @c ==================================================================
-@node    vpe(5), vpe.osdep(5), Top, Top
-@c INCLUDE-POD vpe.5
+@node    Introduction, OS Dependencies, Top, Top
+@c INCLUDE-POD gvpe.5
 
 @c ==================================================================
-@node    vpe.osdep(5), vped.conf(5), vpe(5), Top
-@c INCLUDE-POD vpe.osdep.5
+@node    OS Dependencies, gvpe.conf, Introduction, Top
+@c INCLUDE-POD gvpe.osdep.5
 
 @c ==================================================================
-@node    vped.conf(5), vpectrl(8), vpe.osdep(5), Top
-@c INCLUDE-POD vped.conf.5
+@node    gvpe.conf, gvpectrl, OS Dependencies, Top
+@c INCLUDE-POD gvpe.conf.5
 
 @c ==================================================================
-@node    vpectrl(8), vped(8), vped.conf(5), Top
-@c INCLUDE-POD vpectrl.8
+@node    gvpectrl, gvpe, gvpe.conf, Top
+@c INCLUDE-POD gvpectrl.8
 
 @c ==================================================================
-@node    vped(8), vpe.protocol(7), vpectrl(8), Top
-@c INCLUDE-POD vped.8
+@node    gvpe, Protocol, gvpectrl, Top
+@c INCLUDE-POD gvpe.8
 
 @c ==================================================================
-@node    vpe.protocol(7), complex-example, vped(8), Top
-@c INCLUDE-POD vpe.protocol.7
+@node    Protocol, Complex Example, gvpe, Top
+@c INCLUDE-POD gvpe.protocol.7
 
 @c ==================================================================
-@node    complex-example, complex/vped.conf, vpe.protocol(7), Top
+@node    Complex Example, complex/gvpe.conf, Protocol, Top
 @c INCLUDE-TEXT complex-example/README
 
 @menu
-* complex/vped.conf::         An example vped configuration.
+* complex/gvpe.conf::         An example vped configuration.
 * complex/if-up::             A fully-routing if-up config.
 * complex/node-up::           A node-up/node-down script utilizing dynds.
 @end menu
 
 @c ==================================================================
-@node    complex/vped.conf, complex/if-up, complex-example, complex-example
-@c INCLUDE-EXAMPLE complex-example/vped.conf
+@node    complex/gvpe.conf, complex/if-up, Complex Example, Complex Example
+@c INCLUDE-EXAMPLE complex-example/gvpe.conf
 
 @c ==================================================================
-@node    complex/if-up, complex/node-up, complex/vped.conf, complex-example
+@node    complex/if-up, complex/node-up, complex/gvpe.conf, Complex Example
 @c INCLUDE-EXAMPLE complex-example/if-up
 
 @c ==================================================================
-@node    complex/node-up, , complex/if-up, complex-example
+@node    complex/node-up, , complex/if-up, Complex Example
 @c INCLUDE-EXAMPLE complex-example/node-up
 
 @contents

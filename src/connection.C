@@ -746,8 +746,10 @@ connection::establish_connection_cb (time_watcher &w)
     {
       double retry_int = double (retry_cnt & 3 ? (retry_cnt & 3) : 1 << (retry_cnt >> 2)) * 0.6;
 
-      if (retry_int < 3600 * 8)
+      if (retry_int < conf->max_retry)
         retry_cnt++;
+      else
+        retry_int = conf->max_retry;
 
       w.start (NOW + retry_int);
 

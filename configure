@@ -1719,7 +1719,7 @@ fi
 
 
 # Define the identity of the package.
- PACKAGE=vpe
+ PACKAGE=gvpe
  VERSION=1.7
 
 

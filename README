@@ -6,7 +6,7 @@
 
 ==== DESCRIPTION ====
 
-    Vpe is a suite designed to provide a virtual private network for
+    GVPE is a suite designed to provide a virtual private network for
     multiple nodes over an untrusted network.
 
     "Virtual" means that no physical network is created (of course), but an
@@ -16,7 +16,7 @@
     "Private" means that non-participating nodes cannot decode ("sniff)" nor
     inject ("spoof") packets.
 
-    In the case of vpe, even participating nodes cannot sniff packets send
+    In the case of gvpe, even participating nodes cannot sniff packets send
     to other nodes or spoof packets as if sent from other nodes.
 
     "Network" means that more than two parties can participate in the
@@ -35,36 +35,37 @@
 
 :   EASY TO SETUP
         A few lines of config (the config file is shared unmodified between
-        all hosts) and a single run of ``vpectrl'' to generate the keys
+        all hosts) and a single run of ``gvpectrl'' to generate the keys
         suffices to make it work.
 
 :   MAC-BASED SECURITY
         Since every host has it's own private key, other hosts cannot spoof
-        traffic from this host. That makes it possible to filter packest by
+        traffic from this host. That makes it possible to filter packet by
         MAC address, e.g. to ensure that packets from a specific IP address
-        come, in fact, from a specific host.
+        come, in fact, from a specific host that is associated with that IP
+        and not from another host.
 
 
 ==== PROGRAMS ====
 
-    Vpe comes with two programs: one daemon (``vped'') and one control
-    program (``vpectrl'').
+    Vpe comes with two programs: one daemon (``gvpe'') and one control
+    program (``gvpectrl'').
 
-:   vpectrl
+:   gvpectrl
         Is used to generate the keys, check and give an overview of of the
         configuration and contorl the daemon (restarting etc.).
 
-:   vped
-        Is the daemon used to establish and maintain conenctions to the
+:   gvpe
+        Is the daemon used to establish and maintain connections to the
         other network members. It should be run on the gateway machine.
 
 
 ==== COMPILETIME CONFIGURATION ====
 
-    Please have a look at the ``vpe.osdep(5)'' manpage for platform-specific
-    information.
+    Please have a look at the ``gvpe.osdep(5)'' manpage for
+    platform-specific information.
 
-    Here are a few recipes for compiling your vpe:
+    Here are a few recipes for compiling your gvpe:
 
 
 ==   AS LOW PACKET OVERHEAD AS POSSIBLE   ==
@@ -79,7 +80,8 @@
 
        ./configure --enable-cipher=bf --enable-digest=md4
 
-    Use the fastest cipher and digest algorithms currently available in vpe.
+    Use the fastest cipher and digest algorithms currently available in
+    gvpe.
 
 
 ==   MAXIMIZE SECURITY   ==
@@ -106,11 +108,11 @@
 ==   STEP 1: configuration   ==
 
     First you have to create a daemon configuation file and put it into the
-    configuration directory. This is usually ``/etc/vpe'', depending on how
-    you configured vpe, and can be overwritten using the ``-c'' commandline
+    configuration directory. This is usually ``/etc/gvpe'', depending on how
+    you configured gvpe, and can be overwritten using the ``-c'' commandline
     switch.
 
-    Put the following lines into ``/etc/vpe/vped.conf'':
+    Put the following lines into ``/etc/gvpe/gvpe.conf'':
 
        udp-port = 50000 # the external port to listen on (configure your firewall)
        mtu = 1400       # minimum MTU of all outgoing interfaces on all hosts
@@ -127,7 +129,7 @@
 
     The only other file neccessary if the ``if-up'' script that initializes
     the local ethernet interface. Put the following lines into
-    ``/etc/vpe/if-up'' and make it execute (``chmod 755 /etc/vpe/if-up''):
+    ``/etc/gvpe/if-up'' and make it execute (``chmod 755 /etc/gvpe/if-up''):
 
        #!/bin/sh
        ip link set $IFNAME address $MAC mtu $MTU up
@@ -141,7 +143,7 @@
     should then be set to a subset of that network, e.g. ``10.0.1.0/24'' on
     node ``first'', ``10.0.2.0/24'' on node ``second'', and so on.
 
-    By enabling routing on the gateway host that runs ``vped'' all nodes
+    By enabling routing on the gateway host that runs ``gvpe'' all nodes
     will be able to reach the other nodes. You can, of course, also use
     proxy arp or other means of pseudo-bridging (or even real briding), or
     (best) full routing - the choice is yours.
@@ -152,11 +154,11 @@
     Run the following command to generate all key pairs (that might take a
     while):
 
-       vpectrl -c /etc/vpe -g
+       gvpectrl -c /etc/gvpe -g
 
     This command will put the public keys into
-    ``/etc/vpe/pubkeys/*nodename*'' and the private keys into
-    ``/etc/vpe/hostkeys/*nodename*''.
+    ``/etc/gvpe/pubkeys/*nodename*'' and the private keys into
+    ``/etc/gvpe/hostkeys/*nodename*''.
 
 
 ==   STEP 3: distribute the config files to all nodes   ==
@@ -167,59 +169,59 @@
 
     First all the config files without the hostkeys should be distributed:
 
-       rsync -avzessh /etc/vpe first.example.net:/etc/. --exclude hostkeys
-       rsync -avzessh /etc/vpe 133.55.82.9:/etc/. --exclude hostkeys
-       rsync -avzessh /etc/vpe third.example.net:/etc/. --exclude hostkeys
+       rsync -avzessh /etc/gvpe first.example.net:/etc/. --exclude hostkeys
+       rsync -avzessh /etc/gvpe 133.55.82.9:/etc/. --exclude hostkeys
+       rsync -avzessh /etc/gvpe third.example.net:/etc/. --exclude hostkeys
 
     Then the hostkeys should be copied:
 
-       rsync -avzessh /etc/vpe/hostkeys/first  first.example.net:/etc/hostkey
-       rsync -avzessh /etc/vpe/hostkeys/second 133.55.82.9:/etc/hostkey
-       rsync -avzessh /etc/vpe/hostkeys/third  third.example.net:/etc/hostkey
+       rsync -avzessh /etc/gvpe/hostkeys/first  first.example.net:/etc/hostkey
+       rsync -avzessh /etc/gvpe/hostkeys/second 133.55.82.9:/etc/hostkey
+       rsync -avzessh /etc/gvpe/hostkeys/third  third.example.net:/etc/hostkey
 
-    You should now check the configration by issuing the command ``vpectrl
-    -c /etc/vpe -s'' on each node and verify it's output.
+    You should now check the configration by issuing the command ``gvpectrl
+    -c /etc/gvpe -s'' on each node and verify it's output.
 
 
-==   STEP 4: starting vped   ==
+==   STEP 4: starting gvpe   ==
 
-    You should then start vped on each node by issuing a command like:
+    You should then start gvpe on each node by issuing a command like:
 
-       vped -D -linfo first # first is the nodename
+       gvpe -D -linfo first # first is the nodename
 
-    This will make the vped stay in foreground. You should then see
+    This will make the gvpe stay in foreground. You should then see
     "connection established" messages. If you don't see them check your
     firewall and routing (use tcpdump ;).
 
     If this works you should check your networking setup by pinging various
     endpoints.
 
-    To make vped run more permanently you can either run it as a daemon (by
+    To make gvpe run more permanently you can either run it as a daemon (by
     starting it without the ``-D'' switch), or, much better, from your
     inittab. I use a line like this on my systems:
 
-       t1:2345:respawn:/opt/vpe/sbin/vped -D -L first >/dev/null 2>&1
+       t1:2345:respawn:/opt/gvpe/sbin/gvpe -D -L first >/dev/null 2>&1
 
 
 ==   STEP 5: enjoy   ==
 
-    ... and play around. Sending a -HUP (``vpectrl -kHUP'') to the daemon
+    ... and play around. Sending a -HUP (``gvpectrl -kHUP'') to the daemon
     will make it try to connect to all other nodes again. If you run it from
-    inittab, as is recommended, ``vpectrl -k'' (or simply ``killall vped'')
+    inittab, as is recommended, ``gvpectrl -k'' (or simply ``killall gvpe'')
     will kill the daemon, start it again, making it read it's configuration
     files again.
 
 
 ==== SEE ALSO ====
 
-    vpe.osdep(5) for OS-depedendent information, vped.conf(5), vpectrl(8),
+    gvpe.osdep(5) for OS-depedendent information, gvpe.conf(5), gvpectrl(8),
     and for a description of the protocol and routing algorithms,
-    vpe.protocol(7).
+    gvpe.protocol(7).
 
 
 ==== AUTHOR ====
 
-    Marc Lehmann <vpe@plan9.de>
+    Marc Lehmann <gvpe@plan9.de>
 
 
 ==== COPYRIGHTS AND LICENSES ====

@@ -1,15 +1,15 @@
 =head1 NAME
 
-C<vpectrl> - GNU Virtual Private Ethernet Control Program
+C<gvpectrl> - GNU Virtual Private Ethernet Control Program
 
 =head1 SYNOPSIS
 
-C<vpectrl> [B<-ckgs>] [B<--config=>I<DIR>] [B<--generate-keys>] [B<--help>]
+C<gvpectrl> [B<-ckgs>] [B<--config=>I<DIR>] [B<--generate-keys>] [B<--help>]
 [B<--kill>[B<=>I<SIGNAL>]] [B<--show-config>] [B<--version>]
 
 =head1 DESCRIPTION
 
-This is the control program for the C<vped>, the virtual private ethernet daemon.
+This is the control program for the C<gvpe>, the virtual private ethernet daemon.
 
 =head1 OPTIONS
 
@@ -29,12 +29,12 @@ Display short list of options.
 
 =item B<--kill>[B<=>I<SIGNAL>]
 
-Attempt to kill a running C<vpectrl> (optionally with the specified
+Attempt to kill a running C<gvpectrl> (optionally with the specified
 I<SIGNAL> instead of C<SIGTERM>) and exit.
 
 =item B<--show-config>
 
-Show a summary of the configuration, and how vped interprets it. Can also be very useful
+Show a summary of the configuration, and how gvpe interprets it. Can also be very useful
 when designing firewall scripts.
 
 =item B<--version>
@@ -45,16 +45,16 @@ Output version information and exit.
 
 =head1 BUGS
 
-If you find any bugs, report them to C<vpe@plan9.de>.
+If you find any bugs, report them to C<gvpe@plan9.de>.
 
 =head1 SEE ALSO
 
-vpe(5), vpe.conf(5), vped(8).
+gvpe(5), gvpe.conf(5), gvpe(8).
 
-vpe comes with ABSOLUTELY NO WARRANTY.  This is free software, and you are
+gvpe comes with ABSOLUTELY NO WARRANTY.  This is free software, and you are
 welcome to redistribute it under certain conditions; see the file COPYING
 for details.
 
 =head1 AUTHORS
 
-Marc Lehmann C<< <vpe@plan9.de> >>.
+Marc Lehmann C<< <gvpe@plan9.de> >>.

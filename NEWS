@@ -1,4 +1,5 @@
 1.7
+	- new per-mode option "max-retry".
 	- started to gnuify vpe.
 	- asymmetric rekeying behaviour, so hosts don't rekey simultaneously.
         - new configure option --enable-static-daemon.
