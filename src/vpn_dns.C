@@ -1242,22 +1242,22 @@ dns_connection::time_cb (time_watcher &w)
 
   if (!send)
     {
-      if (last_sent + send_interval <= NOW)
+      // generate a new packet, if wise
+
+      if (!established)
         {
-          // generate a new packet, if wise
-
-          if (!established)
+          if (vpn->dns_sndpq.empty ())
             {
-              if (vpn->dns_sndpq.empty ())
-                {
-                  send = new dns_snd (this);
+              send = new dns_snd (this);
 
-                  cfg.reset (THISNODE->id);
-                  send->gen_syn_req ();
-                }
+              cfg.reset (THISNODE->id);
+              send->gen_syn_req ();
             }
-          else if (vpn->dns_sndpq.size () < MAX_OUTSTANDING
-                   && !SEQNO_EQ (rcvseq, sndseq - (MAX_WINDOW - 1)))
+        }
+      else if (vpn->dns_sndpq.size () < MAX_OUTSTANDING
+               && !SEQNO_EQ (rcvseq, sndseq - (MAX_WINDOW - 1)))
+        {
+          if (last_sent + send_interval <= NOW)
             {
               //printf ("sending data request etc.\n"); //D
               if (!snddq.empty () || last_received + 1. > NOW)
@@ -1272,12 +1272,12 @@ dns_connection::time_cb (time_watcher &w)
 
               sndseq = (sndseq + 1) & SEQNO_MASK;
             }
-
-          if (send)
-            vpn->dns_sndpq.push_back (send);
+          else
+            NEXT (last_sent + send_interval);
         }
-      else
-        NEXT (last_sent + send_interval);
+
+      if (send)
+        vpn->dns_sndpq.push_back (send);
     }
 
   if (send)
@@ -1294,7 +1294,7 @@ dns_connection::time_cb (time_watcher &w)
         rcvpq.size ());
 
   // TODO: no idea when this happens, but when next < NOW, we have a problem
-  if (next < NOW + 0.0001)
+  if (next < NOW + 0.001)
     next = NOW + 0.1;
 
   w.start (next);
