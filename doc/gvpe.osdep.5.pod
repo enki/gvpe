@@ -91,20 +91,25 @@ vpn (the exact address doesn't matter), like this:
 
 TUN-device; already part of the kernel. See C<tincd/netbsd> for more information.
 
+=head2 native/darwin
+
+TAP-device;
+
+The necessary kernel extension can be found here:
+
+  http://www-user.rhrk.uni-kl.de/~nissler/tuntap/
+
+There are two drivers, the one to use is the "tap" driver. It driver must
+be loaded before use, using C<kmodload>.
+
 =head2 tincd/darwin
 
-TUN-device; See C<tincd/netbsd> for more information.
+TUN-device; See C<tincd/netbsd> for more information. C<native/darwin> is
+preferable.
 
 The necessary kernel extension can be found here:
 
   http://chrisp.de/en/projects/tunnel.html
-
-A newer (and reportedly much more stable) driver that also supports TAP
-operations is available here:
-
-  http://www-user.rhrk.uni-kl.de/~nissler/tuntap/
-
-But GVPE has not been ported to it's TAP interface. Patches are welcome.
 
 The driver must be loaded before use:
 

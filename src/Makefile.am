@@ -5,7 +5,7 @@
 sbin_PROGRAMS = gvpe
 bin_PROGRAMS = gvpectrl
 
-EXTRA_DIST = device-linux.C device-cygwin.C device-tincd.C callback.pl	\
+EXTRA_DIST = device-linux.C device-cygwin.C device-tincd.C device-darwin.C callback.pl	\
    tincd/apply tincd/fixit	\
    tincd/cygwin/device.c tincd/darwin/device.c tincd/freebsd/device.c	\
    tincd/linux/device.c tincd/mingw/common.h tincd/mingw/device.c tincd/netbsd/device.c	\

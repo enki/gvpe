@@ -1,4 +1,9 @@
-	- skip unparsable config lines instead of stopping parsing.
+1.9
+	- skip unparsable config lines instead of stopping parsing and
+          continuing with a surely unusable config.
+        - make some dns transport values configurable and document them.
+        - new low-level device native/darwin, which supports the tap driver
+          available for darwin.
 
 1.8 Fri Mar 18 00:58:55 CET 2005
 	- enable-udp = yes is now default only when no other protocols

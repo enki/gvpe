@@ -49,16 +49,11 @@
 #define MAX_POLL_INTERVAL 5.  // how often to poll minimally when the server has no data
 #define ACTIVITY_INTERVAL 5.
 
-#define TIMEOUT_FACTOR 8.
-
 #define INITIAL_TIMEOUT     0.1 // retry timeouts
 #define INITIAL_SYN_TIMEOUT 2. // retry timeout for initial syn
 
-#define MIN_SEND_INTERVAL 0.001 // wait at least this time between sending requests
 #define MAX_SEND_INTERVAL 2. // optimistic?
 
-#define LATENCY_FACTOR   0.5 // RTT * LATENCY_FACTOR == sending rate
-#define MAX_OUTSTANDING  100 // max. outstanding requests
 #define MAX_WINDOW      1000 // max. for MAX_OUTSTANDING, and backlog
 #define MAX_BACKLOG     (64*1024) // size of gvpe protocol backlog (bytes), must be > MAXSIZE
 
@@ -1035,11 +1030,11 @@ vpn::dnsv4_client (dns_packet &pkt)
             if (latency < dns->min_latency)
               dns->min_latency = latency;
 
-            if (dns->send_interval > dns->min_latency * LATENCY_FACTOR)
-              dns->send_interval = dns->min_latency * LATENCY_FACTOR;
+            if (dns->send_interval > dns->min_latency * conf.dns_overlap_factor)
+              dns->send_interval = dns->min_latency * conf.dns_overlap_factor;
 
-            if (dns->send_interval < MIN_SEND_INTERVAL)
-              dns->send_interval = MIN_SEND_INTERVAL;
+            if (dns->send_interval < conf.dns_send_interval)
+              dns->send_interval = conf.dns_send_interval;
           }
 
         delete *i;
@@ -1230,7 +1225,7 @@ dns_connection::time_cb (time_watcher &w)
               send = r;
 
               r->retry++;
-              r->timeout = NOW + (r->retry * min_latency * TIMEOUT_FACTOR);
+              r->timeout = NOW + (r->retry * min_latency * conf.dns_timeout_factor);
 
               // the following code changes the query section a bit, forcing
               // the forwarder to generate a new request
@@ -1259,7 +1254,7 @@ dns_connection::time_cb (time_watcher &w)
               send->gen_syn_req ();
             }
         }
-      else if (vpn->dns_sndpq.size () < MAX_OUTSTANDING
+      else if (vpn->dns_sndpq.size () < conf.dns_max_outstanding
                && !SEQNO_EQ (rcvseq, sndseq - (MAX_WINDOW - 1)))
         {
           if (last_sent + send_interval <= NOW)
@@ -1273,7 +1268,7 @@ dns_connection::time_cb (time_watcher &w)
 
               send = new dns_snd (this);
               send->gen_stream_req (sndseq, snddq);
-              send->timeout = NOW + min_latency * TIMEOUT_FACTOR;
+              send->timeout = NOW + min_latency * conf.dns_timeout_factor;
 
               sndseq = (sndseq + 1) & SEQNO_MASK;
             }
@@ -1299,6 +1294,7 @@ dns_connection::time_cb (time_watcher &w)
         rcvpq.size ());
 
   // TODO: no idea when this happens, but when next < NOW, we have a problem
+  // doesn't seem to happen anymore
   if (next < NOW + 0.001)
     next = NOW + 0.1;
 

@@ -63,7 +63,7 @@
 #define cp()
 #define lookup_config(config_tree,key) (key)
 
-#define MTU MAXSIZE
+#define MTU MAX_MTU
 
 // BIGGEST hack of 'em all
 // will be casted to data_packet, due to structural similarity

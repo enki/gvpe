@@ -69,6 +69,8 @@ void net_packet::operator delete(void *p)
 # include "device-linux.C"
 #elif IFTYPE_native && IF_cygwin
 # include "device-cygwin.C"
+#elif IFTYPE_native && IF_darwin
+# include "device-darwin.C"
 #else
 # error No interface implementation for your IFTYPE/IFSUBTYPE combination.
 #endif

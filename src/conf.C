@@ -123,8 +123,13 @@ void configuration::init ()
 
 #if ENABLE_DNS
   default_node.dns_port    = 0; // default is 0 == client
-  dns_forw_host            = strdup ("127.0.0.1");
-  dns_forw_port            = 53;
+
+  dns_forw_host       = strdup ("127.0.0.1");
+  dns_forw_port       = 53;
+  dns_timeout_factor  = DEFAULT_DNS_TIMEOUT_FACTOR;
+  dns_send_interval   = DEFAULT_DNS_SEND_INTERVAL;
+  dns_overlap_factor  = DEFAULT_DNS_OVERLAP_FACTOR;
+  dns_max_outstanding = DEFAULT_DNS_MAX_OUTSTANDING;
 #endif
 
   conf.pidfilename = strdup (LOCALSTATEDIR "/run/gvpe.pid");
@@ -331,6 +336,30 @@ retry:
             {
 #if ENABLE_DNS
               dns_forw_port = atoi (val);
+#endif
+            }
+          else if (!strcmp (var, "dns-timeout-factor"))
+            {
+#if ENABLE_DNS
+              dns_timeout_factor = atof (val);
+#endif
+            }
+          else if (!strcmp (var, "dns-send-interval"))
+            {
+#if ENABLE_DNS
+              dns_send_interval = atoi (val);
+#endif
+            }
+          else if (!strcmp (var, "dns-overlap-factor"))
+            {
+#if ENABLE_DNS
+              dns_overlap_factor = atof (val);
+#endif
+            }
+          else if (!strcmp (var, "dns-max-outstanding"))
+            {
+#if ENABLE_DNS
+              dns_max_outstanding = atoi (val);
 #endif
             }
           else if (!strcmp (var, "http-proxy-host"))

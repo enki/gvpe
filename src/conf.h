@@ -29,11 +29,16 @@
 #include "slog.h"
 #include "global.h"
 
-#define DEFAULT_REKEY		3600
-#define DEFAULT_KEEPALIVE	60	// one keepalive/minute (it's just 8 bytes...)
-#define DEFAULT_UDPPORT		655	// same as tinc, conflicts would be rare
-#define DEFAULT_MTU		1500	// let's ether-net
-#define DEFAULT_MAX_RETRY	3600	// retry at least this often
+#define DEFAULT_REKEY	       		3600
+#define DEFAULT_KEEPALIVE      		60	// one keepalive/minute (it's just 8 bytes...)
+#define DEFAULT_UDPPORT	       		655	// same as tinc, conflicts would be rare
+#define DEFAULT_MTU	       		1500	// let's ether-net
+#define DEFAULT_MAX_RETRY      		3600	// retry at least this often
+ 
+#define DEFAULT_DNS_TIMEOUT_FACTOR	8.F	// initial retry timeout multiple
+#define DEFAULT_DNS_SEND_INTERVAL	.01F	// minimum send interval
+#define DEFAULT_DNS_OVERLAP_FACTOR	.5F	// RTT * LATENCY_FACTOR == sending rate
+#define DEFAULT_DNS_MAX_OUTSTANDING	100	// max. number of outstanding requests
 
 enum {
   PROT_UDPv4  = 0x01, // udp over ipv4
@@ -109,6 +114,10 @@ struct configuration {
 #if ENABLE_DNS
   char *dns_forw_host;
   u16 dns_forw_port;
+  float dns_timeout_factor;
+  float dns_send_interval;
+  float dns_overlap_factor;
+  int dns_max_outstanding;
 #endif
 
   void init ();

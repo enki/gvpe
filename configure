@@ -873,10 +873,10 @@ Optional Features:
                           Working combinations are: "native/linux"
                           "tincd/linux" "tincd/freebsd" "tincd/openbsd"
                           "tincd/darwin" "native/cygwin"; Untested
-                          combinations are: "tincd/netbsd" "tincd/solaris"
-                          "tincd/mingw" "tincd/raw_socket" "tincd/uml_socket";
-                          Broken combinations are: "tincd/cygwin"; The default
-                          is to autodetect.
+                          combinations are: "native/darwin" "tincd/netbsd"
+                          "tincd/solaris" "tincd/mingw" "tincd/raw_socket"
+                          "tincd/uml_socket"; Broken combinations are:
+                          "tincd/cygwin"; The default is to autodetect.
   --enable-static-daemon  enable statically linked daemon.
   --enable-rohc           enable robust header compression (rfc3095).
   --enable-icmp           enable icmp protocol support (default disabled).
@@ -1721,7 +1721,7 @@ fi
 
 # Define the identity of the package.
  PACKAGE=gvpe
- VERSION=1.8
+ VERSION=1.9
 
 
 cat >>confdefs.h <<_ACEOF
@@ -6417,7 +6417,7 @@ _ACEOF
 
      ;;
      *darwin*)
-       IFTYPE=tincd
+       IFTYPE=native
        IFSUBTYPE=darwin
 
 cat >>confdefs.h <<\_ACEOF

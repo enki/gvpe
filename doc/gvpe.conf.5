@@ -129,7 +129,7 @@
 .\" ========================================================================
 .\"
 .IX Title "GVPE.CONF 5"
-.TH GVPE.CONF 5 "2005-03-17" "1.8" "GNU Virtual Private Ethernet"
+.TH GVPE.CONF 5 "2005-03-23" "1.8" "GNU Virtual Private Ethernet"
 .SH "NAME"
 gvpe.conf \- configuration file for the GNU VPE daemon
 .SH "SYNOPSIS"
@@ -204,6 +204,54 @@ The dns server to forward dns requests to for the \s-1DNS\s0 tunnel protocol
 .IX Item "dns-forw-port = port-number"
 The port where the \f(CW\*(C`dns\-forw\-host\*(C'\fR is to be contacted (default: \f(CW53\fR,
 which is fine in most cases).
+.IP "dns-max-outstanding = integer-number-of-requests" 4
+.IX Item "dns-max-outstanding = integer-number-of-requests"
+The maximum number of outstanding \s-1DNS\s0 transport requests
+(default: \f(CW100\fR). \s-1GVPE\s0 will never issue more requests then the given
+limit without receiving replies. In heavily overloaded situations it might
+help to set this to a low number (e.g. \f(CW3\fR or even \f(CW1\fR) to limit the
+number of parallel requests.
+.Sp
+The default should be working ok for most links.
+.IP "dns-overlap-factor = float" 4
+.IX Item "dns-overlap-factor = float"
+The \s-1DNS\s0 transport uses the minimum request latency (\fBmin_latency\fR) seen
+during a connection as it's timing base. This factor (default: \f(CW0.5\fR,
+must be > 0) is multiplied by \fBmin_latency\fR to get the maximum sending
+rate (= minimum send interval), i.e. a factor of \f(CW1\fR means that a new
+request might be generated every \fBmin_latency\fR seconds, which means on
+average there should only ever be one outstanding request.  A factor of
+\&\f(CW0.5\fR means that \s-1GVPE\s0 will send requests twice as often as the minimum
+latency measured.
+.Sp
+For congested or picky dns forwarders you could use a value nearer to or
+exceeding \f(CW1\fR.
+.Sp
+The default should be working ok for most links.
+.IP "dns-send-interval = send-interval-in-seconds" 4
+.IX Item "dns-send-interval = send-interval-in-seconds"
+The minimum send interval (= maximum rate) that the \s-1DNS\s0 transport will
+use to send new \s-1DNS\s0 requests. \s-1GVPE\s0 will not exceed this rate even when
+the latency is very low. The default is \f(CW0.01\fR, which means \s-1GVPE\s0 will
+not send more than 100 \s-1DNS\s0 requests per connection per second. For
+high-bandwidth links you could go lower, e.g. to \f(CW0.001\fR or so. For
+congested or rate-limited links, you might want to go higher, say \f(CW0.1\fR,
+\&\f(CW0.2\fR or even higher.
+.Sp
+The default should be working ok for most links.
+.IP "dns-timeout-factor = float" 4
+.IX Item "dns-timeout-factor = float"
+Factor to multiply the \f(CW\*(C`min_latency\*(C'\fR (see \f(CW\*(C`dns\-overlap\-factor\*(C'\fR) by to
+get request timeouts. The default of \f(CW8\fR means that the \s-1DNS\s0 transport
+will resend the request when no reply has been received for longer than
+eight times the minimum (= expected) latency, assuming the request or
+reply has been lost.
+.Sp
+For congested links a higher value might be necessary (e.g. \f(CW30\fR). If the
+link is very stable lower values (e.g. \f(CW2\fR) might work nicely. Values
+near or below \f(CW1\fR makes no sense whatsoever.
+.Sp
+The default should be working ok for most links.
 .IP "if-up = relative-or-absolute-path" 4
 .IX Item "if-up = relative-or-absolute-path"
 Sets the path of a script that should be called immediately after the

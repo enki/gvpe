@@ -4,7 +4,7 @@ AC_PREREQ(2.59)
 AC_INIT
 AC_CONFIG_SRCDIR([src/gvpe.C])
 AC_CANONICAL_TARGET
-AM_INIT_AUTOMAKE(gvpe, 1.8)
+AM_INIT_AUTOMAKE(gvpe, 1.9)
 AC_CONFIG_HEADERS([config.h])
 AM_MAINTAINER_MODE
 
@@ -87,6 +87,7 @@ AC_ARG_ENABLE(iftype,
         "tincd/darwin"
         "native/cygwin";
      Untested combinations are:
+        "native/darwin"
         "tincd/netbsd"
         "tincd/solaris"
         "tincd/mingw"
@@ -118,7 +119,7 @@ if test "x$IFTYPE" = "x"; then
        AC_DEFINE(HAVE_FREEBSD, 1, [FreeBSD])
      ;;
      *darwin*)
-       IFTYPE=tincd
+       IFTYPE=native
        IFSUBTYPE=darwin
        AC_DEFINE(HAVE_DARWIN, 1, [Darwin (MacOS/X)])
      ;;
