@@ -27,6 +27,7 @@
 // it's a hack, use only in emergency situations please.
 
 #include <cstring>
+#include <cassert>
 
 #include <sys/types.h>
 #include <sys/socket.h>
