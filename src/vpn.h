@@ -69,12 +69,12 @@ struct vpn
 #endif
 
 #if ENABLE_DNS
-    vector<struct dns_req *> dns_sndpq;
+    vector<struct dns_snd *> dns_sndpq;
     sockinfo dns_forwarder;
 
     void dnsv4_ev (io_watcher &w, short revents); io_watcher dnsv4_ev_watcher;
-    struct dns_packet *dnsv4_server (struct dns_packet *pkt);
-    void dnsv4_client (struct dns_packet *pkt);
+    void dnsv4_server (struct dns_packet &pkt);
+    void dnsv4_client (struct dns_packet &pkt);
 #endif
 
     void udpv4_ev (io_watcher &w, short revents); io_watcher udpv4_ev_watcher;

@@ -45,13 +45,20 @@
 
 #include "vpn.h"
 
-#define MIN_RETRY 1.
-#define MAX_RETRY 6.
+#define MIN_POLL_INTERVAL .2  // how often to poll minimally when the server is having data
+#define MAX_POLL_INTERVAL 6.  // how often to poll minimally when the server has no data
+#define ACTIVITY_INTERVAL 5.
+
+#define INITIAL_TIMEOUT     1.
+#define INITIAL_SYN_TIMEOUT 2.
+
+#define MIN_SEND_INTERVAL (1./1000.)
+#define MAX_SEND_INTERVAL 0.5 // optimistic?
 
 #define MAX_OUTSTANDING 400 // max. outstanding requests
 #define MAX_WINDOW      1000 // max. for MAX_OUTSTANDING
 #define MAX_RATE        100 // requests/s
-#define MAX_BACKLOG     (10*1024) // size of protocol backlog, must be > MAXSIZE
+#define MAX_BACKLOG     (100*1024) // size of protocol backlog, must be > MAXSIZE
 
 #define MAX_DOMAIN_SIZE 220 // 255 is legal limit, but bind doesn't compress well
 // 240 leaves about 4 bytes of server reply data
@@ -63,9 +70,19 @@
 #define MAX_LBL_SIZE 63
 #define MAX_PKT_SIZE 512
 
-#define RR_TYPE_TXT 16
+#define RR_TYPE_A     1
+#define RR_TYPE_NULL 10
+#define RR_TYPE_TXT  16
 #define RR_TYPE_ANY 255
-#define RR_CLASS_IN 1
+
+#define RR_CLASS_IN   1
+
+#define CMD_IP_1   207
+#define CMD_IP_2    46
+#define CMD_IP_3   236
+#define CMD_IP_RST  29
+#define CMD_IP_SYN 113
+#define CMD_IP_REJ  32
 
 // works for cmaps up to 255 (not 256!)
 struct charmap
@@ -155,7 +172,7 @@ unsigned int basecoder::decode_len (unsigned int len)
 
 unsigned int basecoder::encode (char *dst, u8 *src, unsigned int len)
 {
-  if (!len)
+  if (!len || len > MAX_DEC_LEN)
     return 0;
 
   int elen = encode_len (len);
@@ -184,7 +201,7 @@ unsigned int basecoder::encode (char *dst, u8 *src, unsigned int len)
 
 unsigned int basecoder::decode (u8 *dst, char *src, unsigned int len)
 {
-  if (!len)
+  if (!len || len > MAX_ENC_LEN)
     return 0;
 
   u8 src_ [MAX_ENC_LEN];
@@ -241,11 +258,7 @@ test::test ()
 }
 #endif
 
-// the following sequence has been crafted to
-// a) look somewhat random
-// b) the even (and odd) indices never share the same character as upper/lowercase
-// the "_" is not valid but widely accepted (all octets should be supported, but let's be conservative)
-// the other sequences are obviously derived
+//static basecoder cdc64 ("_dDpPhHzZrR06QqMmjJkKBb34TtSsvVlL81xXaAeEFf92WwGgYyoO57UucCNniI-");
 //static basecoder cdc63 ("_dDpPhHzZrR06QqMmjJkKBb34TtSsvVlL81xXaAeEFf92WwGgYyoO57UucCNniI");
 static basecoder cdc62 ("dDpPhHzZrR06QqMmjJkKBb34TtSsvVlL81xXaAeEFf92WwGgYyoO57UucCNniI");
 //static basecoder cdc36 ("dphzr06qmjkb34tsvl81xaef92wgyo57ucni"); // unused as of yet
@@ -333,7 +346,7 @@ bool byte_stream::put (vpn_packet *pkt)
   data [fill++] = pkt->len >> 8;
   data [fill++] = pkt->len;
 
-  memcpy (data + fill, &((*pkt)[0]), pkt->len); fill += pkt->len;
+  memcpy (data + fill, pkt->at (0), pkt->len); fill += pkt->len;
 
   return true;
 }
@@ -351,7 +364,7 @@ vpn_packet *byte_stream::get ()
   vpn_packet *pkt = new vpn_packet;
 
   pkt->len = len;
-  memcpy (&((*pkt)[0]), data + 2, len);
+  memcpy (pkt->at (0), data + 2, len);
   remove (len + 2);
 
   return pkt;
@@ -377,6 +390,63 @@ vpn_packet *byte_stream::get ()
 
 #define DEFAULT_CLIENT_FLAGS (FLAG_QUERY | FLAG_OP_QUERY | FLAG_RD)
 #define DEFAULT_SERVER_FLAGS (FLAG_RESPONSE | FLAG_OP_QUERY | FLAG_AA | FLAG_RD | FLAG_RA)
+
+struct dns_cfg
+{
+  static int next_uid;
+
+  u8 id1, id2, id3, id4;
+  u8 version;
+  u8 rrtype;
+  u8 flags;
+  u8 def_ttl;
+  u8 rcv_cdc;
+  u8 snd_cdc;
+  u16 max_size;
+  u16 client;
+  u16 uid; // to make request unique
+
+  u8 reserved[8];
+
+  void reset (int clientid);
+  bool valid ();
+};
+
+int dns_cfg::next_uid;
+
+void dns_cfg::reset (int clientid)
+{
+  id1 = 'G';
+  id2 = 'V';
+  id3 = 'P';
+  id4 = 'E';
+
+  version  = 1;
+
+  rrtype   = RR_TYPE_TXT;
+  flags    = 0;
+  def_ttl  = 0;
+  rcv_cdc  = 0;
+  snd_cdc  = 62;
+  max_size = ntohs (MAX_PKT_SIZE);
+  client   = ntohs (clientid);
+  uid      = next_uid++;
+
+  memset (reserved, 0, 8);
+}
+
+bool dns_cfg::valid ()
+{
+  return id1 == 'G'
+      && id2 == 'V'
+      && id3 == 'P'
+      && id4 == 'E'
+      && version == 1
+      && flags == 0
+      && rcv_cdc == 0
+      && snd_cdc == 62
+      && max_size == ntohs (MAX_PKT_SIZE);
+}
 
 struct dns_packet : net_packet
 {
@@ -425,16 +495,17 @@ int dns_packet::decode_label (char *data, int size, int &offs)
 
 /////////////////////////////////////////////////////////////////////////////
 
-struct dns_req
+struct dns_snd
 {
   dns_packet *pkt;
-  tstamp next;
+  tstamp timeout, sent;
   int retry;
   struct dns_connection *dns;
   int seqno;
 
-  dns_req (dns_connection *dns);
+  dns_snd (dns_connection *dns);
   void gen_stream_req (int seqno, byte_stream &stream);
+  void gen_syn_req (const dns_cfg &cfg);
 };
 
 static u16 dns_id = 12098; // TODO: should be per-vpn
@@ -451,20 +522,46 @@ static u16 next_id ()
   return dns_id;
 }
 
-dns_req::dns_req (dns_connection *dns)
+dns_snd::dns_snd (dns_connection *dns)
 : dns (dns)
 {
-  next = 0;
+  timeout = 0;
   retry = 0;
+  seqno = 0;
 
   pkt = new dns_packet;
 
   pkt->id = next_id ();
 }
 
-void dns_req::gen_stream_req (int seqno, byte_stream &stream)
+static void append_domain (dns_packet &pkt, int &offs, const char *domain)
+{
+  // add tunnel domain
+  for (;;)
+    {
+      const char *end = strchr (domain, '.');
+
+      if (!end)
+        end = domain + strlen (domain);
+
+      int len = end - domain;
+
+      pkt [offs++] = len;
+      memcpy (pkt.at (offs), domain, len);
+      offs += len;
+
+      if (!*end)
+        break;
+
+      domain = end + 1;
+    }
+}
+
+void dns_snd::gen_stream_req (int seqno, byte_stream &stream)
 {
   this->seqno = seqno;
+
+  timeout = NOW + INITIAL_TIMEOUT;
 
   pkt->flags = htons (DEFAULT_CLIENT_FLAGS);
   pkt->qdcount = htons (1);
@@ -498,30 +595,34 @@ void dns_req::gen_stream_req (int seqno, byte_stream &stream)
       enclen -= lbllen;
     }
 
-  const char *suffix = THISNODE->domain;
-
-  // add tunnel domain
-  for (;;)
-    {
-      const char *end = strchr (suffix, '.');
-
-      if (!end)
-        end = suffix + strlen (suffix);
-
-      int len = end - suffix;
-
-      (*pkt)[offs++] = len;
-      memcpy (&((*pkt)[offs]), suffix, len);
-      offs += len;
-
-      if (!*end)
-        break;
-
-      suffix = end + 1;
-    }
+  append_domain (*pkt, offs, THISNODE->domain);
 
   (*pkt)[offs++] = 0;
   (*pkt)[offs++] = RR_TYPE_ANY >> 8; (*pkt)[offs++] = RR_TYPE_ANY;
+  (*pkt)[offs++] = RR_CLASS_IN >> 8; (*pkt)[offs++] = RR_CLASS_IN;
+
+  pkt->len = offs;
+}
+
+void dns_snd::gen_syn_req (const dns_cfg &cfg)
+{
+  timeout = NOW + INITIAL_SYN_TIMEOUT;
+
+  pkt->flags = htons (DEFAULT_CLIENT_FLAGS);
+  pkt->qdcount = htons (1);
+
+  int offs = 6*2;
+
+  int elen = cdc26.encode ((char *)pkt->at (offs + 1), (u8 *)&cfg, sizeof (dns_cfg));
+
+  assert (elen <= MAX_LBL_SIZE);
+
+  (*pkt)[offs] = elen;
+  offs += elen + 1;
+  append_domain (*pkt, offs, THISNODE->domain);
+
+  (*pkt)[offs++] = 0;
+  (*pkt)[offs++] = RR_TYPE_A   >> 8; (*pkt)[offs++] = RR_TYPE_A;
   (*pkt)[offs++] = RR_CLASS_IN >> 8; (*pkt)[offs++] = RR_CLASS_IN;
 
   pkt->len = offs;
@@ -556,13 +657,18 @@ struct dns_connection
   connection *c;
   struct vpn *vpn;
 
+  dns_cfg cfg;
+
+  bool established;
+
+  tstamp last_received;
+  tstamp last_sent;
+  double poll_interval, send_interval;
+
   vector<dns_rcv *> rcvpq;
 
-  int rcvseq;
-  int sndseq;
-
-  byte_stream rcvdq;
-  byte_stream snddq;
+  byte_stream rcvdq; int rcvseq;
+  byte_stream snddq; int sndseq;
 
   void time_cb (time_watcher &w); time_watcher tw;
   void receive_rep (dns_rcv *r);
@@ -579,7 +685,13 @@ dns_connection::dns_connection (connection *c)
 {
   vpn = c->vpn;
 
+  established = false;
+
   rcvseq = sndseq = 0;
+
+  last_sent = last_received = 0;
+  poll_interval = MIN_POLL_INTERVAL;
+  send_interval = 0.2; // starting rate
 }
 
 dns_connection::~dns_connection ()
@@ -590,17 +702,24 @@ dns_connection::~dns_connection ()
     delete *i;
 }
 
-struct dns_cfg
-{
-  u8 id1, id2, id3;
-  u8 def_ttl;
-  u8 unused1;
-  u16 max_size;
-  u8 flags1, flags2;
-};
-
 void dns_connection::receive_rep (dns_rcv *r)
 {
+  if (r->datalen)
+    {
+      last_received = NOW;
+      tw.trigger ();
+      
+      poll_interval *= 0.99;
+      if (poll_interval > MIN_POLL_INTERVAL)
+        poll_interval = MIN_POLL_INTERVAL;
+    }
+  else
+    {
+      poll_interval *= 1.1;
+      if (poll_interval > MAX_POLL_INTERVAL)
+        poll_interval = MAX_POLL_INTERVAL;
+    }
+
   rcvpq.push_back (r);
 
   redo:
@@ -639,192 +758,298 @@ void dns_connection::receive_rep (dns_rcv *r)
       }
 }
 
-dns_packet *
-vpn::dnsv4_server (dns_packet *pkt)
+void
+vpn::dnsv4_server (dns_packet &pkt)
 {
-  u16 flags = ntohs (pkt->flags);
+  u16 flags = ntohs (pkt.flags);
 
-  //memcpy (&((*rep)[0]), &((*pkt)[0]), pkt->len);
   int offs = 6 * 2; // skip header
 
-  pkt->flags = htons (DEFAULT_SERVER_FLAGS | FLAG_RCODE_FORMERR);
+  pkt.flags = htons (DEFAULT_SERVER_FLAGS | FLAG_RCODE_FORMERR);
 
-  if (0 == (flags & (FLAG_RESPONSE | FLAG_OP_MASK | FLAG_TC))
-      && pkt->qdcount == htons (1))
+  if (0 == (flags & (FLAG_RESPONSE | FLAG_OP_MASK))
+      && pkt.qdcount == htons (1))
     {
       char qname[MAXSIZE];
-      int qlen = pkt->decode_label ((char *)qname, MAXSIZE - offs, offs);
+      int qlen = pkt.decode_label ((char *)qname, MAXSIZE - offs, offs);
 
-      u16 qtype  = (*pkt) [offs++] << 8; qtype  |= (*pkt) [offs++];
-      u16 qclass = (*pkt) [offs++] << 8; qclass |= (*pkt) [offs++];
+      u16 qtype  = pkt [offs++] << 8; qtype  |= pkt [offs++];
+      u16 qclass = pkt [offs++] << 8; qclass |= pkt [offs++];
 
-      pkt->qdcount = htons (1);
-      pkt->ancount = 0;
-      pkt->nscount = 0; // should be self, as other nameservers reply like this
-      pkt->arcount = 0; // a record for self, as other nameservers reply like this
+      pkt.qdcount = htons (1);
+      pkt.ancount = 0;
+      pkt.nscount = 0; // should be self, as other nameservers reply like this
+      pkt.arcount = 0; // a record for self, as other nameservers reply like this
 
-      pkt->flags = htons (DEFAULT_SERVER_FLAGS | FLAG_RCODE_NXDOMAIN);
+      pkt.flags = htons (DEFAULT_SERVER_FLAGS | FLAG_RCODE_NXDOMAIN);
 
       int dlen = strlen (THISNODE->domain);
 
       if (qclass == RR_CLASS_IN
-          && (qtype == RR_TYPE_ANY || qtype == RR_TYPE_TXT)
-          && qlen > dlen + 1 + HDRSIZE
+          && qlen > dlen + 1
           && !memcmp (qname + qlen - dlen - 1, THISNODE->domain, dlen))
         {
-          // correct class, domain: parse
-          int client, seqno;
-          decode_header (qname, client, seqno);
+          // now generate reply
+          pkt.ancount = htons (1); // one answer RR
+          pkt.flags = htons (DEFAULT_SERVER_FLAGS | FLAG_RCODE_OK);
 
-          u8 data[MAXSIZE];
-          int datalen = cdc62.decode (data, qname + HDRSIZE, qlen - (dlen + 1 + HDRSIZE));
-
-          if (0 < client && client <= conns.size ())
+          if ((qtype == RR_TYPE_ANY
+               || qtype == RR_TYPE_TXT
+               || qtype == RR_TYPE_NULL)
+              && qlen > dlen + 1 + HDRSIZE)
             {
-              connection *c = conns [client - 1];
+              // correct class, domain: parse
+              int client, seqno;
+              decode_header (qname, client, seqno);
 
-              if (!c->dns)
-                c->dns = new dns_connection (c);
+              u8 data[MAXSIZE];
+              int datalen = cdc62.decode (data, qname + HDRSIZE, qlen - (dlen + 1 + HDRSIZE));
 
-              dns_connection *dns = c->dns;
-
-              for (vector<dns_rcv *>::iterator i = dns->rcvpq.end (); i-- != dns->rcvpq.begin (); )
-                if (SEQNO_EQ ((*i)->seqno, seqno))
-                  {
-                    // already seen that request: simply reply with the cached reply
-                    dns_rcv *r = *i;
-
-                    printf ("DUPLICATE %d\n", htons (r->pkt->id));//D
-
-                    memcpy (pkt->at (0), r->pkt->at (0), offs  = r->pkt->len);
-                    pkt->id = r->pkt->id;
-                    goto duplicate_request;
-                  }
-
-              // new packet, queue
-              dns_rcv *rcv = new dns_rcv (seqno, data, datalen);
-              dns->receive_rep (rcv);
-
-              // now generate reply
-              pkt->ancount = htons (1); // one answer RR
-              pkt->flags = htons (DEFAULT_SERVER_FLAGS | FLAG_RCODE_OK);
-
-              (*pkt) [offs++] = 0xc0;
-              (*pkt) [offs++] = 6 * 2; // same as in query section
-
-              (*pkt) [offs++] = RR_TYPE_TXT >> 8; (*pkt) [offs++] = RR_TYPE_TXT;
-              (*pkt) [offs++] = RR_CLASS_IN >> 8; (*pkt) [offs++] = RR_CLASS_IN;
-
-              (*pkt) [offs++] = 0; (*pkt) [offs++] = 0;
-              (*pkt) [offs++] = 0; (*pkt) [offs++] = 0; // TTL
-
-              int dlen = MAX_PKT_SIZE - offs - 2;
-
-              // bind doesn't compress well, so reduce further by one label length
-              dlen -= qlen;
-
-              int rdlen_offs = offs += 2;
-
-              while (dlen > 1 && !dns->snddq.empty ())
+              if (0 < client && client <= conns.size ())
                 {
-                  int txtlen = dlen <= 255 ? dlen - 1 : 255;
+                  connection *c = conns [client - 1];
+                  dns_connection *dns = c->dns;
+                  dns_rcv *rcv;
 
-                  if (txtlen > dns->snddq.size ())
-                    txtlen = dns->snddq.size ();
+                  if (dns)
+                    {
+                      for (vector<dns_rcv *>::iterator i = dns->rcvpq.end (); i-- != dns->rcvpq.begin (); )
+                        if (SEQNO_EQ ((*i)->seqno, seqno))
+                          {
+                            // already seen that request: simply reply with the cached reply
+                            dns_rcv *r = *i;
 
-                  (*pkt)[offs++] = txtlen;
-                  memcpy (pkt->at (offs), dns->snddq.begin (), txtlen);
-                  offs += txtlen;
-                  dns->snddq.remove (txtlen);
+                            printf ("DUPLICATE %d\n", htons (r->pkt->id));//D
 
-                  dlen -= txtlen + 1;
+                            memcpy (pkt.at (0), r->pkt->at (0), offs  = r->pkt->len);
+                            pkt.id = r->pkt->id;
+                            goto duplicate_request;
+                          }
+
+                      // new packet, queue
+                      rcv = new dns_rcv (seqno, data, datalen);
+                      dns->receive_rep (rcv);
+                    }
+
+                  pkt [offs++] = 0xc0; pkt [offs++] = 6 * 2; // refer to name in query section
+
+                  // type
+                  int rtype = dns ? dns->cfg.rrtype : RR_TYPE_A;
+                  pkt [offs++] = rtype       >> 8; pkt [offs++] = rtype;
+
+                  // class
+                  pkt [offs++] = RR_CLASS_IN >> 8; pkt [offs++] = RR_CLASS_IN;
+
+                  // TTL
+                  pkt [offs++] = 0; pkt [offs++] = 0;
+                  pkt [offs++] = 0; pkt [offs++] = dns ? dns->cfg.def_ttl : 0;
+
+                  int rdlen_offs = offs += 2;
+
+                  int dlen = (dns ? ntohs (dns->cfg.max_size) : MAX_PKT_SIZE) - offs;
+                  // bind doesn't compress well, so reduce further by one label length
+                  dlen -= qlen;
+
+                  if (dns)
+                    {
+                      while (dlen > 1 && !dns->snddq.empty ())
+                        {
+                          int txtlen = dlen <= 255 ? dlen - 1 : 255;
+
+                          if (txtlen > dns->snddq.size ())
+                            txtlen = dns->snddq.size ();
+
+                          pkt[offs++] = txtlen;
+                          memcpy (pkt.at (offs), dns->snddq.begin (), txtlen);
+                          offs += txtlen;
+                          dns->snddq.remove (txtlen);
+
+                          dlen -= txtlen + 1;
+                        }
+
+                      // avoid empty TXT rdata
+                      if (offs == rdlen_offs)
+                        pkt[offs++] = 0;
+                    }
+                  else
+                    {
+                      // send RST
+                      pkt [offs++] = CMD_IP_1; pkt [offs++] = CMD_IP_2; pkt [offs++] = CMD_IP_3;
+                      pkt [offs++] = CMD_IP_RST;
+                    }
+
+                  int rdlen = offs - rdlen_offs;
+
+                  pkt [rdlen_offs - 2] = rdlen >> 8;
+                  pkt [rdlen_offs - 1] = rdlen;
+
+                  if (dns)
+                    {
+                      // now update dns_rcv copy
+                      rcv->pkt->len = offs;
+                      memcpy (rcv->pkt->at (0), pkt.at (0), offs);
+                    }
+
+                  duplicate_request: ;
                 }
-
-              // avoid empty TXT rdata
-              if (offs == rdlen_offs)
-                (*pkt)[offs++] = 0;
-
-              int rdlen = offs - rdlen_offs;
-
-              (*pkt) [rdlen_offs - 2] = rdlen >> 8;
-              (*pkt) [rdlen_offs - 1] = rdlen;
-
-              // now update dns_rcv copy
-              rcv->pkt->len = offs;
-              memcpy (rcv->pkt->at (0), pkt->at (0), offs);
-
-              duplicate_request: ;
+              else
+                pkt.flags = htons (DEFAULT_SERVER_FLAGS | FLAG_RCODE_FORMERR);
             }
-          else
-            pkt->flags = htons (DEFAULT_SERVER_FLAGS | FLAG_RCODE_FORMERR);
+          else if (qtype == RR_TYPE_A
+                   && qlen > dlen + 1 + cdc26.encode_len (sizeof (dns_cfg)))
+            {
+              dns_cfg cfg;
+              cdc26.decode ((u8 *)&cfg, qname, cdc26.encode_len (sizeof (dns_cfg)));
+              int client = ntohs (cfg.client);
+
+              pkt [offs++] = 0xc0; pkt [offs++] = 6 * 2; // refer to name in query section
+
+              pkt [offs++] = RR_TYPE_A   >> 8; pkt [offs++] = RR_TYPE_A;   // type
+              pkt [offs++] = RR_CLASS_IN >> 8; pkt [offs++] = RR_CLASS_IN; // class
+              pkt [offs++] = 0; pkt [offs++] = 0;
+              pkt [offs++] = 0; pkt [offs++] = cfg.def_ttl; // TTL
+              pkt [offs++] = 0; pkt [offs++] = 4; // rdlength
+
+              slog (L_INFO, _("DNS tunnel: client %d tries to connect"), client);
+
+              pkt [offs++] = CMD_IP_1; pkt [offs++] = CMD_IP_2; pkt [offs++] = CMD_IP_3;
+              pkt [offs++] = CMD_IP_REJ;
+
+              if (0 < client && client <= conns.size ())
+                {
+                  connection *c = conns [client - 1];
+
+                  if (cfg.valid ())
+                    {
+                      pkt [offs - 1] = CMD_IP_SYN;
+
+                      delete c->dns;
+                      c->dns = new dns_connection (c);
+                      c->dns->cfg = cfg;
+                    }
+                }
+            }
         }
 
-      pkt->len = offs;
+      pkt.len = offs;
     }
-
-  return pkt;
 }
 
 void
-vpn::dnsv4_client (dns_packet *pkt)
+vpn::dnsv4_client (dns_packet &pkt)
 {
-  u16 flags = ntohs (pkt->flags);
+  u16 flags = ntohs (pkt.flags);
   int offs = 6 * 2; // skip header
 
-  pkt->qdcount = ntohs (pkt->qdcount);
-  pkt->ancount = ntohs (pkt->ancount);
+  pkt.qdcount = ntohs (pkt.qdcount);
+  pkt.ancount = ntohs (pkt.ancount);
 
   // go through our request list and find the corresponding request
-  for (vector<dns_req *>::iterator i = dns_sndpq.begin ();
+  for (vector<dns_snd *>::iterator i = dns_sndpq.begin ();
        i != dns_sndpq.end ();
        ++i)
-    if ((*i)->pkt->id == pkt->id)
+    if ((*i)->pkt->id == pkt.id)
       {
         dns_connection *dns = (*i)->dns;
         int seqno = (*i)->seqno;
         u8 data[MAXSIZE], *datap = data;
 
+        if ((*i)->retry)
+          {
+            dns->send_interval *= 1.01;
+            if (dns->send_interval < MAX_SEND_INTERVAL)
+              dns->send_interval = MAX_SEND_INTERVAL;
+          }
+        else
+          {
+            dns->send_interval *= 0.99;
+            if (dns->send_interval < MIN_SEND_INTERVAL)
+              dns->send_interval = MIN_SEND_INTERVAL;
+
+            // the latency surely puts an upper bound on
+            // the minimum send interval
+            if (dns->send_interval > NOW - (*i)->sent)
+              dns->send_interval = NOW - (*i)->sent;
+          }
+
         delete *i;
         dns_sndpq.erase (i);
 
-        if (flags & FLAG_RESPONSE && !(flags & (FLAG_OP_MASK | FLAG_TC)))
+        if (flags & FLAG_RESPONSE && !(flags & FLAG_OP_MASK))
           {
             char qname[MAXSIZE];
 
-            while (pkt->qdcount-- && offs < MAXSIZE - 4)
+            while (pkt.qdcount-- && offs < MAXSIZE - 4)
               {
-                int qlen = pkt->decode_label ((char *)qname, MAXSIZE - offs, offs);
+                int qlen = pkt.decode_label ((char *)qname, MAXSIZE - offs, offs);
                 offs += 4; // skip qtype, qclass
               }
 
-            while (pkt->ancount-- && offs < MAXSIZE - 10 && datap)
+            while (pkt.ancount-- && offs < MAXSIZE - 10 && datap)
               {
-                int qlen = pkt->decode_label ((char *)qname, MAXSIZE - offs, offs);
+                int qlen = pkt.decode_label ((char *)qname, MAXSIZE - offs, offs);
 
-                u16 qtype  = (*pkt) [offs++] << 8; qtype  |= (*pkt) [offs++];
-                u16 qclass = (*pkt) [offs++] << 8; qclass |= (*pkt) [offs++];
-                u32 ttl  = (*pkt) [offs++] << 24;
-                    ttl |= (*pkt) [offs++] << 16;
-                    ttl |= (*pkt) [offs++] <<  8;
-                    ttl |= (*pkt) [offs++];
+                u16 qtype  = pkt [offs++] << 8; qtype  |= pkt [offs++];
+                u16 qclass = pkt [offs++] << 8; qclass |= pkt [offs++];
+                u32 ttl  = pkt [offs++] << 24;
+                    ttl |= pkt [offs++] << 16;
+                    ttl |= pkt [offs++] <<  8;
+                    ttl |= pkt [offs++];
+                u16 rdlen = pkt [offs++] << 8; rdlen |= pkt [offs++];
 
-                u16 rdlen = (*pkt) [offs++] << 8; rdlen |= (*pkt) [offs++];
-
-                if (rdlen <= MAXSIZE - offs)
+                if (qtype == RR_TYPE_NULL || qtype == RR_TYPE_TXT)
                   {
-                    // decode bytes, finally
-
-                    while (rdlen)
+                    if (rdlen <= MAXSIZE - offs)
                       {
-                        int txtlen = (*pkt) [offs++];
+                        // decode bytes, finally
 
-                        assert (txtlen + offs < MAXSIZE - 1);
+                        while (rdlen)
+                          {
+                            int txtlen = pkt [offs++];
 
-                        memcpy (datap, pkt->at (offs), txtlen);
-                        datap += txtlen; offs += txtlen;
+                            assert (txtlen + offs < MAXSIZE - 1);
 
-                        rdlen -= txtlen + 1;
+                            memcpy (datap, pkt.at (offs), txtlen);
+                            datap += txtlen; offs += txtlen;
+
+                            rdlen -= txtlen + 1;
+                          }
                       }
+                  }
+                else if (qtype == RR_TYPE_A)
+                  {
+                    u8 ip [4];
+
+                    ip [0] = pkt [offs++];
+                    ip [1] = pkt [offs++];
+                    ip [2] = pkt [offs++];
+                    ip [3] = pkt [offs++];
+
+                    if (ip [0] == CMD_IP_1
+                        && ip [1] == CMD_IP_2
+                        && ip [2] == CMD_IP_3)
+                      {
+                        slog (L_TRACE, _("got tunnel meta command %02x"), ip [3]);
+
+                        if (ip [3] == CMD_IP_RST)
+                          {
+                            slog (L_DEBUG, _("got tunnel RST request"));
+
+                            connection *c = dns->c;
+                            delete c->dns; c->dns = 0;
+
+                            return;
+                          }
+                        else if (ip [3] == CMD_IP_SYN)
+                          dns->established = true;
+                        else
+                          slog (L_INFO, _("got unknown meta command %02x"), ip [3]);
+                      }
+                    else
+                      slog (L_INFO, _("got spurious a record %d.%d.%d.%d"),
+                            ip [0], ip [1], ip [2], ip [3]);
+
+                    return;
                   }
 
                 int client, rseqno;
@@ -849,8 +1074,6 @@ vpn::dnsv4_client (dns_packet *pkt)
 
         break;
       }
-
-  delete pkt;
 }
 
 void
@@ -862,23 +1085,19 @@ vpn::dnsv4_ev (io_watcher &w, short revents)
       struct sockaddr_in sa;
       socklen_t sa_len = sizeof (sa);
 
-      pkt->len = recvfrom (w.fd, &((*pkt)[0]), MAXSIZE, 0, (sockaddr *)&sa, &sa_len);
+      pkt->len = recvfrom (w.fd, pkt->at (0), MAXSIZE, 0, (sockaddr *)&sa, &sa_len);
 
       if (pkt->len > 0)
         {
-          if (pkt->flags & htons (FLAG_TC))
-            {
-              slog (L_WARN, _("DNS request/response truncated, check protocol settings."));
-              //TODO connection reset
-            }
-
           if (THISNODE->dns_port)
             {
-              pkt = dnsv4_server (pkt);
-              sendto (w.fd, &((*pkt)[0]), pkt->len, 0, (sockaddr *)&sa, sa_len);
+              dnsv4_server (*pkt);
+              sendto (w.fd, pkt->at (0), pkt->len, 0, (sockaddr *)&sa, sa_len);
             }
           else
-            dnsv4_client (pkt);
+            dnsv4_client (*pkt);
+
+          delete pkt;
         }
     }
 }
@@ -892,66 +1111,89 @@ connection::send_dnsv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
   if (!dns->snddq.put (pkt))
     return false;
 
-  // start timer if neccessary
-  if (!THISNODE->dns_port && !dns->tw.active)
-    dns->tw.trigger ();
+  dns->tw.trigger ();
 
   return true;
 }
 
+#define NEXT(w) do { if (next > (w)) next = w; } while (0)
+
 void
 dns_connection::time_cb (time_watcher &w)
 {
+  // servers have to be polled
+  if (THISNODE->dns_port)
+    return;
+
   // check for timeouts and (re)transmit
-  tstamp next = NOW + 60;
-  dns_req *send = 0;
+  tstamp next = NOW + poll_interval;
+  dns_snd *send = 0;
   
-  for (vector<dns_req *>::iterator i = vpn->dns_sndpq.begin ();
+  for (vector<dns_snd *>::iterator i = vpn->dns_sndpq.begin ();
        i != vpn->dns_sndpq.end ();
        ++i)
     {
-      dns_req *r = *i;
+      dns_snd *r = *i;
 
-      if (r->next <= NOW)
+      if (r->timeout <= NOW)
         {
           if (!send)
             {
               send = r;
 
-              if (r->retry)//D
-                printf ("req %d:%d, retry %d\n", r->seqno, r->pkt->id, r->retry);
               r->retry++;
-              r->next = NOW + r->retry;
+              r->timeout = NOW + r->retry;
             }
         }
-
-      if (r->next < next)
-        next = r->next;
+      else if (r->timeout < next)
+        NEXT (r->timeout);
     }
 
-  if (!send
-      && vpn->dns_sndpq.size () < MAX_OUTSTANDING)
+  if (last_sent + send_interval <= NOW)
     {
-      send = new dns_req (this);
-      send->gen_stream_req (sndseq, snddq);
-      vpn->dns_sndpq.push_back (send);
+      if (!send)
+        {
+          // generate a new packet, if wise
 
-      sndseq = (sndseq + 1) & SEQNO_MASK;
+          if (!established)
+            {
+              if (vpn->dns_sndpq.empty ())
+                {
+                  send = new dns_snd (this);
+
+                  cfg.reset (THISNODE->id);
+                  send->gen_syn_req (cfg);
+                }
+            }
+          else if (vpn->dns_sndpq.size () < MAX_OUTSTANDING)
+            {
+              send = new dns_snd (this);
+              send->gen_stream_req (sndseq, snddq);
+
+              sndseq = (sndseq + 1) & SEQNO_MASK;
+            }
+
+          if (send)
+            vpn->dns_sndpq.push_back (send);
+        }
+
+      if (send)
+        {
+         printf ("send pkt\n");
+          last_sent = NOW;
+
+          if (!send->retry)
+            send->sent = NOW;
+
+          sendto (vpn->dnsv4_fd,
+                  send->pkt->at (0), send->pkt->len, 0,
+                  vpn->dns_forwarder.sav4 (), vpn->dns_forwarder.salenv4 ());
+        }
     }
+  else
+    NEXT (last_sent + send_interval);
 
-  tstamp min_next = NOW + (1. / (tstamp)MAX_RATE);
-
-  if (send)
-    {
-      dns_packet *pkt = send->pkt;
-
-      next = min_next;
-
-      sendto (vpn->dnsv4_fd, &((*pkt)[0]), pkt->len, 0,
-              vpn->dns_forwarder.sav4 (), vpn->dns_forwarder.salenv4 ());
-    }
-  else if (next < min_next)
-    next = min_next;
+  printf ("pi %f si %f N %f (%d:%d)\n", poll_interval, send_interval, next - NOW, vpn->dns_sndpq.size (), snddq.size ());
 
   w.start (next);
 }
