@@ -826,7 +826,7 @@ vpn::dnsv4_server (dns_packet &pkt)
                             // already seen that request: simply reply with the cached reply
                             dns_rcv *r = *i;
 
-                            printf ("DUPLICATE %d\n", htons (r->pkt->id));//D
+                            slog (L_DEBUG, "DUPLICATE %d\n", htons (r->pkt->id));
 
                             memcpy (pkt.at (0), r->pkt->at (0), offs  = r->pkt->len);
                             pkt.id = r->pkt->id;
