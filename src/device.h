@@ -86,8 +86,11 @@ struct tap_device_base {
 
   char *device;
 
-  bool open ();
-  void close ();
+  tap_device ();
+  ~tap_device ();
+
+  //bool open ();
+  //void close ();
 
   const char *interface () { return ifrname; }
   const char *info ();
@@ -96,9 +99,7 @@ struct tap_device_base {
   void send (tap_packet *pkt);
 };
 
-struct tap_device;
-
-extern tap_device tap;
+//extern tap_device *tap_device ();
 
 #endif
 
