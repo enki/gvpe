@@ -10,6 +10,7 @@
         - fix configure --help output.
         - many documentation layout fixes.
         - synced iom.[Ch] from rxvt-unicode.
+        - try to cope with some non-monotonic time changes.
         - revert to locale.h - a usual, clocale is nonfunctioning on macosx.
         - considerably improved pod2texi and the resulting texi doc.
 
