@@ -49,21 +49,21 @@
 #define MAX_POLL_INTERVAL 6.  // how often to poll minimally when the server has no data
 #define ACTIVITY_INTERVAL 5.
 
-#define INITIAL_TIMEOUT     1. // retry timeouts
-#define INITIAL_SYN_TIMEOUT 2. // retry timeout for initial syn
+#define INITIAL_TIMEOUT     0.1 // retry timeouts
+#define INITIAL_SYN_TIMEOUT 10. // retry timeout for initial syn
 
 #define MIN_SEND_INTERVAL 0.01 // wait at least this time between sending requests
 #define MAX_SEND_INTERVAL 0.5 // optimistic?
 
-#define MAX_OUTSTANDING 40 // max. outstanding requests
-#define MAX_WINDOW      100 // max. for MAX_OUTSTANDING
+#define MAX_OUTSTANDING 10 // max. outstanding requests
+#define MAX_WINDOW      1000 // max. for MAX_OUTSTANDING, and backlog
 #define MAX_BACKLOG     (100*1024) // size of gvpe protocol backlog (bytes), must be > MAXSIZE
 
 #define MAX_DOMAIN_SIZE 220 // 255 is legal limit, but bind doesn't compress well
 // 240 leaves about 4 bytes of server reply data
 // every two request bytes less give room for one reply byte
 
-#define SEQNO_MASK 0xffff
+#define SEQNO_MASK 0x3fff
 #define SEQNO_EQ(a,b) ( 0 == ( ((a) ^ (b)) & SEQNO_MASK) )
 
 #define MAX_LBL_SIZE 63
@@ -267,9 +267,15 @@ static basecoder cdc26 ("dPhZrQmJkBtSvLxAeFwGyO");
 
 #define HDRSIZE 6
 
-inline void encode_header (char *data, int clientid, int seqno)
+inline void encode_header (char *data, int clientid, int seqno, int retry = 0)
 {
-  u8 hdr[3] = { clientid, seqno >> 8, seqno };
+  seqno &= SEQNO_MASK;
+
+  u8 hdr[3] = {
+    clientid,
+    (seqno >> 8) | (retry << 6),
+    seqno,
+  };
 
   assert (clientid < 256);
 
@@ -283,7 +289,7 @@ inline void decode_header (char *data, int &clientid, int &seqno)
   cdc26.decode (hdr, data, HDRSIZE);
 
   clientid = hdr[0];
-  seqno = (hdr[1] << 8) | hdr[2];
+  seqno = ((hdr[1] << 8) | hdr[2]) & SEQNO_MASK;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -322,7 +328,7 @@ byte_stream::~byte_stream ()
 void byte_stream::remove (int count)
 {
   if (count > fill)
-    abort ();
+    assert (count <= fill);
 
   memmove (data, data + count, fill -= count);
 }
@@ -355,7 +361,7 @@ vpn_packet *byte_stream::get ()
   unsigned int len = (data [0] << 8) | data [1];
 
   if (len > MAXSIZE && fill >= 2)
-    abort (); // TODO handle this gracefully, connection reset
+    assert (len <= MAXSIZE || fill < 2); // TODO handle this gracefully, connection reset
 
   if (fill < len + 2)
     return 0;
@@ -424,7 +430,7 @@ void dns_cfg::reset (int clientid)
 
   rrtype   = RR_TYPE_TXT;
   flags    = 0;
-  def_ttl  = 0;
+  def_ttl  = 1;
   rcv_cdc  = 0;
   snd_cdc  = 62;
   max_size = ntohs (MAX_PKT_SIZE);
@@ -501,6 +507,7 @@ struct dns_snd
   int retry;
   struct dns_connection *dns;
   int seqno;
+  bool stdhdr;
 
   void gen_stream_req (int seqno, byte_stream &stream);
   void gen_syn_req (const dns_cfg &cfg);
@@ -530,6 +537,7 @@ dns_snd::dns_snd (dns_connection *dns)
   retry = 0;
   seqno = 0;
   sent = NOW;
+  stdhdr = false;
 
   pkt = new dns_packet;
 
@@ -566,6 +574,7 @@ static void append_domain (dns_packet &pkt, int &offs, const char *domain)
 
 void dns_snd::gen_stream_req (int seqno, byte_stream &stream)
 {
+  stdhdr = true;
   this->seqno = seqno;
 
   timeout = NOW + INITIAL_TIMEOUT;
@@ -670,6 +679,7 @@ struct dns_connection
 
   tstamp last_received;
   tstamp last_sent;
+  double last_latency;
   double poll_interval, send_interval;
 
   vector<dns_rcv *> rcvpq;
@@ -698,7 +708,8 @@ dns_connection::dns_connection (connection *c)
 
   last_sent = last_received = 0;
   poll_interval = MIN_POLL_INTERVAL;
-  send_interval = 0.2; // starting rate
+  send_interval = 0.5; // starting rate
+  last_latency = INITIAL_TIMEOUT;
 }
 
 dns_connection::~dns_connection ()
@@ -720,7 +731,7 @@ void dns_connection::receive_rep (dns_rcv *r)
     }
   else
     {
-      poll_interval *= 1.1;
+      poll_interval *= 1.5;
       if (poll_interval > MAX_POLL_INTERVAL)
         poll_interval = MAX_POLL_INTERVAL;
     }
@@ -748,7 +759,10 @@ void dns_connection::receive_rep (dns_rcv *r)
         rcvseq = (rcvseq + 1) & SEQNO_MASK;
 
         if (!rcvdq.put (r->data, r->datalen))
-          abort (); // MUST never overflow, can be caused by data corruption, TODO
+          {
+            slog (L_ERR, "DNS: !rcvdq.put (r->data, r->datalen)");
+            abort (); // MUST never overflow, can be caused by data corruption, TODO
+          }
 
         while (vpn_packet *pkt = rcvdq.get ())
           {
@@ -817,6 +831,7 @@ vpn::dnsv4_server (dns_packet &pkt)
                   connection *c = conns [client - 1];
                   dns_connection *dns = c->dns;
                   dns_rcv *rcv;
+                  bool in_seq;
 
                   if (dns)
                     {
@@ -826,12 +841,18 @@ vpn::dnsv4_server (dns_packet &pkt)
                             // already seen that request: simply reply with the cached reply
                             dns_rcv *r = *i;
 
-                            slog (L_DEBUG, "DUPLICATE %d\n", htons (r->pkt->id));
+                            slog (L_DEBUG, "DNS: duplicate packet received ID %d, SEQ %d", htons (r->pkt->id), seqno);
+
+                            // refresh header & id, as the retry count could have changed
+                            memcpy (r->pkt->at (6 * 2 + 1), pkt.at (6 * 2 + 1), HDRSIZE);
+                            r->pkt->id = pkt.id;
 
                             memcpy (pkt.at (0), r->pkt->at (0), offs  = r->pkt->len);
-                            pkt.id = r->pkt->id;
+
                             goto duplicate_request;
                           }
+
+                      in_seq = dns->rcvseq == seqno;
 
                       // new packet, queue
                       rcv = new dns_rcv (seqno, data, datalen);
@@ -854,7 +875,10 @@ vpn::dnsv4_server (dns_packet &pkt)
 
                   if (dns)
                     {
-                      while (dlen > 1 && !dns->snddq.empty ())
+                      // only put data into in-order sequence packets, if
+                      // we receive out-of-order packets we generate empty
+                      // replies
+                      while (dlen > 1 && !dns->snddq.empty () && in_seq)
                         {
                           int txtlen = dlen <= 255 ? dlen - 1 : 255;
 
@@ -873,7 +897,7 @@ vpn::dnsv4_server (dns_packet &pkt)
                       if (offs == rdlen_offs)
                         pkt[offs++] = 0;
 
-                      slog (L_NOISE, "snddq %d", dns->snddq.size ());
+                      slog (L_NOISE, "DNS: snddq %d", dns->snddq.size ());
                     }
                   else
                     {
@@ -914,7 +938,7 @@ vpn::dnsv4_server (dns_packet &pkt)
               pkt [offs++] = 0; pkt [offs++] = cfg.def_ttl; // TTL
               pkt [offs++] = 0; pkt [offs++] = 4; // rdlength
 
-              slog (L_INFO, _("DNS tunnel: client %d tries to connect"), client);
+              slog (L_INFO, _("DNS: client %d tries to connect"), client);
 
               pkt [offs++] = CMD_IP_1; pkt [offs++] = CMD_IP_2; pkt [offs++] = CMD_IP_3;
               pkt [offs++] = CMD_IP_REJ;
@@ -961,14 +985,14 @@ vpn::dnsv4_client (dns_packet &pkt)
 
         if ((*i)->retry)
           {
-            dns->send_interval *= 1.001;
+            dns->send_interval *= 1.01;
             if (dns->send_interval > MAX_SEND_INTERVAL)
               dns->send_interval = MAX_SEND_INTERVAL;
           }
         else
           {
 #if 1
-            dns->send_interval *= 0.9999;
+            dns->send_interval *= 0.999;
 #endif
             if (dns->send_interval < MIN_SEND_INTERVAL)
               dns->send_interval = MIN_SEND_INTERVAL;
@@ -976,6 +1000,7 @@ vpn::dnsv4_client (dns_packet &pkt)
             // the latency surely puts an upper bound on
             // the minimum send interval
             double latency = NOW - (*i)->sent;
+            dns->last_latency = latency;
 
             if (dns->send_interval > latency)
               dns->send_interval = latency;
@@ -1038,11 +1063,11 @@ vpn::dnsv4_client (dns_packet &pkt)
                         && ip [1] == CMD_IP_2
                         && ip [2] == CMD_IP_3)
                       {
-                        slog (L_TRACE, _("got tunnel meta command %02x"), ip [3]);
+                        slog (L_TRACE, _("DNS: got tunnel meta command %02x"), ip [3]);
 
                         if (ip [3] == CMD_IP_RST)
                           {
-                            slog (L_DEBUG, _("got tunnel RST request"));
+                            slog (L_DEBUG, _("DNS: got tunnel RST request"));
 
                             delete dns; c->dns = 0;
 
@@ -1050,19 +1075,19 @@ vpn::dnsv4_client (dns_packet &pkt)
                           }
                         else if (ip [3] == CMD_IP_SYN)
                           {
-                            slog (L_DEBUG, _("got tunnel SYN reply, server likes us."));
+                            slog (L_DEBUG, _("DNS: got tunnel SYN reply, server likes us."));
                             dns->established = true;
                           }
                         else if (ip [3] == CMD_IP_REJ)
                           {
-                            slog (L_DEBUG, _("got tunnel REJ reply, server does not like us, aborting."));
+                            slog (L_DEBUG, _("DNS: got tunnel REJ reply, server does not like us, aborting."));
                             abort ();
                           }
                         else
-                          slog (L_INFO, _("got unknown meta command %02x"), ip [3]);
+                          slog (L_INFO, _("DNS: got unknown meta command %02x"), ip [3]);
                       }
                     else
-                      slog (L_INFO, _("got spurious a record %d.%d.%d.%d"),
+                      slog (L_INFO, _("DNS: got spurious a record %d.%d.%d.%d"),
                             ip [0], ip [1], ip [2], ip [3]);
 
                     return;
@@ -1073,12 +1098,12 @@ vpn::dnsv4_client (dns_packet &pkt)
 
                 if (client != THISNODE->id)
                   {
-                    slog (L_INFO, _("got dns tunnel response with wrong clientid, ignoring"));
+                    slog (L_INFO, _("DNS: got dns tunnel response with wrong clientid, ignoring"));
                     datap = 0;
                   }
                 else if (rseqno != seqno)
                   {
-                    slog (L_DEBUG, _("got dns tunnel response with wrong seqno, badly caching nameserver?"));
+                    slog (L_DEBUG, _("DNS: got dns tunnel response with wrong seqno, badly caching nameserver?"));
                     datap = 0;
                   }
               }
@@ -1164,7 +1189,15 @@ dns_connection::time_cb (time_watcher &w)
               send = r;
 
               r->retry++;
-              r->timeout = NOW + r->retry;
+              r->timeout = NOW + (r->retry * last_latency * 8.);
+
+              // the following code changes the query section a bit, forcing
+              // the forwarder to generate a new request
+              if (r->stdhdr)
+                {
+                  //printf ("reencoded header for ID %d retry %d:%d:%d\n", htons (r->pkt->id), THISNODE->id, r->seqno, r->retry);printf ("reencoded header for ID %d retry %d:%d:%d\n", htons (r->pkt->id), THISNODE->id, r->seqno, r->retry);
+                  //encode_header ((char *)r->pkt->at (6 * 2 + 1), THISNODE->id, r->seqno, r->retry);
+                }
             }
         }
       else
@@ -1187,10 +1220,18 @@ dns_connection::time_cb (time_watcher &w)
                   send->gen_syn_req (cfg);
                 }
             }
-          else if (vpn->dns_sndpq.size () < MAX_OUTSTANDING)
+          else if (vpn->dns_sndpq.size () < MAX_OUTSTANDING
+                   && !SEQNO_EQ (rcvseq, sndseq - (MAX_WINDOW - 1)))
             {
+              if (!snddq.empty ())
+                {
+                  poll_interval = send_interval;
+                  NEXT (NOW + send_interval);
+                }
+
               send = new dns_snd (this);
               send->gen_stream_req (sndseq, snddq);
+              send->timeout = NOW + last_latency * 8.;
 
               sndseq = (sndseq + 1) & SEQNO_MASK;
             }
@@ -1210,7 +1251,7 @@ dns_connection::time_cb (time_watcher &w)
   else
     NEXT (last_sent + send_interval);
 
-  slog (L_NOISE, "pi %f si %f N %f (%d:%d)",
+  slog (L_NOISE, "DNS: pi %f si %f N %f (%d:%d)",
         poll_interval, send_interval, next - NOW,
         vpn->dns_sndpq.size (), snddq.size ());
 
