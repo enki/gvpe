@@ -249,7 +249,6 @@ main (int argc, char **argv, char **envp)
 #endif
 
   conf.read_config (true);
-  make_names ();
 
   set_loglevel (llevel != L_NONE ? llevel : conf.llevel);
 

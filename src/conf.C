@@ -99,6 +99,8 @@ conf_node::~conf_node ()
 
 void configuration::init ()
 {
+  asprintf (&confbase, "%s/vpe", CONFDIR);
+
   memset (this, 0, sizeof (*this));
 
   mtu       = DEFAULT_MTU;
@@ -115,6 +117,8 @@ void configuration::init ()
   default_node.connectmode = conf_node::C_ALWAYS;
   default_node.compress    = true;
   default_node.protocols   = PROT_UDPv4;
+
+  conf.pidfilename = strdup (LOCALSTATEDIR "/run/vped.pid");
 }
 
 void configuration::cleanup()

@@ -127,16 +127,6 @@ detach (int do_detach)
   return 0;
 }
 
-void
-make_names (void)
-{
-  if (!conf.pidfilename)
-    conf.pidfilename = strdup (LOCALSTATEDIR "/run/vped.pid");
-
-  if (!confbase)
-    asprintf (&confbase, "%s/vpe", CONFDIR);
-}
-
 void run_script (const run_script_cb &cb, bool wait)
 {
   int pid;

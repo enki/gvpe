@@ -313,7 +313,6 @@ main (int argc, char **argv, char **envp)
   if (show_help)
     usage (0);
 
-  make_names ();
   conf.read_config (false);
 
   if (generate_keys)

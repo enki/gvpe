@@ -45,11 +45,6 @@ extern int kill_other (int signal);
 extern int detach (int do_detach);
 
 /*
- * Set all files and paths according to netname
- */
-extern void make_names (void);
-
-/*
  * check wether the given path is an absolute pathname
  */
 #define ABSOLUTE_PATH(c) ((c)[0] == '/')
