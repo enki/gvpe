@@ -1,6 +1,6 @@
 =head1 NAME
 
-vpe - Overview of the virtual private ethernet suite.
+GNU-VPE - Overview of the GNU Virtual Private Ethernet suite.
 
 =head1 DESCRIPTION
 

@@ -1,6 +1,6 @@
 =head1 NAME
 
-vped.conf - vpe daemon configuration file
+vped.conf - configuration file for the GNU VPE daemon
 
 =head1 SYNOPSIS
 

@@ -1,7 +1,7 @@
 
 ==== NAME ====
 
-    vpe - Overview of the virtual private ethernet suite.
+    GNU-VPE - Overview of the GNU Virtual Private Ethernet suite.
 
 
 ==== DESCRIPTION ====
@@ -60,6 +60,9 @@
 
 
 ==== COMPILETIME CONFIGURATION ====
+
+    Please have a look at the ``vpe.osdep(5)'' manpage for platform-specific
+    information.
 
     Here are a few recipes for compiling your vpe:
 
@@ -209,10 +212,43 @@
 
 ==== SEE ALSO ====
 
-    vpe(5), vped.conf(5), vpectrl(8).
+    vpe.osdep(5) for OS-depedendent information, vped.conf(5), vpectrl(8),
+    and for a description of the protocol and routing algorithms,
+    vpe.protocol(7).
 
 
 ==== AUTHOR ====
 
     Marc Lehmann <vpe@plan9.de>
+
+
+==== COPYRIGHTS AND LICENSES ====
+
+    Vpe itself is distributed under the GENERAL PUBLIC LICENSE (see the file
+    COPYING that should be part of your distribution).
+
+    In some configurations it uses modified versions of the tinc vpn suite,
+    which is also available under the GENERAL PUBLIC LICENSE.
+
+    In some configurations (notably darwin), it uses a poll emulation
+    library that comes with the following license notice:
+
+      Copyright (c) 1995-2002 Brian M. Clapper
+      All rights reserved.
+
+      Redistribution and use in source and binary forms are permitted
+      provided that: (1) source distributions retain this entire
+      copyright notice and comment; (2) modifications made to the
+      software are prominently mentioned, and a copy of the original
+      software (or a pointer to its location) are included; and (3)
+      distributions including binaries display the following
+      acknowledgement: "This product includes software developed by Brian
+      M. Clapper <bmc@clapper.org>" in the documentation or other
+      materials provided with the distribution. The name of the author
+      may not be used to endorse or promote products derived from this
+      software without specific prior written permission.
+
+      THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
+      IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
+      WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 

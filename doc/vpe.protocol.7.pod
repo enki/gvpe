@@ -1,4 +1,4 @@
-=head1 The VPE Protocol
+=head1 The GNU-VPE Protocol
 
 =head2 Anatomy of a VPN packet
 

@@ -1,0 +1,11 @@
+TODO items:
+
+- add a general vpn introduction to the manual
+- reformat the texinfo manual to look less manpagish
+- use gnutls instead of openssl
+
+- vped <no nodename> => starts without error message but fails to connect
+- should tets own hostkey for validity
+- re-bind() on HUP
+- Feb 26 18:48:31 (none) modprobe: modprobe: Can't locate module  (^E^H(
+

@@ -1,6 +1,6 @@
 =head1 NAME
 
-C<vpectrl> - Virtual Private Ethernet Control Program
+C<vpectrl> - GNU Virtual Private Ethernet Control Program
 
 =head1 SYNOPSIS
 

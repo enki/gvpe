@@ -1,6 +1,6 @@
 =head1 NAME
 
-C<vped> - Virtual Private Ethernet Daemon
+C<vped> - GNU Virtual Private Ethernet Daemon
 =head1 SYNOPSIS
 
 C<vped> [B<-cDlL>] [B<--config=>I<DIR>] [B<--no-detach>] [B<-l=>I<LEVEL]>]
