@@ -28,11 +28,17 @@
 struct net_packet {
   u32 len; // actually u16, but padding...
 
-  u8 &operator[] (u16 offset);
+  u8 &operator[] (u16 offset) const;
 
   void skip_hdr (u16 hdrsize)
     {
       memmove ((void *)&(*this)[0], (void *)&(*this)[hdrsize], len -= hdrsize);
+    }
+
+  void set (const net_packet &pkt)
+    {
+      len = pkt.len;
+      memcpy (&((*this)[0]), &(pkt[0]), len);
     }
 
   bool is_arp ()
@@ -52,7 +58,7 @@ struct data_packet : net_packet {
 };
 
 inline 
-u8 &net_packet::operator[] (u16 offset)
+u8 &net_packet::operator[] (u16 offset) const
 {
   return ((data_packet *)this)->data_[offset];
 }

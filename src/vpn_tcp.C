@@ -75,9 +75,13 @@ struct tcp_connection : io_watcher {
   vpn_packet *r_pkt;
   u32 r_len, r_ofs;
 
+  vpn_packet *w_pkt;
+  u32 w_len, w_ofs;
+
   void tcpv4_ev (io_watcher &w, short revents);
 
   bool send_packet (vpn_packet *pkt, int tos);
+  bool write_packet ();
 
   void error (); // abort conenction && cleanup
 
@@ -156,11 +160,47 @@ void tcp_connection::error ()
       fd = -1;
     }
 
-  delete r_pkt;
-  r_pkt = 0;
+  delete r_pkt; r_pkt = 0;
+  delete w_pkt; w_pkt = 0;
 
   stop ();
   state = active ? IDLE : ERROR;
+}
+
+bool
+tcp_connection::write_packet ()
+{
+  ssize_t len;
+
+  if (w_ofs < 2)
+    {
+      u16 plen = htons (w_pkt->len);
+
+      iovec vec[2];
+      vec[0].iov_base = ((u8 *)&plen) + w_ofs;
+      vec[0].iov_len = 2 - w_ofs;
+      vec[1].iov_base = &((*w_pkt)[0]);
+      vec[1].iov_len = w_len - 2;
+
+      len = writev (fd, vec, 2);
+    }
+  else
+    len = write (fd, &((*w_pkt)[w_ofs - 2]), w_len);
+
+  if (len > 0)
+    {
+      w_ofs += len;
+      w_len -= len;
+
+      return w_len == 0;
+    }
+  else if (len < 0 && (errno == EAGAIN || errno == EINTR))
+    return false;
+  else
+    {
+      error ();
+      return false;
+    }
 }
 
 void
@@ -169,14 +209,37 @@ tcp_connection::tcpv4_ev (io_watcher &w, short revents)
   last_activity = NOW;
 
   if (revents & (POLLERR | POLLHUP))
-    error ();
-  else if (revents & POLLOUT && state == CONNECTING)
     {
-      state = ESTABLISHED;
-      set (POLLIN);
+      error ();
+      return;
     }
 
-  else if (revents & POLLIN)
+  if (revents & POLLOUT)
+    {
+      if (state == CONNECTING)
+        {
+          state = ESTABLISHED;
+          set (POLLIN);
+        }
+      else if (state == ESTABLISHED)
+        {
+          if (w_pkt)
+            {
+              if (write_packet ())
+                {
+                  delete w_pkt; w_pkt = 0;
+
+                  set (POLLIN);
+                }
+            }
+          else
+            set (POLLIN);
+        }
+      else
+        set (POLLIN);
+    }
+
+  if (revents & POLLIN)
     {
       for (;;)
         {
@@ -213,13 +276,14 @@ tcp_connection::tcpv4_ev (io_watcher &w, short revents)
                       continue;
                     }
                 }
-              
+              else
+                break;
             }
           else if (len < 0 && (errno == EINTR || errno == EAGAIN))
-            return;
+            break;
 
           error ();
-          return;
+          break;
         }
     }
 }
@@ -250,24 +314,28 @@ tcp_connection::send_packet (vpn_packet *pkt, int tos)
     }
   else if (state == ESTABLISHED)
     {
-      // how this maps to the underlying tcp packet we don't know
-      // and we don't care. at least we tried ;)
-      setsockopt (fd, SOL_IP, IP_TOS, &tos, sizeof tos);
+      // drop packet if the tcp write buffer is full. this *is* the
+      // right thing to do, not using tcp *is* the right thing to do.
+      if (!w_pkt)
+        {
+          // how this maps to the underlying tcp packets we don't know
+          // and we don't care. at least we tried ;)
+          setsockopt (fd, SOL_IP, IP_TOS, &tos, sizeof tos);
 
-      // we use none of the advantages of tcp; if an error occurs, just drop
-      // (this happens when a tcp connection gets stuck, too, which might not be
-      // the wisest thing to do.. either drop packet (too late) or make sure
-      // it gets delivered)
-      u16 len = htons (pkt->len);
+          w_pkt = pkt;
+          w_ofs = 0;
+          w_len = pkt->len + 2; // length + size header
 
-      iovec vec[2];
-      vec[0].iov_base = &len;
-      vec[0].iov_len = sizeof len;
-      vec[1].iov_base = &((*pkt)[0]);
-      vec[1].iov_len = pkt->len;
-      
-      if (sizeof (u16) + pkt->len != writev (fd, vec, 2))
-        error ();
+          if (write_packet ())
+            w_pkt = 0;
+          else
+            {
+              w_pkt = new vpn_packet;
+              w_pkt->set (*pkt);
+
+              set (POLLIN | POLLOUT);
+            }
+        }
     }
 
   return state != ERROR;
@@ -278,6 +346,7 @@ tcp_connection::tcp_connection (int fd_, const sockinfo &si_, vpn &v_)
 {
   last_activity = NOW;
   r_pkt = 0;
+  w_pkt = 0;
   fd = fd_;
 
   if (fd < 0)
