@@ -45,23 +45,23 @@
 
 #include "vpn.h"
 
-#define MIN_POLL_INTERVAL .02  // how often to poll minimally when the server is having data
+#define MIN_POLL_INTERVAL .02  // how often to poll minimally when the server has data
 #define MAX_POLL_INTERVAL 6.  // how often to poll minimally when the server has no data
 #define ACTIVITY_INTERVAL 5.
 
-#define INITIAL_TIMEOUT     1.
-#define INITIAL_SYN_TIMEOUT 2.
+#define INITIAL_TIMEOUT     1. // retry timeouts
+#define INITIAL_SYN_TIMEOUT 2. // retry timeout for initial syn
 
-#define MIN_SEND_INTERVAL 0.01
+#define MIN_SEND_INTERVAL 0.01 // wait at least this time between sending requests
 #define MAX_SEND_INTERVAL 0.5 // optimistic?
 
 #define MAX_OUTSTANDING 40 // max. outstanding requests
 #define MAX_WINDOW      100 // max. for MAX_OUTSTANDING
-#define MAX_BACKLOG     (100*1024) // size of protocol backlog, must be > MAXSIZE
+#define MAX_BACKLOG     (100*1024) // size of gvpe protocol backlog (bytes), must be > MAXSIZE
 
 #define MAX_DOMAIN_SIZE 220 // 255 is legal limit, but bind doesn't compress well
 // 240 leaves about 4 bytes of server reply data
-// every two request byte sless give room for one reply byte
+// every two request bytes less give room for one reply byte
 
 #define SEQNO_MASK 0xffff
 #define SEQNO_EQ(a,b) ( 0 == ( ((a) ^ (b)) & SEQNO_MASK) )
@@ -872,6 +872,8 @@ vpn::dnsv4_server (dns_packet &pkt)
                       // avoid empty TXT rdata
                       if (offs == rdlen_offs)
                         pkt[offs++] = 0;
+
+                      slog (L_NOISE, "snddq %d", dns->snddq.size ());
                     }
                   else
                     {
