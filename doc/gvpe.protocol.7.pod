@@ -1,10 +1,39 @@
-=head1 The GNU-VPE Protocol
+=head1 The GNU-VPE Protocols
+
+=head1 Overview
+
+GVPE can make use of a number of protocols. One of them is the GNU VPE
+protocol which is used to authenticate tunnels and send encrypted data
+packets. This protocol is described in more detail the second part of this
+document.
+
+The first part of this document describes the transport protocols which
+are used by GVPE to send it's data packets over the network.
+
+=head1 PART 1: Tansport protocols
+
+=head2 RAW IP
+
+=head2 ICMP
+
+=head2 UDP
+
+=head2 TCP
+
+=head2 DNS
+
+=head1 PART 2: The GNU VPE protocol
+
+This section, unfortunately, is not yet finished, although the protocol
+is stable (until bugs in the cryptography are found, which will likely
+completely change the following description). Nevertheless, it should give
+you some overview over the protocol.
 
 =head2 Anatomy of a VPN packet
 
 The exact layout and field lengths of a VPN packet is determined at
 compiletime and doesn't change. The same structure is used for all
-protocols, be it rawip or tcp.
+transort protocols, be it RAWIP or TCP.
 
  +------+------+--------+------+
  | HMAC | TYPE | SRCDST | DATA |
@@ -12,7 +41,7 @@ protocols, be it rawip or tcp.
 
 The HMAC field is present in all packets, even if not used (e.g. in auth
 request packets), in which case it is set to all zeroes. The checksum
-itself is over the TYPE, SRCDST and DATA fields in all cases.
+itself is calculated over the TYPE, SRCDST and DATA fields in all cases.
 
 The TYPE field is a single byte and determines the purpose of the packet
 (e.g. RESET, COMPRESSED/UNCOMPRESSED DATA, PING, AUTH REQUEST/RESPONSE,
@@ -20,9 +49,9 @@ CONNECT REQUEST/INFO etc.).
 
 SRCDST is a three byte field which contains the source and destination
 node ids (12 bits each). The protocol does not yet scale well beyond 30+
-hosts, since all hosts connect to each other on startup. But if restarts
-are rare or tolerable and most connections are on demand, larger networks
-are possible.
+hosts, since all hosts must connect to each other once on startup. But if
+restarts are rare or tolerable and most connections are on demand, much
+larger networks are feasible.
 
 The DATA portion differs between each packet type, naturally, and is the
 only part that can be encrypted. Data packets contain more fields, as
@@ -37,8 +66,8 @@ the data for encryption purposes.
 
 SEQNO is a 32-bit sequence number. It is negotiated at every connection
 initialization and starts at some random 31 bit value. VPE currently uses
-a sliding window of 512 packets to detect reordering, duplication and
-reply attacks.
+a sliding window of 512 packets/sequence numbers to detect reordering,
+duplication and reply attacks.
 
 =head2 The authentification protocol
 
@@ -61,25 +90,26 @@ accept data packets from the destination host.
 
 This means that a host can only initate a simplex connection, telling the
 other side the key it has to use when it sends packets. The challenge
-reply is only used to set the current IP address and protocol parameters.
+reply is only used to set the current IP address of the other side and
+protocol parameters.
 
-The protocol here is completely symmetric, so to be able to send packets
-the destination host must send a challenge in the exact same way as
-already described (so, in essence, two simplex connections are created per
-host pair).
+This protocol is completely symmetric, so to be able to send packets the
+destination host must send a challenge in the exact same way as already
+described (so, in essence, two simplex connections are created per host
+pair).
 
 =head2 Retrying
 
 When there is no response to an auth request, the host will send auth
 requests in bursts with an exponential backoff. After some time it will
-resort to PING packets, which are very small (8 byte) and lightweight (no
-RSA operations). A host that receives ping requests from an unconnected
-peer will respond by trying to create a connection.
+resort to PING packets, which are very small (8 bytes) and lightweight
+(no RSA operations required). A host that receives ping requests from an
+unconnected peer will respond by trying to create a connection.
 
 In addition to the exponential backoff, there is a global rate-limit on
-a per-ip base. It allows long bursts but will limit total packet rate to
+a per-IP base. It allows long bursts but will limit total packet rate to
 something like one control packet every ten seconds, to avoid accidental
-floods due to protocol problems (like a rsa key file mismatch between two
+floods due to protocol problems (like a RSA key file mismatch between two
 hosts).
 
 =head2 Routing and Protocol translation

@@ -49,7 +49,7 @@
 #define MAX_POLL_INTERVAL 5.  // how often to poll minimally when the server has no data
 #define ACTIVITY_INTERVAL 5.
 
-#define TIMEOUT_FACTOR 8.
+#define TIMEOUT_FACTOR 2.
 
 #define INITIAL_TIMEOUT     0.1 // retry timeouts
 #define INITIAL_SYN_TIMEOUT 10. // retry timeout for initial syn
@@ -62,7 +62,7 @@
 #define MAX_WINDOW      1000 // max. for MAX_OUTSTANDING, and backlog
 #define MAX_BACKLOG     (32*1024) // size of gvpe protocol backlog (bytes), must be > MAXSIZE
 
-#define MAX_DOMAIN_SIZE 220 // 255 is legal limit, but bind doesn't compress well
+#define MAX_DOMAIN_SIZE 240 // 255 is legal limit, but bind doesn't compress well
 // 240 leaves about 4 bytes of server reply data
 // every request byte less give room for two reply bytes
 
@@ -1231,7 +1231,6 @@ dns_connection::time_cb (time_watcher &w)
 
               r->retry++;
               r->timeout = NOW + (r->retry * min_latency * TIMEOUT_FACTOR);
-              printf ("TO %d %f\n", r->retry, r->timeout - NOW);//D
 
               // the following code changes the query section a bit, forcing
               // the forwarder to generate a new request

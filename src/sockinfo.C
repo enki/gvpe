@@ -65,7 +65,7 @@ sockinfo::set (const conf_node *conf, u8 prot_)
 {
   if (prot_ == PROT_DNSv4)
     {
-      host = 0x01010101; port = htons (conf->id); prot = prot_;
+      host = htonl (conf->id); port = 0; prot = prot_;
     }
   else
     set (conf->hostname,

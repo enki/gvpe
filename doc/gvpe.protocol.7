@@ -129,14 +129,41 @@
 .\" ========================================================================
 .\"
 .IX Title "GVPE.PROTOCOL 7"
-.TH GVPE.PROTOCOL 7 "2004-06-11" "1.7" "GNU Virtual Private Ethernet"
-.SH "The GNU-VPE Protocol"
-.IX Header "The GNU-VPE Protocol"
+.TH GVPE.PROTOCOL 7 "2005-03-15" "1.8" "GNU Virtual Private Ethernet"
+.SH "The GNU-VPE Protocols"
+.IX Header "The GNU-VPE Protocols"
+.SH "Overview"
+.IX Header "Overview"
+\&\s-1GVPE\s0 can make use of a number of protocols. One of them is the \s-1GNU\s0 \s-1VPE\s0
+protocol which is used to authenticate tunnels and send encrypted data
+packets. This protocol is described in more detail the second part of this
+document.
+.PP
+The first part of this document describes the transport protocols which
+are used by \s-1GVPE\s0 to send it's data packets over the network.
+.SH "PART 1: Tansport protocols"
+.IX Header "PART 1: Tansport protocols"
+.Sh "\s-1RAW\s0 \s-1IP\s0"
+.IX Subsection "RAW IP"
+.Sh "\s-1ICMP\s0"
+.IX Subsection "ICMP"
+.Sh "\s-1UDP\s0"
+.IX Subsection "UDP"
+.Sh "\s-1TCP\s0"
+.IX Subsection "TCP"
+.Sh "\s-1DNS\s0"
+.IX Subsection "DNS"
+.SH "PART 2: The GNU VPE protocol"
+.IX Header "PART 2: The GNU VPE protocol"
+This section, unfortunately, is not yet finished, although the protocol
+is stable (until bugs in the cryptography are found, which will likely
+completely change the following description). Nevertheless, it should give
+you some overview over the protocol.
 .Sh "Anatomy of a \s-1VPN\s0 packet"
 .IX Subsection "Anatomy of a VPN packet"
 The exact layout and field lengths of a \s-1VPN\s0 packet is determined at
 compiletime and doesn't change. The same structure is used for all
-protocols, be it rawip or tcp.
+transort protocols, be it \s-1RAWIP\s0 or \s-1TCP\s0.
 .PP
 .Vb 3
 \& +------+------+--------+------+
@@ -146,7 +173,7 @@ protocols, be it rawip or tcp.
 .PP
 The \s-1HMAC\s0 field is present in all packets, even if not used (e.g. in auth
 request packets), in which case it is set to all zeroes. The checksum
-itself is over the \s-1TYPE\s0, \s-1SRCDST\s0 and \s-1DATA\s0 fields in all cases.
+itself is calculated over the \s-1TYPE\s0, \s-1SRCDST\s0 and \s-1DATA\s0 fields in all cases.
 .PP
 The \s-1TYPE\s0 field is a single byte and determines the purpose of the packet
 (e.g. \s-1RESET\s0, \s-1COMPRESSED/UNCOMPRESSED\s0 \s-1DATA\s0, \s-1PING\s0, \s-1AUTH\s0 \s-1REQUEST/RESPONSE\s0,
@@ -154,9 +181,9 @@ The \s-1TYPE\s0 field is a single byte and determines the purpose of the packet
 .PP
 \&\s-1SRCDST\s0 is a three byte field which contains the source and destination
 node ids (12 bits each). The protocol does not yet scale well beyond 30+
-hosts, since all hosts connect to each other on startup. But if restarts
-are rare or tolerable and most connections are on demand, larger networks
-are possible.
+hosts, since all hosts must connect to each other once on startup. But if
+restarts are rare or tolerable and most connections are on demand, much
+larger networks are feasible.
 .PP
 The \s-1DATA\s0 portion differs between each packet type, naturally, and is the
 only part that can be encrypted. Data packets contain more fields, as
@@ -173,8 +200,8 @@ the data for encryption purposes.
 .PP
 \&\s-1SEQNO\s0 is a 32\-bit sequence number. It is negotiated at every connection
 initialization and starts at some random 31 bit value. \s-1VPE\s0 currently uses
-a sliding window of 512 packets to detect reordering, duplication and
-reply attacks.
+a sliding window of 512 packets/sequence numbers to detect reordering,
+duplication and reply attacks.
 .Sh "The authentification protocol"
 .IX Subsection "The authentification protocol"
 Before hosts can exchange packets, they need to establish authenticity of
@@ -196,24 +223,25 @@ accept data packets from the destination host.
 .PP
 This means that a host can only initate a simplex connection, telling the
 other side the key it has to use when it sends packets. The challenge
-reply is only used to set the current \s-1IP\s0 address and protocol parameters.
+reply is only used to set the current \s-1IP\s0 address of the other side and
+protocol parameters.
 .PP
-The protocol here is completely symmetric, so to be able to send packets
-the destination host must send a challenge in the exact same way as
-already described (so, in essence, two simplex connections are created per
-host pair).
+This protocol is completely symmetric, so to be able to send packets the
+destination host must send a challenge in the exact same way as already
+described (so, in essence, two simplex connections are created per host
+pair).
 .Sh "Retrying"
 .IX Subsection "Retrying"
 When there is no response to an auth request, the host will send auth
 requests in bursts with an exponential backoff. After some time it will
-resort to \s-1PING\s0 packets, which are very small (8 byte) and lightweight (no
-\&\s-1RSA\s0 operations). A host that receives ping requests from an unconnected
-peer will respond by trying to create a connection.
+resort to \s-1PING\s0 packets, which are very small (8 bytes) and lightweight
+(no \s-1RSA\s0 operations required). A host that receives ping requests from an
+unconnected peer will respond by trying to create a connection.
 .PP
 In addition to the exponential backoff, there is a global rate-limit on
-a per-ip base. It allows long bursts but will limit total packet rate to
+a per-IP base. It allows long bursts but will limit total packet rate to
 something like one control packet every ten seconds, to avoid accidental
-floods due to protocol problems (like a rsa key file mismatch between two
+floods due to protocol problems (like a \s-1RSA\s0 key file mismatch between two
 hosts).
 .Sh "Routing and Protocol translation"
 .IX Subsection "Routing and Protocol translation"
