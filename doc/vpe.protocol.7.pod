@@ -74,5 +74,38 @@ hosts).
 
 =head2 Routing and Protocol translation
 
-... not yet written, please bug me ...
+The vpe routing algorithm is easy: there isn't any routing. Vped always
+tries to establish direct connections, if the protocol abilities of the
+two hosts allow it.
+
+If the two hosts should be able to reach each other (common protocol, ip
+and port all known), but cannot (network down), then there will be no
+connection, point.
+
+A host can usually declare itself unreachable directly by setting it's
+port number(s) to zero. It can declare other hosts as unreachable by using
+a config-file that disables all protocols for these other hosts.
+
+If two hosts cannot connect to each other because their IP address(es)
+are not known (such as dialup hosts), one side will send a connection
+request to a router (routers must be configured to act as routers!), which
+will send both the originating and the destination host a connection info
+request with protocol information and IP address of the other host (if
+known). Both hosts will then try to establish a connection to the other
+peer, which is usually possible even when both hosts are behind a NAT
+gateway.
+
+If the hosts cannot reach each other because they have no common protocol,
+the originator instead use the router with highest priority and matching
+protocol as peer. Since the SRCDST field is not encrypted, the router host
+can just forward the packet to the destination host. Since each host uses
+it's own private key, the router will not be able to decrypt or encrypt
+packets, it will just act as a simple router and protocol translator.
+
+When no router is connected, the host will aggressively try to connect to
+all routers, and if a router is asked for an unconnected host it will try
+to ask another router to establish the connection.
+
+... more not yet written about the details of the routing, please bug me
+...
 

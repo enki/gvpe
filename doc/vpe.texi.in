@@ -72,6 +72,7 @@ you are most probably... right ;)
 * vped.conf(5)::      The main configuration file.
 * vpectrl(8)::        Config/Control programm reference.
 * vped(8)::           Networking daemon reference.
+* vpe.protocol(7)::   The network protocol explained.
 * complex-example::   A nontrivial example from the real world. Read vpe(5).
 @end menu
 
@@ -91,11 +92,15 @@ you are most probably... right ;)
 @c INCLUDE-POD vpectrl.8
 
 @c ==================================================================
-@node    vped(8), complex-example, vpectrl(8), Top
+@node    vped(8), vpe.protocol(7), vpectrl(8), Top
 @c INCLUDE-POD vped.8
 
 @c ==================================================================
-@node    complex-example, complex/vped.conf, vped(8), Top
+@node    vpe.protocol(7), complex-example, vped(8), Top
+@c INCLUDE-POD vpe.protocol.7
+
+@c ==================================================================
+@node    complex-example, complex/vped.conf, vpe.protocol(7), Top
 @c INCLUDE-TEXT complex-example/README
 
 @menu
