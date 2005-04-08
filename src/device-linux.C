@@ -101,7 +101,7 @@ tap_device::tap_device ()
     }
 
 #if 0
-  doesn't work
+  does not work
   id2mac (THISNODE->id, &ifr.ifr_hwaddr.sa_data);
   if (ioctl (fd, SIOCSIFHWADDR, &ifr))
     {
