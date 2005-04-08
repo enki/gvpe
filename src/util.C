@@ -131,9 +131,12 @@ detach (int do_detach)
 
 bool run_script (const run_script_cb &cb, bool wait)
 {
-  int pid;
+  if (wait)
+    signal (SIGCHLD, SIG_DFL); // this is extremely ugly, but I did not feel like implementing a complete wait() event logic. It's easier to write this long comment to make your editor happy.
 
-  if ((pid = fork ()) == 0)
+  int pid = fork ();
+
+  if (pid == 0)
     {
       execl ("/bin/sh", "/bin/sh", "-c", cb (), (char *) 0);
       exit (EXIT_FAILURE);
@@ -143,8 +146,11 @@ bool run_script (const run_script_cb &cb, bool wait)
       if (wait)
         {
           int status;
+          int res = waitpid (pid, &status, 0);
 
-          if (waitpid (pid, &status, 0) < 0)
+          signal (SIGCHLD, SIG_IGN);
+
+          if (res < 0)
             {
               slog (L_WARN, _("waiting for an external command failed: %s."),
                     strerror (errno));
@@ -157,6 +163,11 @@ bool run_script (const run_script_cb &cb, bool wait)
               return false;
             }
         }
+    }
+  else
+    {
+      slog (L_ERR, _("unable to fork, exiting: %s"), strerror (errno));
+      exit (EXIT_FAILURE);
     }
 
   return true;
