@@ -129,14 +129,14 @@
 .\" ========================================================================
 .\"
 .IX Title "GVPE 8"
-.TH GVPE 8 "2005-03-26" "1.9" "GNU Virtual Private Ethernet"
+.TH GVPE 8 "2005-03-28" "1.9" "GNU Virtual Private Ethernet"
 .SH "NAME"
 \&\f(CW\*(C`gvpe\*(C'\fR \- GNU Virtual Private Ethernet Daemon
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
 \&\f(CW\*(C`gvpe\*(C'\fR [\fB\-cDlL\fR] [\fB\-\-config=\fR\fI\s-1DIR\s0\fR] [\fB\-\-no\-detach\fR] [\fB\-l=\fR\fI\s-1LEVEL\s0]\fR]
 [\fB\-\-kill\fR[\fB=\fR\fI\s-1SIGNAL\s0\fR]] [\fB\-\-mlock\fR] [\fB\-\-help\fR] [\fB\-\-version\fR]
-\&\fI\s-1NODENAME\s0\fR
+\&\fI\s-1NODENAME\s0\fR [\fIoption...\fR]
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
 See the \fIgvpe\fR\|(5) manpage for an introduction to the gvpe suite.
@@ -150,6 +150,28 @@ further configure the virtual device.  If that succeeds, it will detach
 from the controlling terminal and continue in the background, accepting
 and setting up connections to other gvpe daemons that are part of the
 virtual private ethernet.
+.PP
+The optional arguments after the node name have to be of the form:
+.PP
+.Vb 1
+\&   [I<nodename>.]var=value
+.Ve
+.PP
+If the argument has a prefix of \f(CW\*(C`nodename.\*(C'\fR
+(i.e. \f(CW\*(C`laptop.enable\-dns=yes\*(C'\fR) then it will be parsed after all the
+config directives for that node, if not, it is parsed befroe the first
+node directive in the config file, and can be used to set global options
+or default variables.
+.PP
+For example, to start \f(CW\*(C`gvpe\*(C'\fR in the foreground, with log-level \f(CW\*(C`info\*(C'\fR on
+the node \f(CW\*(C`laptop\*(C'\fR, with \s-1TCP\s0 enabled and HTTP-Proxy host and Port set, use
+this:
+.PP
+.Vb 3
+\&  gvpe -D -l info laptop \e
+\&       http-proxy-host=10.0.0.18 http-proxy-port=3128 \e
+\&       laptop.enable-tcp=yes
+.Ve
 .SH "OPTIONS"
 .IX Header "OPTIONS"
 .IP "\fB\-c\fR, \fB\-\-config=\fR\fI\s-1DIR\s0\fR" 4

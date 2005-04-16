@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# TODO: texinfo fails on @cinde xin title elements etc. *sigh*
+# TODO: texinfo fails on @cindex in title elements etc. *sigh*
 
 use Pod::POM;
 	
