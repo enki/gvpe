@@ -1203,6 +1203,8 @@ const char *connection::script_node_up ()
             "%s/%s",
             confbase,
             ::conf.script_node_up ? ::conf.script_node_up : "node-up");
+
+  return filename;
 }
 
 const char *connection::script_node_down ()
@@ -1216,6 +1218,8 @@ const char *connection::script_node_down ()
             "%s/%s",
             confbase,
             ::conf.script_node_down ? ::conf.script_node_down : "node-down");
+
+  return filename;
 }
 
 connection::connection (struct vpn *vpn, conf_node *conf)
