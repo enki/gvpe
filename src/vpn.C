@@ -110,6 +110,7 @@ vpn::setup ()
         return -1;
 
       fcntl (ipv4_fd, F_SETFL, O_NONBLOCK);
+      fcntl (ipv4_fd, F_SETFD, FD_CLOEXEC);
 
 #if defined(SOL_IP) && defined(IP_MTU_DISCOVER)
       // this I really consider a linux bug. I am neither connected
@@ -142,6 +143,7 @@ vpn::setup ()
         return -1;
 
       fcntl (udpv4_fd, F_SETFL, O_NONBLOCK);
+      fcntl (udpv4_fd, F_SETFD, FD_CLOEXEC);
 
       // standard daemon practise...
       {
@@ -181,6 +183,7 @@ vpn::setup ()
         return -1;
 
       fcntl (icmpv4_fd, F_SETFL, O_NONBLOCK);
+      fcntl (icmpv4_fd, F_SETFD, FD_CLOEXEC);
 
 #ifdef ICMP_FILTER
       {
@@ -226,6 +229,7 @@ vpn::setup ()
         return -1;
 
       fcntl (tcpv4_fd, F_SETFL, O_NONBLOCK);
+      fcntl (tcpv4_fd, F_SETFD, FD_CLOEXEC);
 
       // standard daemon practise...
       {
@@ -260,6 +264,9 @@ vpn::setup ()
 
       if (dnsv4_fd < 0)
         return -1;
+
+      fcntl (dnsv4_fd, F_SETFL, O_NONBLOCK);
+      fcntl (dnsv4_fd, F_SETFD, FD_CLOEXEC);
 
 # if defined(SOL_IP) && defined(IP_MTU_DISCOVER)
       // this I really consider a linux bug. I am neither connected
@@ -304,6 +311,8 @@ vpn::setup ()
       exit (EXIT_FAILURE);
     }
   
+  fcntl (tap->fd, F_SETFD, FD_CLOEXEC);
+
   if (tap->if_up () &&
       !run_script (run_script_cb (this, &vpn::script_if_init), true))
     {
