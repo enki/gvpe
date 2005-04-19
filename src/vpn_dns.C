@@ -19,6 +19,10 @@
     Foundation, Inc. 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
+// TODO: EDNS0 option to increase dns mtu?
+// TODO: re-write dns packet parsing/creation using a safe mem-buffer
+//       to ensure no buffer overflows or similar problems.
+
 #include "config.h"
 
 #if ENABLE_DNS
