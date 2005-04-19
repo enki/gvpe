@@ -1,4 +1,8 @@
+2.0
+	- protocol version 0.1, compatible with older releases.
+
 1.9 Tue Apr 19 06:21:50 CEST 2005
+	- protocol version 0.1, compatible with older releases.
         - WARNING: this version checks the return value of if-up etc.
           scripts and exits on failure.
         - IMPORTANT: run if-up/node-up etc. scripts via /bin/sh.
@@ -22,6 +26,7 @@
           parsing and continuing with a certainly unusable config.
 
 1.8 Fri Mar 18 00:58:55 CET 2005
+	- protocol version 0.1, compatible with older releases.
 	- enable-udp = yes is now default only when no other protocols
           are enabled. otherwise it is disabled unless explicitly enabled.
         - implemented dns tunneling (experimental now and in the future).
