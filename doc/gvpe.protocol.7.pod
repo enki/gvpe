@@ -10,7 +10,7 @@ document.
 The first part of this document describes the transport protocols which
 are used by GVPE to send it's data packets over the network.
 
-=head1 PART 1: Tansport protocols
+=head1 PART 1: Transport protocols
 
 GVPE offers a range of transport protocols that can be used to interchange
 data between nodes. Protocols differ in their overhead, speed,
