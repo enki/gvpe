@@ -70,7 +70,7 @@ struct vpn_packet : hmac_packet
       PT_PING, PT_PONG,	// wasting namespace space? ;)
       PT_AUTH_REQ,	// authentification request
       PT_AUTH_RES,	// authentification response
-      PT_CONNECT_REQ,	// want other host to contact me
+      PT_CONNECT_REQ,	// want other node to contact me
       PT_CONNECT_INFO,	// request connection to some node
       PT_MAX
     };

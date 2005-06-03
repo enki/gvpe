@@ -66,7 +66,12 @@ struct sockinfo
   };
 
 bool operator == (const sockinfo &a, const sockinfo &b);
-bool operator < (const sockinfo &a, const sockinfo &b);
+bool operator <  (const sockinfo &a, const sockinfo &b);
+
+inline bool operator != (const sockinfo &a, const sockinfo &b)
+{
+  return !(a == b);
+}
 
 #endif
 

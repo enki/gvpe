@@ -1,8 +1,13 @@
-TODO: enable bridging (compile-time option?)
+TODO: enable bridging (compile-time option? ignore fragmentation?)
 TODO: explore DTLS
 
 2.0
 	- protocol version 0.1, compatible with older releases.
+        - implemented != for sockinfo. This fixes a bug where
+          gvpe sent packets to the old ip address of another host
+          even though it had received packets from it's new address.
+          This only cuases problems if you forget to -HUP your gvpe after
+          your ip address changed, which is *required*.
 
 1.9 Tue Apr 19 06:21:50 CEST 2005
 	- protocol version 0.1, compatible with older releases.

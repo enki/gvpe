@@ -850,7 +850,7 @@ connection::inject_data_packet (tap_packet *pkt, bool broadcast/*TODO DDD*/)
     send_data_packet (pkt);
   else
     {
-      if (!broadcast)//DDDD
+      if (!broadcast)
         data_queue.put (new tap_packet (*pkt));
 
       establish_connection ();
@@ -1065,7 +1065,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 
                     if (si != rsi)
                       {
-                        // fast re-sync on connection changes, useful especially for tcp/ip
+                        // fast re-sync on source address changes, useful especially for tcp/ip
                         si = rsi;
 
                         slog (L_INFO, _("%s(%s): socket address changed to %s"),
