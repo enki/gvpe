@@ -89,7 +89,7 @@ usage (int status)
                "  -s, --show-config          Display the configuration information.\n"
                "      --help                 Display this help and exit.\n"
                "      --version              Output version information and exit.\n\n"));
-      printf (_("Report bugs to <vpe@plan9.de>.\n"));
+      printf (_("Report bugs to <gvpe@schmorp.de>.\n"));
     }
 
   exit (status);
@@ -300,7 +300,7 @@ main (int argc, char **argv, char **envp)
               VERSION, __DATE__, __TIME__, PROTOCOL_MAJOR, PROTOCOL_MINOR);
       printf (_("Built with kernel interface %s/%s.\n"), IFTYPE, IFSUBTYPE);
       printf (_
-              ("Copyright (C) 2003 Marc Lehmann <vpe@plan9.de> and others.\n"
+              ("Copyright (C) 2003 Marc Lehmann <gvpe@schmorp.de> and others.\n"
                "See the AUTHORS file for a complete list.\n\n"
                "vpe comes with ABSOLUTELY NO WARRANTY.  This is free software,\n"
                "and you are welcome to redistribute it under certain conditions;\n"
