@@ -73,10 +73,10 @@ struct sliding_window {
     {
       if (seqno <= seq - WINDOWSIZE)
         slog (L_ERR, _("received duplicate or outdated packet (received %08lx, expected %08lx)\n"
-                       "possible replay attack, or just massive packet reordering"), seqno, seq + 1);//D
-      else if (seqno > seq + WINDOWSIZE)
+                       "possible replay attack, or just massive packet reordering"), seqno, seq + 1);
+      else if (seqno > seq + WINDOWSIZE * 4)
         slog (L_ERR, _("received duplicate or out-of-sync packet (received %08lx, expected %08lx)\n"
-                       "possible replay attack, or just massive packet loss"), seqno, seq + 1);//D
+                       "possible replay attack, or just massive packet loss"), seqno, seq + 1);
       else
         {
           while (seqno > seq)
@@ -95,17 +95,16 @@ struct sliding_window {
           u32 mask = 1 << (s & 31);
 
           if (*cell & mask)
-            {
-              slog (L_ERR, _("received duplicate packet (received %08lx, expected %08lx)\n"
-                             "possible replay attack, or just packet duplication"), seqno, seq + 1);//D
-              return false;
-            }
+            slog (L_ERR, _("received duplicate packet (received %08lx, expected %08lx)\n"
+                           "possible replay attack, or just packet duplication"), seqno, seq + 1);
           else
             {
               *cell |= mask;
               return true;
             }
         }
+
+      return false;
     }
 };
 

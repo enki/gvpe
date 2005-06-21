@@ -49,7 +49,8 @@
 #define DIGEST		ENABLE_DIGEST ()
 #define HMAC_KEYLEN	(256 >> 3)	// number of bits used for the HMAC key (also change CHG_HMAC_KEY)
 
-#define MAX_SEQNO	0xfffffff0U
+#define WINDOWSIZE	512			// sliding window size
+#define MAX_SEQNO	(0xfffffff0U - WINDOWSIZE * 8)
 
 #define CHG_SEQNO	 0	// where the seqno starts within the rsa challenge
 #define CHG_CIPHER_KEY	 4	// where the key starts within the rsa challenge
@@ -66,11 +67,9 @@
 #define ETH_OVERHEAD 14			// the size of an ethernet header
 #define MAXSIZE (MAX_MTU + VPE_OVERHEAD)// slightly too large, but who cares
 
-#define PKTCACHESIZE 5			// the size of the memory pool for packets
+#define PKTCACHESIZE	5		// the size of the memory pool for packets
 
-#define QUEUEDEPTH 16			// the number of packets that will be queued (should be low)
-
-#define WINDOWSIZE 512			// sliding window size
+#define QUEUEDEPTH	16		// the number of packets that will be queued (should be low)
 
 extern char *confbase;		// directory in which all config files are
 extern char *thisnode;		// config for current node (TODO: remove)

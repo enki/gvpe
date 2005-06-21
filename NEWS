@@ -1,4 +1,4 @@
-TODO: enable bridging (compile-time option?)
+TODO: enable bridging (compile-time option? ignore fragmentation?)
 TODO: explore DTLS
 
 2.0
@@ -6,8 +6,12 @@ TODO: explore DTLS
         - implemented != for sockinfo. This fixes a bug where
           gvpe sent packets to the old ip address of another host
           even though it had received packets from it's new address.
-          This only cuases problems if you forget to -HUP your gvpe after
+          This only causes problems if you forget to -HUP your gvpe after
           your ip address changed, which is *required*.
+        - tighter limit for the maximum sequence # to avoid overflow
+          conditions + allow more headroom for packet reordering.
+        - fixed a bug in receive sequence checking that made gvpe
+          accept out-of-window packets in most cases.
 
 1.9 Tue Apr 19 06:21:50 CEST 2005
 	- protocol version 0.1, compatible with older releases.
