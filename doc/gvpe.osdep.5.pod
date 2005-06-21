@@ -210,5 +210,5 @@ gvpe(5).
 
 =head1 AUTHOR
 
-Marc Lehmann <gvpe@plan9.de>
+Marc Lehmann <gvpe@schmorp.de>
 

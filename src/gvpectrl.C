@@ -296,7 +296,7 @@ main (int argc, char **argv, char **envp)
 
   if (show_version)
     {
-      printf (_("%s version %s (built %s %s, protocol %d.%d)\n"), get_identity (),
+      printf (_("%s version %s (built %s %s, protocol version %d.%d)\n"), get_identity (),
               VERSION, __DATE__, __TIME__, PROTOCOL_MAJOR, PROTOCOL_MINOR);
       printf (_("Built with kernel interface %s/%s.\n"), IFTYPE, IFSUBTYPE);
       printf (_

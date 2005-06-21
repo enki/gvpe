@@ -555,5 +555,5 @@ gvpe(5), gvpe(8), gvpectrl(8).
 
 =head1 AUTHOR
 
-Marc Lehmann <gvpe@plan9.de>
+Marc Lehmann <gvpe@schmorp.de>
 

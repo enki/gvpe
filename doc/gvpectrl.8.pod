@@ -45,7 +45,7 @@ Output version information and exit.
 
 =head1 BUGS
 
-If you find any bugs, report them to C<gvpe@plan9.de>.
+If you find any bugs, report them to C<gvpe@schmorp.de>.
 
 =head1 SEE ALSO
 
@@ -57,5 +57,5 @@ for details.
 
 =head1 AUTHOR
 
-Marc Lehmann C<< <gvpe@plan9.de> >>.
+Marc Lehmann C<< <gvpe@schmorp.de> >>.
 

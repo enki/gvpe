@@ -22,7 +22,7 @@
 
 This is the info manual for vpe, the Virtual Private Ethernet daemon.
 
-Copyright @copyright{} 2003-2005 Marc Lehmann <gvpe@@plan9.de>.
+Copyright @copyright{} 2003-2005 Marc Lehmann <gvpe@@schmorp.de>.
 
 Permission is granted to make and distribute verbatim copies of this
 manual provided the copyright notice and this permission notice are
@@ -43,7 +43,7 @@ permission notice identical to this one.
 @vskip 0pt plus 1filll
 @cindex copyright
 
-Copyright @copyright{} 2003-2004 Marc Lehmann <gvpe@@plan9.de>.
+Copyright @copyright{} 2003-2005 Marc Lehmann <gvpe@@schmorp.de>.
 
 Permission is granted to make and distribute verbatim copies of this
 manual provided the copyright notice and this permission notice are
