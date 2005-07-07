@@ -12,6 +12,8 @@ TODO: explore DTLS
           conditions + allow more headroom for packet reordering.
         - fixed a bug in receive sequence checking that made gvpe
           accept out-of-window packets in most cases.
+        - replace some asserts that trapped config msimatches by
+          more useful log messages.
 
 1.9 Tue Apr 19 06:21:50 CEST 2005
 	- protocol version 0.1, compatible with older releases.

@@ -21,8 +21,6 @@
 
 #include "config.h"
 
-#include <cassert>
-
 #include <list>
 
 #include <openssl/rand.h>
@@ -1086,22 +1084,28 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
           {
             connect_req_packet *p = (connect_req_packet *) pkt;
 
-            assert (p->id > 0 && p->id <= vpn->conns.size ()); // hmac-auth does not mean we accept anything
-            connection *c = vpn->conns[p->id - 1];
-            conf->protocols = p->protocols;
-
-            slog (L_TRACE, "<<%d PT_CONNECT_REQ(%d) [%d]\n",
-                           conf->id, p->id, c->ictx && c->octx);
-
-            if (c->ictx && c->octx)
+            if (p->id > 0 && p->id <= vpn->conns.size ())
               {
-                // send connect_info packets to both sides, in case one is
-                // behind a nat firewall (or both ;)
-                c->send_connect_info (conf->id, si, conf->protocols);
-                send_connect_info (c->conf->id, c->si, c->conf->protocols);
+                connection *c = vpn->conns[p->id - 1];
+                conf->protocols = p->protocols;
+
+                slog (L_TRACE, "<<%d PT_CONNECT_REQ(%d) [%d]\n",
+                               conf->id, p->id, c->ictx && c->octx);
+
+                if (c->ictx && c->octx)
+                  {
+                    // send connect_info packets to both sides, in case one is
+                    // behind a nat firewall (or both ;)
+                    c->send_connect_info (conf->id, si, conf->protocols);
+                    send_connect_info (c->conf->id, c->si, c->conf->protocols);
+                  }
+                else
+                  c->establish_connection ();
               }
             else
-              c->establish_connection ();
+              slog (L_WARN,
+                    _("received authenticated connection request from unknown node #%d, config file mismatch?"),
+                    p->id);
           }
 
         break;
@@ -1111,7 +1115,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
           {
             connect_info_packet *p = (connect_info_packet *)pkt;
 
-            if (p->id > 0 && p->id <= vpn->conns.size ()) // hmac-auth does not mean we accept anything
+            if (p->id > 0 && p->id <= vpn->conns.size ())
               {
                 connection *c = vpn->conns[p->id - 1];
 
@@ -1127,6 +1131,10 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                 if (dsi.valid ())
                   c->send_auth_request (dsi, true);
               }
+            else
+              slog (L_WARN,
+                    _("received authenticated connection request from unknown node #%d, config file mismatch?"),
+                    p->id);
           }
 
         break;
