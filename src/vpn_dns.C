@@ -463,6 +463,8 @@ void dns_cfg::reset (int clientid)
 
 bool dns_cfg::valid ()
 {
+  // although the protocol itself allows for some configurability,
+  // only the following encoding/decoding settings are implemented.
   return id1 == 'G'
       && id2 == 'V'
       && id3 == 'P'
