@@ -34,7 +34,7 @@ void *net_packet::operator new(size_t s)
 {
   if (s > sizeof (data_packet))
     {
-      slog (L_ERR, _("FATAL: allocation for network packet larger than max supported packet size (%d > %d).\n"),
+      slog (L_ERR, _("FATAL: allocation for network packet larger than max supported packet size (%d > %d)."),
             s, sizeof (data_packet));
       abort ();
     }

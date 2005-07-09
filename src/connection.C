@@ -719,7 +719,7 @@ connection::send_auth_response (const sockinfo &si, const rsaid &id, const rsach
 void
 connection::send_connect_info (int rid, const sockinfo &rsi, u8 rprotocols)
 {
-  slog (L_TRACE, ">>%d PT_CONNECT_INFO(%d,%s)\n",
+  slog (L_TRACE, ">>%d PT_CONNECT_INFO(%d,%s)",
                  conf->id, rid, (const char *)rsi);
 
   connect_info_packet *r = new connect_info_packet (conf->id, rid, rsi, rprotocols);
@@ -1089,7 +1089,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                 connection *c = vpn->conns[p->id - 1];
                 conf->protocols = p->protocols;
 
-                slog (L_TRACE, "<<%d PT_CONNECT_REQ(%d) [%d]\n",
+                slog (L_TRACE, "<<%d PT_CONNECT_REQ(%d) [%d]",
                                conf->id, p->id, c->ictx && c->octx);
 
                 if (c->ictx && c->octx)
