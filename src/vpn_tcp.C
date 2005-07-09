@@ -131,12 +131,12 @@ vpn::tcpv4_ev (io_watcher &w, short revents)
 
       if (fd >= 0)
         {
+          fcntl (fd, F_SETFL, O_NONBLOCK);
+          fcntl (fd, F_SETFD, FD_CLOEXEC);
+
           sockinfo si(sa, PROT_TCPv4);
 
           slog (L_DEBUG, _("%s: accepted tcp connection"), (const char *)si);//D
-
-          fcntl (fd, F_SETFL, O_NONBLOCK);
-          fcntl (fd, F_SETFD, FD_CLOEXEC);
 
           tcp_connection *i = new tcp_connection (fd, si, *this);
           tcp_si.insert (*i);
@@ -391,6 +391,9 @@ tcp_connection::send_packet (vpn_packet *pkt, int tos)
           if (connect (fd, csi->sav4 (), csi->salenv4 ()) >= 0
               || errno == EINPROGRESS)
             {
+              fcntl (fd, F_SETFL, O_NONBLOCK);
+              fcntl (fd, F_SETFD, FD_CLOEXEC);
+
               state = CONNECTING;
               start (fd, EVENT_WRITE);
             }
