@@ -136,6 +136,7 @@ vpn::tcpv4_ev (io_watcher &w, short revents)
           slog (L_DEBUG, _("%s: accepted tcp connection"), (const char *)si);//D
 
           fcntl (fd, F_SETFL, O_NONBLOCK);
+          fcntl (fd, F_SETFD, FD_CLOEXEC);
 
           tcp_connection *i = new tcp_connection (fd, si, *this);
           tcp_si.insert (*i);
