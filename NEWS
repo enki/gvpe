@@ -8,13 +8,15 @@ TODO: explore DTLS
           even though it had received packets from it's new address.
           This only causes problems if you forget to -HUP your gvpe after
           your ip address changed, which is *required*.
-        - tighter limit for the maximum sequence # to avoid overflow
-          conditions + allow more headroom for packet reordering.
+        - sets close-on-exec flag on tcp connections. This fixes a bug
+          where child processes kept tcp connections open and caused
+          connections to fail when only one side can connect.
         - fixed a bug in receive sequence checking that made gvpe
           accept out-of-window packets in most cases.
+        - tighter limit for the maximum sequence # to avoid overflow
+          conditions + allow more headroom for packet reordering.
         - replace some asserts that trapped config msimatches by
           more useful log messages.
-        - sets close-on-exec flag on tcp connections.
         - fix spurious extra newline in some log messages.
 
 1.9 Tue Apr 19 06:21:50 CEST 2005
