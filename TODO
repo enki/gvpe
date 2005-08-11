@@ -1,5 +1,6 @@
 TODO items:
 
+- kill -USR1 should not reconnect but just refresh with pinging
 - mac=xxxxx config directive, to allow windows etc.
 - on shell xyz
 - add a general vpn introduction to the manual
