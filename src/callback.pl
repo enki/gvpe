@@ -1,16 +1,13 @@
 #!/usr/bin/perl
 
 print <<EOF;
-// THIS IS A GENERATED FILE, RUN callback.pl to regenerate it
-// THIS IS A GENERATED FILE, RUN callback.pl to regenerate it
-// THIS IS A GENERATED FILE, RUN callback.pl to regenerate it
-// THIS IS A GENERATED FILE, RUN callback.pl to regenerate it
-// THIS IS A GENERATED FILE, RUN callback.pl to regenerate it
-// THIS IS A GENERATED FILE, RUN callback.pl to regenerate it
+// THIS IS A GENERATED FILE: RUN callback.pl to regenerate it
+// THIS IS A GENERATED FILE: callback.pl is part of the GVPE
+// THIS IS A GENERATED FILE: distribution.
 
 /*
     callback.h -- C++ callback mechanism
-    Copyright (C) 2003 Marc Lehmann <pcg\@goof.com>
+    Copyright (C) 2003-2005 Marc Lehmann <pcg\@goof.com>
  
     This file is part of GVPE.
 
