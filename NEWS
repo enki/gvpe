@@ -3,6 +3,7 @@ TODO: explore DTLS
 
 2.0
 	- protocol version 0.1, compatible with older releases.
+        - implement allow-direct, deny-direct node config statements.
         - implemented != for sockinfo. This fixes a bug where
           gvpe sent packets to the old ip address of another host
           even though it had received packets from it's new address.

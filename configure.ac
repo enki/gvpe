@@ -57,7 +57,7 @@ AM_GNU_GETTEXT_VERSION(0.11.5)
 # Enable GNU extensions.
 # Define this here, not in acconfig's @TOP@ section, since definitions
 # in the latter don't make it into the configure-time tests.
-AC_DEFINE([_GNU_SOURCE], 1, [Enable GNU extenstions])
+AC_DEFINE([_GNU_SOURCE], 1, [Enable GNU extensions])
 
 # do NOT define POSIX_SOURCE, sicne this clashes with many BSDs
 dnl AC_DEFINE([_POSIX_SOURCE], 1, [Enable POSIX 1003.1 extensions])
@@ -266,6 +266,11 @@ AC_ARG_ENABLE(rohc,
 
 AM_CONDITIONAL(ROHC, test x$rohc = xtrue)
 
+dnl AC_ARG_ENABLE(bridging,
+dnl   [AS_HELP_STRING(--enable-bridging,enable bridging support (default disabled).)],
+dnl   AC_DEFINE_UNQUOTED(ENABLE_BRIDGING, 1, [bridging support.])
+dnl )
+
 AC_ARG_ENABLE(icmp,
   [AS_HELP_STRING(--enable-icmp,enable icmp protocol support (default disabled).)],
   AC_DEFINE_UNQUOTED(ENABLE_ICMP, 1, [ICMP protocol support.])
@@ -323,10 +328,10 @@ AC_ARG_ENABLE(compression,
 )
 AC_DEFINE_UNQUOTED(ENABLE_COMPRESSION, $COMPRESS, [Enable compression support.])
 
-CIPHER=bf_cbc
+CIPHER=aes_128_cbc
 AC_ARG_ENABLE(cipher,
   [AS_HELP_STRING(--enable-cipher,[
-      Select the symmetric cipher (default "bf").
+      Select the symmetric cipher (default "aes-128").
       Must be one of "bf" (blowfish), "aes-128" (rijndael), "aes-192" or "aes-256".])],
   if test "x$enableval" = xbf     ; then CIPHER=bf_cbc     ; fi
   if test "x$enableval" = xaes-128; then CIPHER=aes_128_cbc; fi
@@ -335,10 +340,10 @@ AC_ARG_ENABLE(cipher,
 )
 AC_DEFINE_UNQUOTED(ENABLE_CIPHER, EVP_${CIPHER}, [Select the symmetric cipher to use.])
 
-DIGEST=sha1
+DIGEST=ripemd160
 AC_ARG_ENABLE(digest,
   [AS_HELP_STRING(--enable-digest,[
-      Select the digets algorithm to use (default "sha1"). Must be one of
+      Select the digets algorithm to use (default "ripemd160"). Must be one of
       "sha1", "ripemd160", "md5" or "md4" (insecure).])],
   if test "x$enableval" = xsha1     ; then DIGEST=sha1     ; fi
   if test "x$enableval" = xripemd160; then DIGEST=ripemd160; fi
@@ -363,7 +368,15 @@ dnl if $LD -v --help 2>&1 | grep -q gc-sections; then
 dnl    LDFLAGS="$LDFLAGS -Wl,--gc-sections"
 dnl fi
 
-AC_CONFIG_COMMANDS_POST([
+AC_SUBST(INCLUDES)
+
+AC_CONFIG_FILES([Makefile po/Makefile.in
+src/Makefile
+doc/Makefile
+lib/Makefile
+m4/Makefile
+])
+AC_OUTPUT
 
 echo
 echo "***"
@@ -375,7 +388,10 @@ echo "*** Digest used:  $DIGEST"
 echo "*** HMAC length:  $HMAC"
 echo "*** RAND used:    $RAND"
 echo "*** Max. MTU:     $MTU"
-echo "*** Compression:  $COMPRESS"
+
+echo "***"
+echo "*** Enable options:"
+grep ENABLE_ config.h | sed -e 's/^/*** /'
 
 if test "x$DIGEST" = xmd4; then
 echo "***"
@@ -393,17 +409,6 @@ echo "*** WARNING: The random prefix you have chosen ($RAND) is probably insecur
 fi
 
 echo "***"
-
 echo
 
-])
 
-AC_SUBST(INCLUDES)
-
-AC_CONFIG_FILES([Makefile po/Makefile.in
-src/Makefile
-doc/Makefile
-lib/Makefile
-m4/Makefile
-])
-AC_OUTPUT

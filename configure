@@ -894,12 +894,12 @@ Optional Features:
   --enable-max-mtu=BYTES  enable mtu sizes upto BYTES bytes (default 1500).
                           Use 9100 for jumbogram support.
   --disable-compression   Disable compression support.
-  --enable-cipher         Select the symmetric cipher (default "bf"). Must be
-                          one of "bf" (blowfish), "aes-128" (rijndael),
-                          "aes-192" or "aes-256".
-  --enable-digest         Select the digets algorithm to use (default "sha1").
-                          Must be one of "sha1", "ripemd160", "md5" or "md4"
-                          (insecure).
+  --enable-cipher         Select the symmetric cipher (default "aes-128").
+                          Must be one of "bf" (blowfish), "aes-128"
+                          (rijndael), "aes-192" or "aes-256".
+  --enable-digest         Select the digets algorithm to use (default
+                          "ripemd160"). Must be one of "sha1", "ripemd160",
+                          "md5" or "md4" (insecure).
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -9723,6 +9723,7 @@ else
 fi
 
 
+
 # Check whether --enable-icmp or --disable-icmp was given.
 if test "${enable_icmp+set}" = set; then
   enableval="$enable_icmp"
@@ -10040,7 +10041,7 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
-CIPHER=bf_cbc
+CIPHER=aes_128_cbc
 # Check whether --enable-cipher or --disable-cipher was given.
 if test "${enable_cipher+set}" = set; then
   enableval="$enable_cipher"
@@ -10056,7 +10057,7 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
-DIGEST=sha1
+DIGEST=ripemd160
 # Check whether --enable-digest or --disable-digest was given.
 if test "${enable_digest+set}" = set; then
   enableval="$enable_digest"
@@ -10079,8 +10080,6 @@ fi
 if $CXX -v --help 2>&1 | grep -q fexceptions; then
    CXXFLAGS="$CXXFLAGS -fno-exceptions"
 fi
-
-
 
 
 
@@ -11647,40 +11646,6 @@ chmod +x $CONFIG_STATUS
 ac_clean_files=$ac_clean_files_save
 
 
-
-echo
-echo "***"
-echo "*** Configuration Summary"
-echo "***"
-echo "*** Kernel Iface: $IFTYPE/$IFSUBTYPE"
-echo "*** Cipher used:  $CIPHER"
-echo "*** Digest used:  $DIGEST"
-echo "*** HMAC length:  $HMAC"
-echo "*** RAND used:    $RAND"
-echo "*** Max. MTU:     $MTU"
-echo "*** Compression:  $COMPRESS"
-
-if test "x$DIGEST" = xmd4; then
-echo "***"
-echo "*** WARNING: The digest you have chosen ($DIGEST) is known to be insecure"
-fi
-
-if test "$HMAC" -lt 12; then
-echo "***"
-echo "*** WARNING: The hmac length you have chosen ($HMAC) is probably insecure"
-fi
-
-if test "$RAND" -lt 8; then
-echo "***"
-echo "*** WARNING: The random prefix you have chosen ($RAND) is probably insecure"
-fi
-
-echo "***"
-
-echo
-
-
-
 # configure is writing to config.log, and then calls config.status.
 # config.status does its own redirection, appending to config.log.
 # Unfortunately, on DOS this fails, as config.log is still kept open
@@ -11701,4 +11666,39 @@ if test "$no_create" != yes; then
   # would make configure fail if this is the last instruction.
   $ac_cs_success || { (exit 1); exit 1; }
 fi
+
+
+echo
+echo "***"
+echo "*** Configuration Summary"
+echo "***"
+echo "*** Kernel Iface: $IFTYPE/$IFSUBTYPE"
+echo "*** Cipher used:  $CIPHER"
+echo "*** Digest used:  $DIGEST"
+echo "*** HMAC length:  $HMAC"
+echo "*** RAND used:    $RAND"
+echo "*** Max. MTU:     $MTU"
+
+echo "***"
+echo "*** Enable options:"
+grep ENABLE_ config.h | sed -e 's/^/*** /'
+
+if test "x$DIGEST" = xmd4; then
+echo "***"
+echo "*** WARNING: The digest you have chosen ($DIGEST) is known to be insecure"
+fi
+
+if test "$HMAC" -lt 12; then
+echo "***"
+echo "*** WARNING: The hmac length you have chosen ($HMAC) is probably insecure"
+fi
+
+if test "$RAND" -lt 8; then
+echo "***"
+echo "*** WARNING: The random prefix you have chosen ($RAND) is probably insecure"
+fi
+
+echo "***"
+echo
+
 
