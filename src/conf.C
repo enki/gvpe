@@ -71,6 +71,30 @@ const char *strprotocol (u8 protocol)
   return "<unknown>";
 }
 
+static bool
+match_list (const vector<const char *> &list, const char *str)
+{
+   for (vector<const char *>::const_iterator i = list.end (); i-- > list.begin (); )
+     if ((*i)[0] == '*' && !(*i)[1])
+       return true;
+     else if (!strcmp (*i, str))
+       return true;
+
+   return false;
+}
+
+bool
+conf_node::can_direct (struct conf_node *other)
+{
+  if (match_list (allow_direct, other->nodename))
+    return true;
+
+  if (match_list (deny_direct, other->nodename))
+    return false;
+
+  return true;
+}
+
 void
 conf_node::print ()
 {
@@ -434,6 +458,10 @@ configuration_parser::parse_line (char *line)
     {
       u8 v; parse_bool (v, "enable-rawip", PROT_IPv4, 0); node->protocols = (node->protocols & ~PROT_IPv4 ) | v;
     }
+  else if (!strcmp (var, "allow-direct"))
+    node->allow_direct.push_back (strdup (val));
+  else if (!strcmp (var, "deny-direct"))
+    node->deny_direct.push_back (strdup (val));
 
   // unknown or misplaced
   else

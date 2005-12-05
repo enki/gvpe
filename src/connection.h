@@ -72,6 +72,7 @@ struct vpn_packet : hmac_packet
       PT_AUTH_RES,	// authentification response
       PT_CONNECT_REQ,	// want other node to contact me
       PT_CONNECT_INFO,	// request connection to some node
+      PT_DATA_BRIDGED,  // uncompressed packet with foreign mac pot. larger than path mtu
       PT_MAX
     };
 
@@ -117,6 +118,7 @@ enum
   {
     FEATURE_COMPRESSION = 0x01,
     FEATURE_ROHC        = 0x02,
+    FEATURE_BRIDGING    = 0x04,
   };
 
 struct connection

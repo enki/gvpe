@@ -1,7 +1,6 @@
 TODO: enable bridging (compile-time option? ignore fragmentation?)
-TODO: explore DTLS
 
-2.0
+2.0 Mon Dec  5 13:59:26 CET 2005
 	- protocol version 0.1, compatible with older releases.
         - implement allow-direct, deny-direct node config statements.
         - implemented != for sockinfo. This fixes a bug where
@@ -16,7 +15,7 @@ TODO: explore DTLS
           accept out-of-window packets in most cases.
         - tighter limit for the maximum sequence # to avoid overflow
           conditions + allow more headroom for packet reordering.
-        - replace some asserts that trapped config msimatches by
+        - replace some asserts that trapped config mismatches by
           more useful log messages.
         - fix spurious extra newline in some log messages.
 

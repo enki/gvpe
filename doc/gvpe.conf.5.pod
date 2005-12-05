@@ -374,10 +374,14 @@ reestablished every C<rekey> seconds.
 
 The following settings are node-specific, that is, every node can have
 different settings, even within the same gvpe instance. Settings that are
-executed before the first node section set the defaults, settings that are
-executed within a node section only apply to the given node.
+set before the first node section set the defaults, settings that are
+set within a node section only apply to the given node.
 
 =over 4
+
+=item allow-direct = nodename
+
+Allow direct connections to this node. See C<deny-direct> for more info.
 
 =item compress = yes|true|on | no|false|off
 
@@ -393,6 +397,33 @@ try to establish and keep a connection to the given host), C<never>
 C<ondemand> (try to establish a connection on the first packet sent, and
 take it down after the keepalive interval) or C<disabled> (node is bad,
 don't talk to it).
+
+=item deny-direct = nodename | *
+
+Deny direct connections to the specified node (or all nodes when C<*>
+is given). Only one node can be specified, but you can use multiple
+C<allow-direct> and C<deny-direct> statements. This only makes sense in
+networks with routers, as routers are required for indirect connections.
+
+Sometimes, a node cannot reach some other nodes for reasons of network
+connectivity. For example, a node behind a firewall that only allows
+conenctions to/from a single other node in the network. In this case one
+should specify C<deny-direct = *> and C<allow-direct = othernodename> (the other
+node I<must> be a router for this to work).
+
+The algorithm to check wether a connection may be direct is as follows:
+
+1. Other node mentioned in a C<allow-direct>? If yes, allow the connection.
+
+2. Other node mentioned in a C<deny-direct>? If yes, deny direct connections.
+
+3. Allow the connection.
+
+That is, C<allow-direct> takes precende over C<deny-direct>.
+
+The check is done in both directions, i.e. both nodes must allow a direct
+connection before one is attempted, so you only need to specify connect
+limitations on one node.
 
 =item dns-domain = domain-suffix
 
@@ -461,6 +492,14 @@ protocol is enabled automatically).
 NOTE: Please specify C<enable-udp = yes> if you want t use it even though
 it might get switched on automatically, as some future version might
 default to another default protocol.
+
+=item hostname = hostname | ip    [can not be defaulted]
+
+Forces the address of this node to be set to the given dns hostname or ip
+address. It will be resolved before each connect request, so dyndns should
+work fine. If this setting is not specified and a router is available,
+then the router will be queried for the address of this node. Otherwise,
+the connection attempt will fail.
 
 =item icmp-type = integer
 

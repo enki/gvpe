@@ -78,7 +78,12 @@ struct conf_node
   bool compress;
   bool inherit_tos; // inherit TOS in packets send to this destination
 
+  vector<const char *> allow_direct;
+  vector<const char *> deny_direct;
+
   u32 routerprio;
+
+  bool can_direct (struct conf_node *other);
 
   void print ();
 

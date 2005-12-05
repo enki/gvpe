@@ -466,6 +466,9 @@ struct config_packet : vpn_packet
 #if ENABLE_ROHC
     f |= FEATURE_ROHC;
 #endif
+#if ENABLE_BRIDGING
+    f |= FEATURE_BRIDGING;
+#endif
     return f;
   }
 };
@@ -624,6 +627,14 @@ connection::reset_si ()
   if (!conf->udp_port) protocol &= ~PROT_UDPv4;
   if (!conf->tcp_port) protocol &= ~PROT_TCPv4;
   if (!conf->dns_port) protocol &= ~PROT_DNSv4;
+
+  if (protocol
+      && (!conf->can_direct (THISNODE)
+          || !THISNODE->can_direct (conf)))
+    {
+      slog (L_DEBUG, _("%s: direct connection denied"), conf->nodename);
+      protocol = 0;
+    }
 
   si.set (conf, protocol);
 }
