@@ -55,7 +55,7 @@ class callback$a {
   struct proxy : proxy_base {
     virtual R call (void *obj, R (object::*meth)($TYPE)$_TYPEARG)
       {
-        ((reinterpret_cast<O1 *>(obj)) ->* (reinterpret_cast<R (O2::*)($TYPE)>(meth)))
+        return (R)((reinterpret_cast<O1 *>(obj)) ->* (reinterpret_cast<R (O2::*)($TYPE)>(meth)))
           ($ARG);
       }
   };

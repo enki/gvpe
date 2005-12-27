@@ -1,5 +1,8 @@
 TODO: enable bridging (compile-time option? ignore fragmentation?)
 
+	- update of callback.h, migth cause callback return values to
+          be corrupted.
+
 2.0 Mon Dec  5 13:59:26 CET 2005
 	- protocol version 0.1, compatible with older releases.
         - implement allow-direct, deny-direct node config statements.
