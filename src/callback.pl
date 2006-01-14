@@ -7,7 +7,7 @@ print <<EOF;
 
 /*
     callback.h -- C++ callback mechanism
-    Copyright (C) 2003-2005 Marc Lehmann <pcg\@goof.com>
+    Copyright (C) 2003-2006 Marc Lehmann <pcg\@goof.com>
  
     This file is part of GVPE.
 
@@ -49,11 +49,11 @@ class callback$a {
 
   /* a proxy is a kind of recipe on how to call a specific class method	*/
   struct proxy_base {
-    virtual R call (void *obj, R (object::*meth)($TYPE)$_TYPEARG) = 0;
+    virtual R call (void *obj, R (object::*meth)($TYPE)$_TYPEARG) const = 0;
   };
   template<class O1, class O2>
   struct proxy : proxy_base {
-    virtual R call (void *obj, R (object::*meth)($TYPE)$_TYPEARG)
+    virtual R call (void *obj, R (object::*meth)($TYPE)$_TYPEARG) const
       {
         return (R)((reinterpret_cast<O1 *>(obj)) ->* (reinterpret_cast<R (O2::*)($TYPE)>(meth)))
           ($ARG);
@@ -64,7 +64,7 @@ class callback$a {
 
 public:
   template<class O1, class O2>
-  callback$a (O1 *object, R (O2::*method)($TYPE))
+  explicit callback$a (O1 *object, R (O2::*method)($TYPE))
     {
       static proxy<O1,O2> p;
       obj  = reinterpret_cast<void *>(object);
