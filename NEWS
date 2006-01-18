@@ -1,7 +1,7 @@
 TODO: enable bridging (compile-time option? ignore fragmentation?)
 
-	- update of callback.h, migth cause callback return values to
-          be corrupted.
+        - bugfix of callback.h, might have cause callback return values to
+          be corrupted on architectures like sparc before.
 
 2.0 Mon Dec  5 13:59:26 CET 2005
 	- protocol version 0.1, compatible with older releases.
