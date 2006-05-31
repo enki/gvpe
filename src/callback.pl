@@ -29,20 +29,35 @@ print <<EOF;
 #ifndef CALLBACK_H__
 #define CALLBACK_H__
 
+#define CALLBACK_H_VERSION 2
+
+template<class signature>
+struct callback_funtype_trait;
+
+template<int arity, class signature>
+struct callback_get_impl;
+
 EOF
 
-for my $a (0..7) {
+for my $a (0..10) {
    my $CLASS     = join "", map ", class A$_", 1..$a;
    my $TYPE      = join ", ", map "A$_", 1..$a;
    my $ARG       = join ", ", map "a$_", 1..$a;
    my $TYPEARG   = join ", ", map "A$_ a$_", 1..$a;
+   my $TYPEDEFS  = join " ", map "typedef A$_ arg$_\_type;", 1..$a;
+   my $TYPEvoid  = $TYPE    ? $TYPE        : "void";
+   my $_TYPE     = $TYPE    ? ", $TYPE"    : "";
    my $_ARG      = $ARG     ? ", $ARG"     : "";
    my $_TYPEARG  = $TYPEARG ? ", $TYPEARG" : "";
+   my $_TTYPE    = $a       ? join "", map ", typename T::arg$_\_type", 1..$a : "";
    
    print <<EOF;
 template<class R$CLASS>
-class callback$a {
+class callback$a
+{
   struct object { };
+
+  typedef R (object::*ptr_type)($TYPE);
 
   void *obj;
   R (object::*meth)($TYPE);
@@ -83,10 +98,44 @@ public:
     }
 };
 
+template<class R$CLASS>
+struct callback_funtype_trait$a
+{
+  static const int arity = $a;
+  typedef R type ($TYPEvoid);
+  typedef R result_type;
+  $TYPEDEFS
+};
+
+template<class R$CLASS>
+struct callback_funtype_trait<R ($TYPE)> : callback_funtype_trait$a<R$_TYPE>
+{
+};
+
+template<class signature>
+struct callback_get_impl<$a, signature>
+{
+  typedef callback_funtype_trait<signature> T;
+  typedef callback$a<typename T::result_type$_TTYPE> type;
+};
+   
 EOF
 }
 
 print <<EOF
+
+template<class signature>
+struct callback : callback_get_impl<callback_funtype_trait<signature>::arity, signature>::type
+{
+  typedef typename callback_get_impl<callback_funtype_trait<signature>::arity, signature>::type base_type;
+
+  template<class O, class M>
+  explicit callback (O object, M method)
+    : base_type (object, method)
+    {
+    }
+};
+
 #endif
 EOF
 
