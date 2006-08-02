@@ -419,7 +419,7 @@ The algorithm to check wether a connection may be direct is as follows:
 
 3. Allow the connection.
 
-That is, C<allow-direct> takes precende over C<deny-direct>.
+That is, C<allow-direct> takes precedence over C<deny-direct>.
 
 The check is done in both directions, i.e. both nodes must allow a direct
 connection before one is attempted, so you only need to specify connect
