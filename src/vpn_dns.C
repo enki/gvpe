@@ -773,6 +773,7 @@ void dns_connection::receive_rep (dns_rcv *r)
   for (vector<dns_rcv *>::iterator i = rcvpq.end (); i-- != rcvpq.begin (); )
     if (SEQNO_EQ (rcvseq, (*i)->seqno))
       {
+        //printf ("seqno eq %x %x\n", rcvseq, (*i)->seqno);//D
         // enter the packet into our input stream
         r = *i;
 
@@ -780,6 +781,7 @@ void dns_connection::receive_rep (dns_rcv *r)
         for (vector<dns_rcv *>::iterator j = rcvpq.begin (); j != rcvpq.end (); ++j)
           if (SEQNO_EQ ((*j)->seqno, rcvseq - MAX_WINDOW))
             {
+              //printf ("seqno RR %x %x\n", (*j)->seqno, rcvseq - MAX_WINDOW);//D
               delete *j;
               rcvpq.erase (j);
               break;
@@ -1017,6 +1019,7 @@ vpn::dnsv4_client (dns_packet &pkt)
         connection *c = dns->c;
         int seqno = (*i)->seqno;
         u8 data[MAXSIZE], *datap = data;
+        //printf ("rcv pkt %x\n", seqno);//D
 
         if ((*i)->retry)
           {
@@ -1232,14 +1235,12 @@ dns_connection::time_cb (time_watcher &w)
 
               r->retry++;
               r->timeout = NOW + (r->retry * min_latency * conf.dns_timeout_factor);
+              //printf ("RETRY %x (%d, %f)\n", r->seqno, r->retry, r->timeout - NOW);//D
 
               // the following code changes the query section a bit, forcing
               // the forwarder to generate a new request
               if (r->stdhdr)
-                {
-                  //printf ("reencoded header for ID %d retry %d:%d:%d (%p)\n", htons (r->pkt->id), THISNODE->id, r->seqno, r->retry);
-                  //encode_header ((char *)r->pkt->at (6 * 2 + 1), THISNODE->id, r->seqno, r->retry);
-                }
+                encode_header ((char *)r->pkt->at (6 * 2 + 1), THISNODE->id, r->seqno, r->retry);
             }
         }
       else
@@ -1275,6 +1276,7 @@ dns_connection::time_cb (time_watcher &w)
               send = new dns_snd (this);
               send->gen_stream_req (sndseq, snddq);
               send->timeout = NOW + min_latency * conf.dns_timeout_factor;
+              //printf ("SEND %x (%f)\n", send->seqno, send->timeout - NOW, min_latency, conf.dns_timeout_factor);//D
 
               sndseq = (sndseq + 1) & SEQNO_MASK;
             }
