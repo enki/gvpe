@@ -129,7 +129,7 @@
 .\" ========================================================================
 .\"
 .IX Title "GVPE.CONF 5"
-.TH GVPE.CONF 5 "2006-08-02" "2.0" "GNU Virtual Private Ethernet"
+.TH GVPE.CONF 5 "2006-11-22" "2.0" "GNU Virtual Private Ethernet"
 .SH "NAME"
 gvpe.conf \- configuration file for the GNU VPE daemon
 .SH "SYNOPSIS"
@@ -247,11 +247,12 @@ will resend the request when no reply has been received for longer than
 eight times the minimum (= expected) latency, assuming the request or
 reply has been lost.
 .Sp
-For congested links a higher value might be necessary (e.g. \f(CW30\fR). If the
-link is very stable lower values (e.g. \f(CW2\fR) might work nicely. Values
-near or below \f(CW1\fR makes no sense whatsoever.
+For congested links a higher value might be necessary (e.g. \f(CW30\fR). If
+the link is very stable lower values (e.g. \f(CW2\fR) might work
+nicely. Values near or below \f(CW1\fR makes no sense whatsoever.
 .Sp
-The default should be working ok for most links.
+The default should be working ok for most links but will result in low
+throughput if packet loss is high.
 .IP "if-up = relative-or-absolute-path" 4
 .IX Item "if-up = relative-or-absolute-path"
 Sets the path of a script that should be called immediately after the

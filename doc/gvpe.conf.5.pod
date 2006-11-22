@@ -118,11 +118,12 @@ will resend the request when no reply has been received for longer than
 eight times the minimum (= expected) latency, assuming the request or
 reply has been lost.
 
-For congested links a higher value might be necessary (e.g. C<30>). If the
-link is very stable lower values (e.g. C<2>) might work nicely. Values
-near or below C<1> makes no sense whatsoever.
+For congested links a higher value might be necessary (e.g. C<30>). If
+the link is very stable lower values (e.g. C<2>) might work
+nicely. Values near or below C<1> makes no sense whatsoever.
 
-The default should be working ok for most links.
+The default should be working ok for most links but will result in low
+throughput if packet loss is high.
 
 =item if-up = relative-or-absolute-path
 
