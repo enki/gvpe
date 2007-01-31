@@ -343,7 +343,7 @@ AC_DEFINE_UNQUOTED(ENABLE_CIPHER, EVP_${CIPHER}, [Select the symmetric cipher to
 DIGEST=ripemd160
 AC_ARG_ENABLE(digest,
   [AS_HELP_STRING(--enable-digest,[
-      Select the digets algorithm to use (default "ripemd160"). Must be one of
+      Select the digest algorithm to use (default "ripemd160"). Must be one of
       "sha1", "ripemd160", "md5" or "md4" (insecure).])],
   if test "x$enableval" = xsha1     ; then DIGEST=sha1     ; fi
   if test "x$enableval" = xripemd160; then DIGEST=ripemd160; fi
