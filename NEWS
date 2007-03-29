@@ -1,9 +1,13 @@
-TODO: enable bridging (compile-time option? ignore fragmentation?)
+gvpe NEWS
 
+2.01 Thu Mar 29 19:26:04 CEST 2007
 	- protocol version 0.1, compatible with older releases.
         - bugfix of callback.h, might have cause callback return values to
           be corrupted on architectures like sparc before.
         - dns transport retries more aggressively.
+        - updated documentation, improved dns transport reliability
+          and throughput.
+        - added experimental support for sha256 and sha512 digests.
 
 2.0 Mon Dec  5 13:59:26 CET 2005
 	- protocol version 0.1, compatible with older releases.

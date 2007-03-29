@@ -720,7 +720,7 @@ Factor to multiply the @t{min_latency} (see @t{dns-overlap-factor}) by to get re
 @refill
 For congested links a higher value might be necessary (e.g. @t{30}). If the link is very stable lower values (e.g. @t{2}) might work nicely. Values near or below @t{1} makes no sense whatsoever.
 @refill
-The default should be working ok for most links.
+The default should be working ok for most links but will result in low throughput if packet loss is high.
 @refill
 
 
@@ -1096,7 +1096,7 @@ The algorithm to check wether a connection may be direct is as follows:
 @refill
 3. Allow the connection.
 @refill
-That is, @t{allow-direct} takes precende over @t{deny-direct}.
+That is, @t{allow-direct} takes precedence over @t{deny-direct}.
 @refill
 The check is done in both directions, i.e. both nodes must allow a direct connection before one is attempted, so you only need to specify connect limitations on one node.
 @refill

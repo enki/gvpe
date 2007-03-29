@@ -4,7 +4,7 @@ AC_PREREQ(2.59)
 AC_INIT
 AC_CONFIG_SRCDIR([src/gvpe.C])
 AC_CANONICAL_TARGET
-AM_INIT_AUTOMAKE(gvpe, 2.0)
+AM_INIT_AUTOMAKE(gvpe, 2.01)
 AC_CONFIG_HEADERS([config.h])
 AM_MAINTAINER_MODE
 
@@ -344,7 +344,9 @@ DIGEST=ripemd160
 AC_ARG_ENABLE(digest,
   [AS_HELP_STRING(--enable-digest,[
       Select the digest algorithm to use (default "ripemd160"). Must be one of
-      "sha1", "ripemd160", "md5" or "md4" (insecure).])],
+      "sha512", "sha256", "sha1", "ripemd160", "md5" or "md4" (insecure).])],
+  if test "x$enableval" = xsha512   ; then DIGEST=sha512   ; fi
+  if test "x$enableval" = xsha256   ; then DIGEST=sha256   ; fi
   if test "x$enableval" = xsha1     ; then DIGEST=sha1     ; fi
   if test "x$enableval" = xripemd160; then DIGEST=ripemd160; fi
   if test "x$enableval" = xmd5      ; then DIGEST=md5      ; fi
