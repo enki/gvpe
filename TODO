@@ -1,5 +1,43 @@
 TODO items:
 
+:establish_connection_cb might call send_connect_request
+which might call :establish_connection_cb recursively.
+
+#4  0x000000000040af01 in time_watcher::trigger (this=0x52e198) at callback.h:141
+#5  0x0000000000403e7a in vpn::send_connect_request (this=0x51a6e0, id=5436496) at iom.h:154
+#6  0x000000000040e2b7 in connection::establish_connection_cb (this=0x52dff0, w=@0x52e198) at connection.C:764
+#7  0x000000000040fa59 in callback1<void, time_watcher&>::proxy<connection, connection>::call (this=0x52e2a0, obj=0x52e2a0, meth=
+    (void ( struct callback1<void,time_watcher&>::object::*)(time_watcher &,)) 531452, a1=@0x52f450) at callback.h:122
+#8  0x000000000040af01 in time_watcher::trigger (this=0x52e198) at callback.h:141
+#9  0x0000000000403e7a in vpn::send_connect_request (this=0x51a6e0, id=5436496) at iom.h:154
+#10 0x000000000040e2b7 in connection::establish_connection_cb (this=0x52dff0, w=@0x52e198) at connection.C:764
+#11 0x000000000040fa59 in callback1<void, time_watcher&>::proxy<connection, connection>::call (this=0x52e2a0, obj=0x52e2a0, meth=
+    (void ( struct callback1<void,time_watcher&>::object::*)(time_watcher &,)) 531452, a1=@0x52f450) at callback.h:122
+#12 0x000000000040af01 in time_watcher::trigger (this=0x52e198) at callback.h:141
+#13 0x0000000000403e7a in vpn::send_connect_request (this=0x51a6e0, id=5436496) at iom.h:154
+#14 0x000000000040e2b7 in connection::establish_connection_cb (this=0x52dff0, w=@0x52e198) at connection.C:764
+#15 0x000000000040fa59 in callback1<void, time_watcher&>::proxy<connection, connection>::call (this=0x52e2a0, obj=0x52e2a0, meth=
+    (void ( struct callback1<void,time_watcher&>::object::*)(time_watcher &,)) 531452, a1=@0x52f450) at callback.h:122
+#16 0x000000000040af01 in time_watcher::trigger (this=0x52e198) at callback.h:141
+#17 0x0000000000403e7a in vpn::send_connect_request (this=0x51a6e0, id=5436496) at iom.h:154
+#18 0x000000000040e2b7 in connection::establish_connection_cb (this=0x52dff0, w=@0x52e198) at connection.C:764
+#19 0x000000000040fa59 in callback1<void, time_watcher&>::proxy<connection, connection>::call (this=0x52e2a0, obj=0x52e2a0, meth=
+    (void ( struct callback1<void,time_watcher&>::object::*)(time_watcher &,)) 531452, a1=@0x52f450) at callback.h:122
+#20 0x000000000040af01 in time_watcher::trigger (this=0x52e198) at callback.h:141
+#21 0x0000000000403e7a in vpn::send_connect_request (this=0x51a6e0, id=5436496) at iom.h:154
+#22 0x000000000040e2b7 in connection::establish_connection_cb (this=0x52dff0, w=@0x52e198) at connection.C:764
+#23 0x000000000040fa59 in callback1<void, time_watcher&>::proxy<connection, connection>::call (this=0x52e2a0, obj=0x52e2a0, meth=
+    (void ( struct callback1<void,time_watcher&>::object::*)(time_watcher &,)) 531452, a1=@0x52f450) at callback.h:122
+#24 0x000000000040af01 in time_watcher::trigger (this=0x52e198) at callback.h:141
+#25 0x0000000000403e7a in vpn::send_connect_request (this=0x51a6e0, id=5436496) at iom.h:154
+#26 0x000000000040e2b7 in connection::establish_connection_cb (this=0x52dff0, w=@0x52e198) at connection.C:764
+#27 0x000000000040fa59 in callback1<void, time_watcher&>::proxy<connection, connection>::call (this=0x52e2a0, obj=0x52e2a0, meth=
+    (void ( struct callback1<void,time_watcher&>::object::*)(time_watcher &,)) 531452, a1=@0x52f450) at callback.h:122
+#28 0x000000000040af01 in time_watcher::trigger (this=0x52e198) at callback.h:141
+#29 0x0000000000403e7a in vpn::send_connect_request (this=0x51a6e0, id=5436496) at iom.h:154
+#30 0x000000000040e2b7 in connection::establish_connection_cb (this=0x52dff0, w=@0x52e198) at connection.C:764
+
+
 - kill -USR1 should not reconnect but just refresh with pinging
 - mac=xxxxx config directive, to allow windows etc.
 - on shell xyz

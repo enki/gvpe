@@ -43,7 +43,6 @@ if (automake-1.7 --version) < /dev/null > /dev/null 2>&1; then
 else
     echo
     echo "  You must have automake 1.7 installed to compile $PROJECT."
-    echo "  (or a newer version if it is available)"
 #    DIE=1
 fi
 
