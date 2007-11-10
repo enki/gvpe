@@ -586,6 +586,8 @@ struct connect_info_packet : vpn_packet
 void
 connection::connection_established ()
 {
+  slog (L_TRACE, _("%s: possible connection establish (ictx %d, octx %d)"), conf->nodename, !!ictx, !!octx);
+
   if (ictx && octx)
     {
       connectmode = conf->connectmode;
@@ -762,12 +764,15 @@ connection::establish_connection_cb (ev::timer &w, int revents)
 
       if (si.prot && !si.host)
         {
+          slog (L_TRACE, _("%s: connection request (indirect)"), conf->nodename);
           /*TODO*/ /* start the timer so we don't recurse endlessly */
           w.start (1);
           vpn->send_connect_request (conf->id);
         }
       else
         {
+          slog (L_TRACE, _("%s: connection request (direct)"), conf->nodename, !!ictx, !!octx);
+
           const sockinfo &dsi = forward_si (si);
 
           slow = slow || (dsi.prot & PROT_SLOW);
@@ -889,6 +894,9 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 
   slog (L_NOISE, "<<%d received packet type %d from %d to %d", 
         conf->id, pkt->typ (), pkt->src (), pkt->dst ());
+
+  if (connectmode == conf_node::C_DISABLED)
+    return;
 
   switch (pkt->typ ())
     {

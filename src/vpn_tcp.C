@@ -1,6 +1,6 @@
 /*
     vpn_tcp.C -- handle the tcp part of the protocol.
-    Copyright (C) 2003-2005 Marc Lehmann <gvpe@schmorp.de>
+    Copyright (C) 2003-2007 Marc Lehmann <gvpe@schmorp.de>
  
     This file is part of GVPE.
 
@@ -434,6 +434,8 @@ tcp_connection::send_packet (vpn_packet *pkt, int tos)
 
 void tcp_connection::error ()
 {
+  stop ();
+
   if (fd >= 0)
     {
       close (fd);
@@ -446,7 +448,6 @@ void tcp_connection::error ()
   free (proxy_req); proxy_req = 0;
 #endif
 
-  stop ();
   state = active ? IDLE : ERROR;
 }
 

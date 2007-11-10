@@ -229,7 +229,7 @@ AC_CHECK_FUNC(gethostbyname, [], [
 ])
 
 dnl libev support
-m4_include([libev/ev.m4])
+m4_include([libev/libev.m4])
 
 AC_LANG_POP
 
@@ -364,6 +364,8 @@ fi
 if $CXX -v --help 2>&1 | grep -q fexceptions; then
    CXXFLAGS="$CXXFLAGS -fno-exceptions"
 fi
+
+LIBS="$EXTRA_LIBS $LIBS"
 
 dnl if $CXX -v --help 2>&1 | grep -q ffunction-sections; then
 dnl    CXXFLAGS="$CXXFLAGS -ffunction-sections"
