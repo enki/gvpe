@@ -282,7 +282,7 @@ main (int argc, char **argv, char **envp)
 
   if (!network.setup ())
     {
-      ev::ev_loop (0);
+      ev::ev_loop (EV_DEFAULT_A_ 0);
       cleanup_and_exit (EXIT_FAILURE);
     }
 
