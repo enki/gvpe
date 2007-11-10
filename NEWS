@@ -1,5 +1,10 @@
 gvpe NEWS
 
+	- protocol version 0.1, compatible with older releases.
+        - convert from iom.C to libev
+          (http://software.schmorp.de/pkg/libev).
+        - bugfixes.
+
 2.01 Thu Mar 29 19:26:04 CEST 2007
 	- protocol version 0.1, compatible with older releases.
         - bugfix of callback.h, might have cause callback return values to

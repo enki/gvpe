@@ -157,9 +157,9 @@ struct connection
     void connection_established ();
     void reset_connection ();
 
-    void establish_connection_cb (time_watcher &w); time_watcher establish_connection;
-    void rekey_cb (time_watcher &w); time_watcher rekey; // next rekying (actually current reset + reestablishing)
-    void keepalive_cb (time_watcher &w); time_watcher keepalive; // next keepalive probe
+    void establish_connection_cb (ev::timer &w, int revents); ev::timer establish_connection;
+    void rekey_cb (ev::timer &w, int revents); ev::timer rekey; // next rekying (actually current reset + reestablishing)
+    void keepalive_cb (ev::timer &w, int revents); ev::timer keepalive; // next keepalive probe
 
     void send_connect_request (int id);
     void send_auth_request (const sockinfo &si, bool initiate);

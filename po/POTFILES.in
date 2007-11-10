@@ -25,9 +25,6 @@ src/global.h
 src/gvpe.C
 src/gvpectrl.C
 src/hash_map.h
-src/iom.C
-src/iom.h
-src/iom_conf.h
 src/lambda.h
 src/lzf/lzf.c
 src/lzf/lzf.h

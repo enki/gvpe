@@ -92,13 +92,13 @@ struct rsa_entry {
 
 struct rsa_cache : list<rsa_entry>
 {
-  void cleaner_cb (time_watcher &w); time_watcher cleaner;
+  void cleaner_cb (ev::timer &w, int revents); ev::timer cleaner;
   
   bool find (const rsaid &id, rsachallenge &chg)
   {
     for (iterator i = begin (); i != end (); ++i)
       {
-        if (!memcmp (&id, &i->id, sizeof id) && i->expire > NOW)
+        if (!memcmp (&id, &i->id, sizeof id) && i->expire > ev::ev_now ())
           {
             memcpy (&chg, &i->chg, sizeof chg);
 
@@ -107,8 +107,8 @@ struct rsa_cache : list<rsa_entry>
           }
       }
 
-    if (cleaner.at < NOW)
-      cleaner.start (NOW + RSA_TTL);
+    if (!cleaner.is_active ())
+      cleaner.again ();
 
     return false;
   }
@@ -120,30 +120,32 @@ struct rsa_cache : list<rsa_entry>
     RAND_bytes ((unsigned char *)&id,  sizeof id);
     RAND_bytes ((unsigned char *)&chg, sizeof chg);
 
-    e.expire = NOW + RSA_TTL;
+    e.expire = ev::ev_now () + RSA_TTL;
     e.id = id;
     memcpy (&e.chg, &chg, sizeof chg);
 
     push_back (e);
 
-    if (cleaner.at < NOW)
-      cleaner.start (NOW + RSA_TTL);
+    if (!cleaner.is_active ())
+      cleaner.again ();
   }
 
   rsa_cache ()
   : cleaner (this, &rsa_cache::cleaner_cb)
-  { }
+  {
+    cleaner.set (RSA_TTL, RSA_TTL);
+  }
 
 } rsa_cache;
 
-void rsa_cache::cleaner_cb (time_watcher &w)
+void rsa_cache::cleaner_cb (ev::timer &w, int revents)
 {
-  if (!empty ())
+  if (empty ())
+    w.stop ();
+  else
     {
-      w.start (NOW + RSA_TTL);
-
       for (iterator i = begin (); i != end (); )
-        if (i->expire <= NOW)
+        if (i->expire <= ev::ev_now ())
           i = erase (i);
         else
           ++i;
@@ -220,7 +222,7 @@ bool net_rate_limiter::can (u32 host)
   for (i = begin (); i != end (); )
     if (i->host == host)
       break;
-    else if (i->last < NOW - NRL_EXPIRE)
+    else if (i->last < ev::ev_now () - NRL_EXPIRE)
       i = erase (i);
     else
       i++;
@@ -232,7 +234,7 @@ bool net_rate_limiter::can (u32 host)
       ri.host = host;
       ri.pcnt = 1.;
       ri.diff = NRL_MAXDIF;
-      ri.last = NOW;
+      ri.last = ev::ev_now ();
 
       push_front (ri);
 
@@ -244,9 +246,9 @@ bool net_rate_limiter::can (u32 host)
       erase (i);
 
       ri.pcnt = ri.pcnt * NRL_ALPHA;
-      ri.diff = ri.diff * NRL_ALPHA + (NOW - ri.last);
+      ri.diff = ri.diff * NRL_ALPHA + (ev::ev_now () - ri.last);
 
-      ri.last = NOW;
+      ri.last = ev::ev_now ();
 
       double dif = ri.diff / ri.pcnt;
 
@@ -589,9 +591,9 @@ connection::connection_established ()
       connectmode = conf->connectmode;
 
       // make sure rekeying timeouts are slightly asymmetric
-      rekey.start (NOW + ::conf.rekey
-                   + (conf->id > THISNODE->id ? 10 : 0));
-      keepalive.start (NOW + ::conf.keepalive);
+      ev::tstamp rekey_interval = ::conf.rekey + (conf->id > THISNODE->id ? 10 : 0);
+      rekey.start (rekey_interval, rekey_interval);
+      keepalive.start (::conf.keepalive);
 
       // send queued packets
       if (ictx && octx)
@@ -612,7 +614,7 @@ connection::connection_established ()
   else
     {
       retry_cnt = 0;
-      establish_connection.start (NOW + 5);
+      establish_connection.start (5);
       keepalive.stop ();
       rekey.stop ();
     }
@@ -742,26 +744,28 @@ connection::send_connect_info (int rid, const sockinfo &rsi, u8 rprotocols)
 }
 
 void
-connection::establish_connection_cb (time_watcher &w)
+connection::establish_connection_cb (ev::timer &w, int revents)
 {
   if (!ictx
       && conf != THISNODE
       && connectmode != conf_node::C_NEVER
       && connectmode != conf_node::C_DISABLED
-      && NOW > w.at)
+      && !w.is_active ())
     {
-      w.at = TSTAMP_MAX; // first disable this watcher in case of recursion
-
-      double retry_int = double (retry_cnt & 3
-                                 ? (retry_cnt & 3) + 1
-                                 : 1 << (retry_cnt >> 2));
+      ev::tstamp retry_int = ev::tstamp (retry_cnt & 3
+                                         ? (retry_cnt & 3) + 1
+                                         : 1 << (retry_cnt >> 2));
 
       reset_si ();
 
       bool slow = si.prot & PROT_SLOW;
 
       if (si.prot && !si.host)
-        vpn->send_connect_request (conf->id);
+        {
+          /*TODO*/ /* start the timer so we don't recurse endlessly */
+          w.start (1);
+          vpn->send_connect_request (conf->id);
+        }
       else
         {
           const sockinfo &dsi = forward_si (si);
@@ -784,7 +788,7 @@ connection::establish_connection_cb (time_watcher &w)
       else
         retry_int = conf->max_retry;
 
-      w.start (NOW + retry_int);
+      w.start (retry_int);
     }
 }
 
@@ -827,7 +831,7 @@ connection::shutdown ()
 }
 
 void
-connection::rekey_cb (time_watcher &w)
+connection::rekey_cb (ev::timer &w, int revents)
 {
   reset_connection ();
   establish_connection ();
@@ -881,7 +885,7 @@ void connection::inject_vpn_packet (vpn_packet *pkt, int tos)
 void
 connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 {
-  last_activity = NOW;
+  last_activity = ev::ev_now ();
 
   slog (L_NOISE, "<<%d received packet type %d from %d to %d", 
         conf->id, pkt->typ (), pkt->src (), pkt->dst ());
@@ -1156,25 +1160,25 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
     }
 }
 
-void connection::keepalive_cb (time_watcher &w)
+void connection::keepalive_cb (ev::timer &w, int revents)
 {
-  if (NOW >= last_activity + ::conf.keepalive + 30)
+  if (ev::ev_now () >= last_activity + ::conf.keepalive + 30)
     {
       reset_connection ();
       establish_connection ();
     }
-  else if (NOW < last_activity + ::conf.keepalive)
-    w.start (last_activity + ::conf.keepalive);
+  else if (ev::ev_now () < last_activity + ::conf.keepalive)
+    w.start (last_activity + ::conf.keepalive - ev::now ());
   else if (conf->connectmode != conf_node::C_ONDEMAND
            || THISNODE->connectmode != conf_node::C_ONDEMAND)
     {
       send_ping (si);
-      w.start (NOW + 5);
+      w.start (5);
     }
-  else if (NOW < last_activity + ::conf.keepalive + 10)
+  else if (ev::ev_now () < last_activity + ::conf.keepalive + 10)
     // hold ondemand connections implicitly a few seconds longer
     // should delete octx, though, or something like that ;)
-    w.start (last_activity + ::conf.keepalive + 10);
+    w.start (last_activity + ::conf.keepalive + 10 - ev::now ());
   else
     reset_connection ();
 }
@@ -1215,7 +1219,7 @@ const char *connection::script_node_up ()
 {
   script_init_connect_env ();
 
-  putenv ("STATE=up");
+  putenv ((char *)"STATE=up");
 
   char *filename;
   asprintf (&filename,
@@ -1230,7 +1234,7 @@ const char *connection::script_node_down ()
 {
   script_init_connect_env ();
 
-  putenv ("STATE=down");
+  putenv ((char *)"STATE=down");
 
   char *filename;
   asprintf (&filename,

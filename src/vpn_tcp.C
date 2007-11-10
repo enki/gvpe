@@ -60,15 +60,17 @@ struct lt_sockinfo
 };
 
 struct tcp_si_map : public map<const sockinfo *, tcp_connection *, lt_sockinfo> {
-  void cleaner_cb (time_watcher &w); time_watcher cleaner;
+  void cleaner_cb (ev::timer &w, int revents); ev::timer cleaner;
 
   tcp_si_map ()
   : cleaner(this, &tcp_si_map::cleaner_cb)
-  { }
+  {
+    cleaner.start (300, 300);
+  }
 
 } tcp_si;
 
-struct tcp_connection : io_watcher {
+struct tcp_connection : ev::io {
   tstamp last_activity;
   const sockinfo si;
   vpn &v;
@@ -86,7 +88,7 @@ struct tcp_connection : io_watcher {
   int proxy_req_len;
 #endif
 
-  void tcpv4_ev (io_watcher &w, short revents);
+  void tcpv4_ev (ev::io &w, int revents);
 
   bool send_packet (vpn_packet *pkt, int tos);
   bool write_packet ();
@@ -102,11 +104,9 @@ struct tcp_connection : io_watcher {
   ~tcp_connection ();
 };
 
-void tcp_si_map::cleaner_cb (time_watcher &w)
+void tcp_si_map::cleaner_cb (ev::timer &w, int revents)
 {
-  w.start (NOW + 600);
-
-  tstamp to = NOW - ::conf.keepalive - 30 - 60;
+  tstamp to = ev::ev_now () - ::conf.keepalive - 30 - 60;
 
   for (iterator i = begin (); i != end(); )
     if (i->second->last_activity >= to)
@@ -119,9 +119,9 @@ void tcp_si_map::cleaner_cb (time_watcher &w)
 }
 
 void
-vpn::tcpv4_ev (io_watcher &w, short revents)
+vpn::tcpv4_ev (ev::io &w, int revents)
 {
-  if (revents & EVENT_READ)
+  if (revents & EV_READ)
     {
       struct sockaddr_in sa;
       socklen_t sa_len = sizeof (sa);
@@ -200,16 +200,16 @@ tcp_connection::write_packet ()
 }
 
 void
-tcp_connection::tcpv4_ev (io_watcher &w, short revents)
+tcp_connection::tcpv4_ev (ev::io &w, int revents)
 {
-  last_activity = NOW;
+  last_activity = ev::ev_now ();
 
-  if (revents & EVENT_WRITE)
+  if (revents & EV_WRITE)
     {
       if (state == CONNECTING)
         {
           state = ESTABLISHED;
-          set (EVENT_READ);
+          set (EV_READ);
 #if ENABLE_HTTP_PROXY
           if (::conf.proxy_host && ::conf.proxy_port)
             {
@@ -233,17 +233,17 @@ tcp_connection::tcpv4_ev (io_watcher &w, short revents)
                 {
                   delete w_pkt; w_pkt = 0;
 
-                  set (EVENT_READ);
+                  set (EV_READ);
                 }
             }
           else
-            set (EVENT_READ);
+            set (EV_READ);
         }
       else
-        set (EVENT_READ);
+        set (EV_READ);
     }
 
-  if (revents & EVENT_READ)
+  if (revents & EV_READ)
     {
       if (state == ESTABLISHED)
         for (;;)
@@ -347,7 +347,7 @@ tcp_connection::tcpv4_ev (io_watcher &w, short revents)
 bool
 tcp_connection::send_packet (vpn_packet *pkt, int tos)
 {
-  last_activity = NOW;
+  last_activity = ev::ev_now ();
 
   if (state == IDLE)
     {
@@ -395,7 +395,7 @@ tcp_connection::send_packet (vpn_packet *pkt, int tos)
               fcntl (fd, F_SETFD, FD_CLOEXEC);
 
               state = CONNECTING;
-              start (fd, EVENT_WRITE);
+              start (fd, EV_WRITE);
             }
           else
             close (fd);
@@ -424,7 +424,7 @@ tcp_connection::send_packet (vpn_packet *pkt, int tos)
               w_pkt = new vpn_packet;
               w_pkt->set (*pkt);
 
-              set (EVENT_READ | EVENT_WRITE);
+              set (EV_READ | EV_WRITE);
             }
         }
     }
@@ -451,12 +451,12 @@ void tcp_connection::error ()
 }
 
 tcp_connection::tcp_connection (int fd_, const sockinfo &si_, vpn &v_)
-: v(v_), si(si_), io_watcher(this, &tcp_connection::tcpv4_ev)
+: v(v_), si(si_), ev::io(this, &tcp_connection::tcpv4_ev)
 {
   if (!tcp_si.cleaner.active)
     tcp_si.cleaner.start (0);
 
-  last_activity = NOW;
+  last_activity = ev::ev_now ();
   r_pkt = 0;
   w_pkt = 0;
   fd = fd_;
@@ -473,7 +473,7 @@ tcp_connection::tcp_connection (int fd_, const sockinfo &si_, vpn &v_)
     {
       active = false;
       state = ESTABLISHED;
-      start (fd, EVENT_READ);
+      start (fd, EV_READ);
     }
 }
 

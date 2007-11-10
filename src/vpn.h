@@ -38,7 +38,7 @@ struct vpn
       EVENT_SHUTDOWN  = 2,
     };
 
-    void event_cb (time_watcher &w); time_watcher event;
+    void event_cb (ev::timer &w, int revents); ev::timer event;
 
     tap_device *tap;
 
@@ -51,7 +51,7 @@ struct vpn
     void reconnect_all ();
     void shutdown_all ();
 
-    void tap_ev (io_watcher &w, short revents); io_watcher tap_ev_watcher;
+    void tap_ev (ev::io &w, int revents); ev::io tap_ev_watcher;
     void inject_data_packet (tap_packet *pkt, int dst);
 
     void send_connect_request (int id);
@@ -60,12 +60,12 @@ struct vpn
     bool send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos = 0);
 
 #if ENABLE_TCP
-    void tcpv4_ev (io_watcher &w, short revents); io_watcher tcpv4_ev_watcher;
+    void tcpv4_ev (ev::io &w, int revents); ev::io tcpv4_ev_watcher;
     bool send_tcpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
 #endif
 
 #if ENABLE_ICMP
-    void icmpv4_ev (io_watcher &w, short revents); io_watcher icmpv4_ev_watcher;
+    void icmpv4_ev (ev::io &w, int revents); ev::io icmpv4_ev_watcher;
     bool send_icmpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
 #endif
 
@@ -73,17 +73,17 @@ struct vpn
     vector<struct dns_snd *> dns_sndpq;
     sockinfo dns_forwarder;
 
-    void dnsv4_ev (io_watcher &w, short revents); io_watcher dnsv4_ev_watcher;
+    void dnsv4_ev (ev::io &w, int revents); ev::io dnsv4_ev_watcher;
     void dnsv4_server (struct dns_packet &pkt);
     void dnsv4_client (struct dns_packet &pkt);
 
     bool send_dnsv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
 #endif
 
-    void udpv4_ev (io_watcher &w, short revents); io_watcher udpv4_ev_watcher;
+    void udpv4_ev (ev::io &w, int revents); ev::io udpv4_ev_watcher;
     bool send_udpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
 
-    void ipv4_ev (io_watcher &w, short revents); io_watcher ipv4_ev_watcher;
+    void ipv4_ev (ev::io &w, int revents); ev::io ipv4_ev_watcher;
     bool send_ipv4_packet (vpn_packet *pkt, const sockinfo &si, int tos);
 
     vpn ();

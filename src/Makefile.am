@@ -13,7 +13,7 @@ EXTRA_DIST = device-linux.C device-cygwin.C device-tincd.C device-darwin.C callb
    tincd/uml_socket/device.c tincd/bsd/device.c \
    ether_emu.C lzf/lzf_c.c lzf/lzf_d.c
 
-INCLUDES = @INCLUDES@ -I$(top_builddir) -I$(top_srcdir)/lib
+INCLUDES = -I$(top_builddir) -I$(top_srcdir)/lib -I$(top_srcdir)/libev @INCLUDES@
 
 LIBS = @LIBS@ @LIBINTL@
 
@@ -24,11 +24,11 @@ ROHCLIB =
 endif
 
 COMMON = global.h conf.h conf.C util.h util.C \
-         slog.h slog.C netcompat.h
+         slog.h slog.C netcompat.h ev_cpp.h ev_cpp.C 
 
 gvpe_SOURCES = gvpe.C hash_map.h vpn.h vpn.C vpn_tcp.C vpn_dns.C \
                sockinfo.h sockinfo.C \
-               lzf/lzf.h lzf/lzfP.h iom.h iom_conf.h iom.C \
+               lzf/lzf.h lzf/lzfP.h \
                connection.h connection.C callback.h device.h device.C \
                $(COMMON)
 gvpe_LDADD = $(top_builddir)/lib/libgvpe.a $(ROHCLIB)

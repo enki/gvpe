@@ -67,7 +67,7 @@ tap_device::tap_device ()
 {
   struct ifreq ifr;
 
-  device = DEFAULT_DEVICE;
+  device = (char *)DEFAULT_DEVICE;
 
   fd = open (device, O_RDWR);
 

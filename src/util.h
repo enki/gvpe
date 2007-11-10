@@ -29,7 +29,10 @@
 #include "gettext.h"
 
 #include "slog.h"
-#include "iom.h"
+#include "ev_cpp.h"
+#include "callback.h"
+
+typedef ev::ev_tstamp tstamp;
 
 /*
  * check for an existing gvpe for this net, and write pid to pidfile

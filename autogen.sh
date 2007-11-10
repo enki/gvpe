@@ -93,12 +93,13 @@ rm doc/gvpe.texi
 autoconf
 autoheader
 
-
 #intltoolize --copy --force --automake
 
 cd $ORIGDIR
 
-if $srcdir/configure --enable-maintainer-mode "$@"; then
+if [ -e reconf ]; then
+   ./reconf "$@"
+elif $srcdir/configure --enable-maintainer-mode "$@"; then
   echo
   echo "Now type 'make' to compile $PROJECT."
 else

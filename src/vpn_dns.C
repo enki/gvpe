@@ -561,7 +561,7 @@ struct dns_connection
   byte_stream rcvdq; int rcvseq; int repseq;
   byte_stream snddq; int sndseq;
 
-  void time_cb (time_watcher &w); time_watcher tw;
+  void time_cb (ev::timer &w, int revents); ev::timer tw;
   void receive_rep (dns_rcv *r);
 
   dns_connection (connection *c);
@@ -590,7 +590,7 @@ dns_snd::dns_snd (dns_connection *dns)
   timeout = 0;
   retry = 0;
   seqno = 0;
-  sent = NOW;
+  sent = ev::ev_now ();
   stdhdr = false;
 
   pkt = new dns_packet;
@@ -631,7 +631,7 @@ void dns_snd::gen_stream_req (int seqno, byte_stream &stream)
   stdhdr = true;
   this->seqno = seqno;
 
-  timeout = NOW + INITIAL_TIMEOUT;
+  timeout = ev::ev_now () + INITIAL_TIMEOUT;
 
   pkt->flags = htons (DEFAULT_CLIENT_FLAGS);
   pkt->qdcount = htons (1);
@@ -676,7 +676,7 @@ void dns_snd::gen_stream_req (int seqno, byte_stream &stream)
 
 void dns_snd::gen_syn_req ()
 {
-  timeout = NOW + INITIAL_SYN_TIMEOUT;
+  timeout = ev::ev_now () + INITIAL_SYN_TIMEOUT;
 
   pkt->flags = htons (DEFAULT_CLIENT_FLAGS);
   pkt->qdcount = htons (1);
@@ -752,8 +752,8 @@ void dns_connection::receive_rep (dns_rcv *r)
 {
   if (r->datalen)
     {
-      last_received = NOW;
-      tw.trigger ();
+      last_received = ev::ev_now ();
+      tw ();
       
       poll_interval = send_interval;
     }
@@ -1034,7 +1034,7 @@ vpn::dnsv4_client (dns_packet &pkt)
 #endif
             // the latency surely puts an upper bound on
             // the minimum send interval
-            double latency = NOW - (*i)->sent;
+            double latency = ev::ev_now () - (*i)->sent;
 
             if (latency < dns->min_latency)
               dns->min_latency = latency;
@@ -1158,9 +1158,9 @@ vpn::dnsv4_client (dns_packet &pkt)
 }
 
 void
-vpn::dnsv4_ev (io_watcher &w, short revents)
+vpn::dnsv4_ev (ev::io &w, int revents)
 {
-  if (revents & EVENT_READ)
+  if (revents & EV_READ)
     {
       dns_packet *pkt = new dns_packet;
       struct sockaddr_in sa;
@@ -1196,7 +1196,7 @@ vpn::send_dnsv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
     c->dns = new dns_connection (c);
   
   if (c->dns->snddq.put (pkt))
-    c->dns->tw.trigger ();
+    c->dns->tw ();
 
   // always return true even if the buffer overflows
   return true;
@@ -1211,14 +1211,14 @@ connection::dnsv4_reset_connection ()
 #define NEXT(w) do { if (next > (w)) next = w; } while (0)
 
 void
-dns_connection::time_cb (time_watcher &w)
+dns_connection::time_cb (ev::timer &w, int revents)
 {
   // servers have to be polled
   if (THISNODE->dns_port)
     return;
 
   // check for timeouts and (re)transmit
-  tstamp next = NOW + poll_interval;
+  tstamp next = ev::now () + poll_interval;
   dns_snd *send = 0;
   
   for (vector<dns_snd *>::iterator i = vpn->dns_sndpq.begin ();
@@ -1227,15 +1227,15 @@ dns_connection::time_cb (time_watcher &w)
     {
       dns_snd *r = *i;
 
-      if (r->timeout <= NOW)
+      if (r->timeout <= ev::ev_now ())
         {
           if (!send)
             {
               send = r;
 
               r->retry++;
-              r->timeout = NOW + (r->retry * min_latency * conf.dns_timeout_factor);
-              //printf ("RETRY %x (%d, %f)\n", r->seqno, r->retry, r->timeout - NOW);//D
+              r->timeout = ev::ev_now () + (r->retry * min_latency * conf.dns_timeout_factor);
+              //printf ("RETRY %x (%d, %f)\n", r->seqno, r->retry, r->timeout - ev::ev_now ());//D
 
               // the following code changes the query section a bit, forcing
               // the forwarder to generate a new request
@@ -1264,19 +1264,19 @@ dns_connection::time_cb (time_watcher &w)
       else if (vpn->dns_sndpq.size () < conf.dns_max_outstanding
                && !SEQNO_EQ (rcvseq, sndseq - (MAX_WINDOW - 1)))
         {
-          if (last_sent + send_interval <= NOW)
+          if (last_sent + send_interval <= ev::ev_now ())
             {
               //printf ("sending data request etc.\n"); //D
-              if (!snddq.empty () || last_received + 1. > NOW)
+              if (!snddq.empty () || last_received + 1. > ev::ev_now ())
                 {
                   poll_interval = send_interval;
-                  NEXT (NOW + send_interval);
+                  NEXT (ev::ev_now () + send_interval);
                 }
 
               send = new dns_snd (this);
               send->gen_stream_req (sndseq, snddq);
-              send->timeout = NOW + min_latency * conf.dns_timeout_factor;
-              //printf ("SEND %x (%f)\n", send->seqno, send->timeout - NOW, min_latency, conf.dns_timeout_factor);//D
+              send->timeout = ev::ev_now () + min_latency * conf.dns_timeout_factor;
+              //printf ("SEND %x (%f)\n", send->seqno, send->timeout - ev::ev_now (), min_latency, conf.dns_timeout_factor);//D
 
               sndseq = (sndseq + 1) & SEQNO_MASK;
             }
@@ -1290,23 +1290,23 @@ dns_connection::time_cb (time_watcher &w)
 
   if (send)
     {
-      last_sent = NOW;
+      last_sent = ev::ev_now ();
       sendto (vpn->dnsv4_fd,
               send->pkt->at (0), send->pkt->len, 0,
               vpn->dns_forwarder.sav4 (), vpn->dns_forwarder.salenv4 ());
     }
 
   slog (L_NOISE, "DNS: pi %f si %f N %f (%d:%d %d)",
-        poll_interval, send_interval, next - NOW,
+        poll_interval, send_interval, next - ev::ev_now (),
         vpn->dns_sndpq.size (), snddq.size (),
         rcvpq.size ());
 
-  // TODO: no idea when this happens, but when next < NOW, we have a problem
+  // TODO: no idea when this happens, but when next < ev::ev_now (), we have a problem
   // doesn't seem to happen anymore
-  if (next < NOW + 0.001)
-    next = NOW + 0.1;
+  if (next < ev::ev_now () + 0.001)
+    next = ev::ev_now () + 0.1;
 
-  w.start (next);
+  w.start (next - ev::ev_now ());
 }
 
 #endif

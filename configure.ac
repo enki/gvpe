@@ -228,6 +228,9 @@ AC_CHECK_FUNC(gethostbyname, [], [
   AC_CHECK_LIB(nsl, gethostbyname)
 ])
 
+dnl libev support
+m4_include([libev/ev.m4])
+
 AC_LANG_POP
 
 dnl AC_CHECK_FUNCS([freeaddrinfo gai_strerror getaddrinfo getnameinfo])

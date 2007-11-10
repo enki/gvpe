@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# imports the libev files
+
+SRC=../libev/
+
+mkdir -m 755 -p libev
+
+for file in ev.m4 ev.h ev.c ev_vars.h ev_wrap.h ev_win32.c ev_select.c ev_poll.c ev_epoll.c ev_kqueue.c
+do
+   cp -p $SRC/$file libev/.
+done
+

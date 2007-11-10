@@ -130,7 +130,7 @@ vpn::setup ()
           exit (EXIT_FAILURE);
         }
 
-      ipv4_ev_watcher.start (ipv4_fd, EVENT_READ);
+      ipv4_ev_watcher.start (ipv4_fd, EV_READ);
     }
 
   udpv4_fd = -1;
@@ -169,7 +169,7 @@ vpn::setup ()
           exit (EXIT_FAILURE);
         }
 
-      udpv4_ev_watcher.start (udpv4_fd, EVENT_READ);
+      udpv4_ev_watcher.start (udpv4_fd, EV_READ);
     }
 
   icmpv4_fd = -1;
@@ -214,7 +214,7 @@ vpn::setup ()
           exit (EXIT_FAILURE);
         }
 
-      icmpv4_ev_watcher.start (icmpv4_fd, EVENT_READ);
+      icmpv4_ev_watcher.start (icmpv4_fd, EV_READ);
     }
 #endif
 
@@ -251,7 +251,7 @@ vpn::setup ()
           exit (EXIT_FAILURE);
         }
 
-      tcpv4_ev_watcher.start (tcpv4_fd, EVENT_READ);
+      tcpv4_ev_watcher.start (tcpv4_fd, EV_READ);
     }
 #endif
 
@@ -294,7 +294,7 @@ vpn::setup ()
           exit (EXIT_FAILURE);
         }
 
-      dnsv4_ev_watcher.start (dnsv4_fd, EVENT_READ);
+      dnsv4_ev_watcher.start (dnsv4_fd, EV_READ);
     }
 #endif
 
@@ -327,7 +327,7 @@ vpn::setup ()
       exit (EXIT_FAILURE);
     }
 
-  tap_ev_watcher.start (tap->fd, EVENT_READ);
+  tap_ev_watcher.start (tap->fd, EV_READ);
 
   return 0;
 }
@@ -488,9 +488,9 @@ vpn::send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 }
 
 void
-vpn::ipv4_ev (io_watcher &w, short revents)
+vpn::ipv4_ev (ev::io &w, int revents)
 {
-  if (revents & EVENT_READ)
+  if (revents & EV_READ)
     {
       vpn_packet *pkt = new vpn_packet;
       struct sockaddr_in sa;
@@ -529,9 +529,9 @@ vpn::ipv4_ev (io_watcher &w, short revents)
 
 #if ENABLE_ICMP
 void
-vpn::icmpv4_ev (io_watcher &w, short revents)
+vpn::icmpv4_ev (ev::io &w, int revents)
 {
-  if (revents & EVENT_READ)
+  if (revents & EV_READ)
     {
       vpn_packet *pkt = new vpn_packet;
       struct sockaddr_in sa;
@@ -577,9 +577,9 @@ vpn::icmpv4_ev (io_watcher &w, short revents)
 #endif
 
 void
-vpn::udpv4_ev (io_watcher &w, short revents)
+vpn::udpv4_ev (ev::io &w, int revents)
 {
-  if (revents & EVENT_READ)
+  if (revents & EV_READ)
     {
       vpn_packet *pkt = new vpn_packet;
       struct sockaddr_in sa;
@@ -614,9 +614,9 @@ vpn::udpv4_ev (io_watcher &w, short revents)
 }
 
 void
-vpn::tap_ev (io_watcher &w, short revents)
+vpn::tap_ev (ev::io &w, int revents)
 {
-  if (revents & EVENT_READ)
+  if (revents & EV_READ)
     {
       /* process data */
       tap_packet *pkt;
@@ -656,7 +656,7 @@ vpn::tap_ev (io_watcher &w, short revents)
 }
 
 void
-vpn::event_cb (time_watcher &w)
+vpn::event_cb (ev::timer &w, int)
 {
   if (events)
     {
@@ -757,7 +757,7 @@ connection::dump_status ()
 void
 vpn::dump_status ()
 {
-  slog (L_NOTICE, _("BEGIN status dump (%ld)"), (long)NOW);
+  slog (L_NOTICE, _("BEGIN status dump (%ld)"), (long)ev::ev_now ());
 
   for (conns_vector::iterator c = conns.begin (); c != conns.end (); ++c)
     (*c)->dump_status ();

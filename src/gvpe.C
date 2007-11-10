@@ -50,7 +50,7 @@
 #include "slog.h"
 #include "util.h"
 #include "vpn.h"
-#include "iom.h"
+#include "ev_cpp.h"
 
 static loglevel llevel = L_NONE;
 
@@ -163,14 +163,14 @@ RETSIGTYPE
 sigterm_handler (int a)
 {
   network.events |= vpn::EVENT_SHUTDOWN;
-  network.event.start (0);
+  network.event.start ();
 }
 
 RETSIGTYPE
 sighup_handler (int a)
 {
   network.events |= vpn::EVENT_RECONNECT;
-  network.event.start (0);
+  network.event.start ();
 }
 
 RETSIGTYPE
@@ -254,6 +254,12 @@ main (int argc, char **argv, char **envp)
       argc--;
     }
 
+  if (!ev::ev_default_loop (0))
+    {
+      slog (L_ERR, _("unable to initialise the event loop (bad $LIBEV_METHODS?)"));
+      exit (EXIT_FAILURE);
+    }
+
   {
     configuration_parser (conf, true, argc, argv);
   }
@@ -276,7 +282,7 @@ main (int argc, char **argv, char **envp)
 
   if (!network.setup ())
     {
-      io_manager::loop ();
+      ev::ev_loop (0);
       cleanup_and_exit (EXIT_FAILURE);
     }
 
