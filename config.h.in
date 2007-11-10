@@ -62,6 +62,9 @@
 /* Define to 1 if you have the <clocale> header file. */
 #undef HAVE_CLOCALE
 
+/* Define to 1 if you have the `clock_gettime' function. */
+#undef HAVE_CLOCK_GETTIME
+
 /* Cygwin */
 #undef HAVE_CYGWIN
 
