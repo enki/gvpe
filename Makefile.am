@@ -6,7 +6,10 @@ SUBDIRS = m4 lib src doc po
 
 ACLOCAL_AMFLAGS = -I m4 
 
-EXTRA_DIST = config.rpath mkinstalldirs depcomp TODO
+EXTRA_DIST = config.rpath mkinstalldirs depcomp TODO \
+	     libev/ev.c libev/ev.h libev/ev.m4 \
+	     libev/ev_epoll.c libev/ev_kqueue.c libev/ev_poll.c libev/ev_select.c \
+	     libev/ev_vars.h ev_win32.c libev/ev_wrap.h
 
 CVS_CREATED = ABOUT-NLS configure aclocal.m4 config.h.in config.guess \
  config.sub install-sh missing mkinstalldirs \
