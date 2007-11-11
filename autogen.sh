@@ -4,6 +4,17 @@ AUTOCONF_REQUIRED_VERSION=2.57
 AUTOMAKE_REQUIRED_VERSION=1.7
 INTLTOOL_REQUIRED_VERSION=0.17
 
+if ! [ -e libev/ev++.h ]; then
+   cat <<EOF
+**
+** libev/ directory is missing
+**
+** you need a checkout of libev (http://software.schmorp.de/pkg/libev)
+** in the top-level build directory.
+**
+EOF
+   exit 1
+fi
 
 srcdir=`dirname $0`
 test -z "$srcdir" && srcdir=.
