@@ -23,10 +23,10 @@
 
 #if ENABLE_TCP
 
-// tcp processing is extremely ugly, since the vpe protocol is simply
+// tcp processing is extremely ugly, since the gvpe protocol is simply
 // designed for unreliable datagram networks. tcp is implemented by
 // multiplexing packets over tcp. errors are completely ignored, as we
-// rely on the higher level protocol to time out and reconnect.
+// rely on the higher level layers to time out and reconnect.
 
 #include <cstring>
 
@@ -65,7 +65,7 @@ struct tcp_si_map : public map<const sockinfo *, tcp_connection *, lt_sockinfo> 
   tcp_si_map ()
   : cleaner(this, &tcp_si_map::cleaner_cb)
   {
-    cleaner.start (300, 300);
+    cleaner.start (::conf.keepalive / 2, ::conf.keepalive / 2);
   }
 
 } tcp_si;
@@ -113,6 +113,7 @@ void tcp_si_map::cleaner_cb (ev::timer &w, int revents)
       ++i;
     else
       {
+        delete i->second;
         erase (i);
         i = begin ();
       }
@@ -454,9 +455,6 @@ void tcp_connection::error ()
 tcp_connection::tcp_connection (int fd_, const sockinfo &si_, vpn &v_)
 : v(v_), si(si_), ev::io(this, &tcp_connection::tcpv4_ev)
 {
-  if (!tcp_si.cleaner.active)
-    tcp_si.cleaner.start (0);
-
   last_activity = ev::ev_now ();
   r_pkt = 0;
   w_pkt = 0;
