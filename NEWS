@@ -1,5 +1,6 @@
 gvpe NEWS
 
+2.2
 	- protocol version 0.1, compatible with older releases.
         - convert from iom.C to libev, a high-performance event loop
           (http://software.schmorp.de/pkg/libev).
