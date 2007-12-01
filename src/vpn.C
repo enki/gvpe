@@ -757,7 +757,7 @@ connection::dump_status ()
 void
 vpn::dump_status ()
 {
-  slog (L_NOTICE, _("BEGIN status dump (%ld)"), (long)ev::ev_now ());
+  slog (L_NOTICE, _("BEGIN status dump (%ld)"), (long)ev_now ());
 
   for (conns_vector::iterator c = conns.begin (); c != conns.end (); ++c)
     (*c)->dump_status ();

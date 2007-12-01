@@ -106,7 +106,7 @@ struct tcp_connection : ev::io {
 
 void tcp_si_map::cleaner_cb (ev::timer &w, int revents)
 {
-  tstamp to = ev::ev_now () - ::conf.keepalive - 30 - 60;
+  tstamp to = ev_now () - ::conf.keepalive - 30 - 60;
 
   for (iterator i = begin (); i != end(); )
     if (i->second->last_activity >= to)
@@ -203,7 +203,7 @@ tcp_connection::write_packet ()
 void
 tcp_connection::tcpv4_ev (ev::io &w, int revents)
 {
-  last_activity = ev::ev_now ();
+  last_activity = ev_now ();
 
   if (revents & EV_WRITE)
     {
@@ -348,7 +348,7 @@ tcp_connection::tcpv4_ev (ev::io &w, int revents)
 bool
 tcp_connection::send_packet (vpn_packet *pkt, int tos)
 {
-  last_activity = ev::ev_now ();
+  last_activity = ev_now ();
 
   if (state == IDLE)
     {
@@ -455,7 +455,7 @@ void tcp_connection::error ()
 tcp_connection::tcp_connection (int fd_, const sockinfo &si_, vpn &v_)
 : v(v_), si(si_), ev::io(this, &tcp_connection::tcpv4_ev)
 {
-  last_activity = ev::ev_now ();
+  last_activity = ev_now ();
   r_pkt = 0;
   w_pkt = 0;
   fd = fd_;

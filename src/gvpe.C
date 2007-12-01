@@ -254,7 +254,7 @@ main (int argc, char **argv, char **envp)
       argc--;
     }
 
-  if (!ev::ev_default_loop (0))
+  if (!ev_default_loop (0))
     {
       slog (L_ERR, _("unable to initialise the event loop (bad $LIBEV_METHODS?)"));
       exit (EXIT_FAILURE);
@@ -282,7 +282,7 @@ main (int argc, char **argv, char **envp)
 
   if (!network.setup ())
     {
-      ev::ev_loop (EV_DEFAULT_A_ 0);
+      ev_loop (EV_DEFAULT_ 0);
       cleanup_and_exit (EXIT_FAILURE);
     }
 

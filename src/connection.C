@@ -98,7 +98,7 @@ struct rsa_cache : list<rsa_entry>
   {
     for (iterator i = begin (); i != end (); ++i)
       {
-        if (!memcmp (&id, &i->id, sizeof id) && i->expire > ev::ev_now ())
+        if (!memcmp (&id, &i->id, sizeof id) && i->expire > ev_now ())
           {
             memcpy (&chg, &i->chg, sizeof chg);
 
@@ -120,7 +120,7 @@ struct rsa_cache : list<rsa_entry>
     RAND_bytes ((unsigned char *)&id,  sizeof id);
     RAND_bytes ((unsigned char *)&chg, sizeof chg);
 
-    e.expire = ev::ev_now () + RSA_TTL;
+    e.expire = ev_now () + RSA_TTL;
     e.id = id;
     memcpy (&e.chg, &chg, sizeof chg);
 
@@ -145,7 +145,7 @@ void rsa_cache::cleaner_cb (ev::timer &w, int revents)
   else
     {
       for (iterator i = begin (); i != end (); )
-        if (i->expire <= ev::ev_now ())
+        if (i->expire <= ev_now ())
           i = erase (i);
         else
           ++i;
@@ -222,7 +222,7 @@ bool net_rate_limiter::can (u32 host)
   for (i = begin (); i != end (); )
     if (i->host == host)
       break;
-    else if (i->last < ev::ev_now () - NRL_EXPIRE)
+    else if (i->last < ev_now () - NRL_EXPIRE)
       i = erase (i);
     else
       i++;
@@ -234,7 +234,7 @@ bool net_rate_limiter::can (u32 host)
       ri.host = host;
       ri.pcnt = 1.;
       ri.diff = NRL_MAXDIF;
-      ri.last = ev::ev_now ();
+      ri.last = ev_now ();
 
       push_front (ri);
 
@@ -246,9 +246,9 @@ bool net_rate_limiter::can (u32 host)
       erase (i);
 
       ri.pcnt = ri.pcnt * NRL_ALPHA;
-      ri.diff = ri.diff * NRL_ALPHA + (ev::ev_now () - ri.last);
+      ri.diff = ri.diff * NRL_ALPHA + (ev_now () - ri.last);
 
-      ri.last = ev::ev_now ();
+      ri.last = ev_now ();
 
       double dif = ri.diff / ri.pcnt;
 
@@ -890,7 +890,7 @@ void connection::inject_vpn_packet (vpn_packet *pkt, int tos)
 void
 connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 {
-  last_activity = ev::ev_now ();
+  last_activity = ev_now ();
 
   slog (L_NOISE, "<<%d received packet type %d from %d to %d", 
         conf->id, pkt->typ (), pkt->src (), pkt->dst ());
@@ -1170,12 +1170,12 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 
 void connection::keepalive_cb (ev::timer &w, int revents)
 {
-  if (ev::ev_now () >= last_activity + ::conf.keepalive + 30)
+  if (ev_now () >= last_activity + ::conf.keepalive + 30)
     {
       reset_connection ();
       establish_connection ();
     }
-  else if (ev::ev_now () < last_activity + ::conf.keepalive)
+  else if (ev_now () < last_activity + ::conf.keepalive)
     w.start (last_activity + ::conf.keepalive - ev::now ());
   else if (conf->connectmode != conf_node::C_ONDEMAND
            || THISNODE->connectmode != conf_node::C_ONDEMAND)
@@ -1183,7 +1183,7 @@ void connection::keepalive_cb (ev::timer &w, int revents)
       send_ping (si);
       w.start (5);
     }
-  else if (ev::ev_now () < last_activity + ::conf.keepalive + 10)
+  else if (ev_now () < last_activity + ::conf.keepalive + 10)
     // hold ondemand connections implicitly a few seconds longer
     // should delete octx, though, or something like that ;)
     w.start (last_activity + ::conf.keepalive + 10 - ev::now ());

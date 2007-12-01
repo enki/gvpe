@@ -590,7 +590,7 @@ dns_snd::dns_snd (dns_connection *dns)
   timeout = 0;
   retry = 0;
   seqno = 0;
-  sent = ev::ev_now ();
+  sent = ev_now ();
   stdhdr = false;
 
   pkt = new dns_packet;
@@ -631,7 +631,7 @@ void dns_snd::gen_stream_req (int seqno, byte_stream &stream)
   stdhdr = true;
   this->seqno = seqno;
 
-  timeout = ev::ev_now () + INITIAL_TIMEOUT;
+  timeout = ev_now () + INITIAL_TIMEOUT;
 
   pkt->flags = htons (DEFAULT_CLIENT_FLAGS);
   pkt->qdcount = htons (1);
@@ -676,7 +676,7 @@ void dns_snd::gen_stream_req (int seqno, byte_stream &stream)
 
 void dns_snd::gen_syn_req ()
 {
-  timeout = ev::ev_now () + INITIAL_SYN_TIMEOUT;
+  timeout = ev_now () + INITIAL_SYN_TIMEOUT;
 
   pkt->flags = htons (DEFAULT_CLIENT_FLAGS);
   pkt->qdcount = htons (1);
@@ -752,7 +752,7 @@ void dns_connection::receive_rep (dns_rcv *r)
 {
   if (r->datalen)
     {
-      last_received = ev::ev_now ();
+      last_received = ev_now ();
       tw ();
       
       poll_interval = send_interval;
@@ -1034,7 +1034,7 @@ vpn::dnsv4_client (dns_packet &pkt)
 #endif
             // the latency surely puts an upper bound on
             // the minimum send interval
-            double latency = ev::ev_now () - (*i)->sent;
+            double latency = ev_now () - (*i)->sent;
 
             if (latency < dns->min_latency)
               dns->min_latency = latency;
@@ -1227,15 +1227,15 @@ dns_connection::time_cb (ev::timer &w, int revents)
     {
       dns_snd *r = *i;
 
-      if (r->timeout <= ev::ev_now ())
+      if (r->timeout <= ev_now ())
         {
           if (!send)
             {
               send = r;
 
               r->retry++;
-              r->timeout = ev::ev_now () + (r->retry * min_latency * conf.dns_timeout_factor);
-              //printf ("RETRY %x (%d, %f)\n", r->seqno, r->retry, r->timeout - ev::ev_now ());//D
+              r->timeout = ev_now () + (r->retry * min_latency * conf.dns_timeout_factor);
+              //printf ("RETRY %x (%d, %f)\n", r->seqno, r->retry, r->timeout - ev_now ());//D
 
               // the following code changes the query section a bit, forcing
               // the forwarder to generate a new request
@@ -1264,19 +1264,19 @@ dns_connection::time_cb (ev::timer &w, int revents)
       else if (vpn->dns_sndpq.size () < conf.dns_max_outstanding
                && !SEQNO_EQ (rcvseq, sndseq - (MAX_WINDOW - 1)))
         {
-          if (last_sent + send_interval <= ev::ev_now ())
+          if (last_sent + send_interval <= ev_now ())
             {
               //printf ("sending data request etc.\n"); //D
-              if (!snddq.empty () || last_received + 1. > ev::ev_now ())
+              if (!snddq.empty () || last_received + 1. > ev_now ())
                 {
                   poll_interval = send_interval;
-                  NEXT (ev::ev_now () + send_interval);
+                  NEXT (ev_now () + send_interval);
                 }
 
               send = new dns_snd (this);
               send->gen_stream_req (sndseq, snddq);
-              send->timeout = ev::ev_now () + min_latency * conf.dns_timeout_factor;
-              //printf ("SEND %x (%f)\n", send->seqno, send->timeout - ev::ev_now (), min_latency, conf.dns_timeout_factor);//D
+              send->timeout = ev_now () + min_latency * conf.dns_timeout_factor;
+              //printf ("SEND %x (%f)\n", send->seqno, send->timeout - ev_now (), min_latency, conf.dns_timeout_factor);//D
 
               sndseq = (sndseq + 1) & SEQNO_MASK;
             }
@@ -1290,23 +1290,23 @@ dns_connection::time_cb (ev::timer &w, int revents)
 
   if (send)
     {
-      last_sent = ev::ev_now ();
+      last_sent = ev_now ();
       sendto (vpn->dnsv4_fd,
               send->pkt->at (0), send->pkt->len, 0,
               vpn->dns_forwarder.sav4 (), vpn->dns_forwarder.salenv4 ());
     }
 
   slog (L_NOISE, "DNS: pi %f si %f N %f (%d:%d %d)",
-        poll_interval, send_interval, next - ev::ev_now (),
+        poll_interval, send_interval, next - ev_now (),
         vpn->dns_sndpq.size (), snddq.size (),
         rcvpq.size ());
 
-  // TODO: no idea when this happens, but when next < ev::ev_now (), we have a problem
+  // TODO: no idea when this happens, but when next < ev_now (), we have a problem
   // doesn't seem to happen anymore
-  if (next < ev::ev_now () + 0.001)
-    next = ev::ev_now () + 0.1;
+  if (next < ev_now () + 0.001)
+    next = ev_now () + 0.1;
 
-  w.start (next - ev::ev_now ());
+  w.start (next - ev_now ());
 }
 
 #endif
