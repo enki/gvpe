@@ -29,41 +29,41 @@
 // encapsulate one or more network addresses. this structure
 // gets transferred over the wire, so be careful with endianness etc.
 struct sockinfo
+{
+  u32 host;
+  u16 port;
+  u8 prot;
+  u8 pad1;
+
+  void set (const sockaddr_in *sa, u8 prot_);
+  void set (const conf_node *conf, u8 prot_);
+  void set (const char *hostname, u16 port_, u8 prot_);
+
+  // return the supported protocols
+  u8 supported_protocols (conf_node *conf = 0);
+  bool upgrade_protocol (u8 prot_, conf_node *conf = 0);
+
+  operator const char *() const;
+
+  const sockaddr *sav4 () const;
+  const socklen_t salenv4 () const
   {
-    u32 host;
-    u16 port;
-    u8 prot;
-    u8 pad1;
+    return sizeof (sockaddr_in);
+  }
 
-    void set (const sockaddr_in *sa, u8 prot_);
-    void set (const conf_node *conf, u8 prot_);
-    void set (const char *hostname, u16 port_, u8 prot_);
+  const char *ntoa () const;
 
-    // return the supported protocols
-    u8 supported_protocols (conf_node *conf = 0);
-    bool upgrade_protocol (u8 prot_, conf_node *conf = 0);
+  bool valid () const
+  {
+    return prot != 0 && host != 0;
+  }
 
-    operator const char *() const;
+  sockinfo() { prot = 0; }
 
-    const sockaddr *sav4 () const;
-    const socklen_t salenv4 () const
-    {
-      return sizeof (sockaddr_in);
-    }
-
-    const char *ntoa () const;
-
-    bool valid () const
-    {
-      return prot != 0 && host != 0;
-    }
-
-    sockinfo() { prot = 0; }
-
-    sockinfo(const char *hostname, u16 port, u8 prot) { set (hostname, port, prot); }
-    sockinfo(const sockaddr_in &sa, u8 prot)          { set (&sa, prot);            }
-    sockinfo(const conf_node *conf, u8 prot)          { set (conf, prot);           }
-  };
+  sockinfo(const char *hostname, u16 port, u8 prot) { set (hostname, port, prot); }
+  sockinfo(const sockaddr_in &sa, u8 prot)          { set (&sa, prot);            }
+  sockinfo(const conf_node *conf, u8 prot)          { set (conf, prot);           }
+};
 
 bool operator == (const sockinfo &a, const sockinfo &b);
 bool operator <  (const sockinfo &a, const sockinfo &b);

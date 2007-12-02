@@ -35,7 +35,8 @@ struct vpn;
 // called after HUP etc. to (re-)initialize global data structures
 void connection_init ();
 
-struct rsaid {
+struct rsaid
+{
   u8 id[RSA_IDLEN]; // the challenge id
 };
 
@@ -61,130 +62,130 @@ private:
 };
 
 struct vpn_packet : hmac_packet
+{
+  enum ptype
   {
-    enum ptype
-    {
-      PT_RESET = 0,
-      PT_DATA_UNCOMPRESSED,
-      PT_DATA_COMPRESSED,
-      PT_PING, PT_PONG,	// wasting namespace space? ;)
-      PT_AUTH_REQ,	// authentification request
-      PT_AUTH_RES,	// authentification response
-      PT_CONNECT_REQ,	// want other node to contact me
-      PT_CONNECT_INFO,	// request connection to some node
-      PT_DATA_BRIDGED,  // uncompressed packet with foreign mac pot. larger than path mtu
-      PT_MAX
-    };
-
-    u8 type;
-    u8 srcdst, src1, dst1;
-
-    void set_hdr (ptype type_, unsigned int dst);
-
-    unsigned int src () const
-    {
-      return src1 | ((srcdst >> 4) << 8);
-    }
-
-    unsigned int dst () const
-    {
-      return dst1 | ((srcdst & 0xf) << 8);
-    }
-
-    ptype typ () const
-    {
-      return (ptype) type;
-    }
+    PT_RESET = 0,
+    PT_DATA_UNCOMPRESSED,
+    PT_DATA_COMPRESSED,
+    PT_PING, PT_PONG,	// wasting namespace space? ;)
+    PT_AUTH_REQ,	// authentification request
+    PT_AUTH_RES,	// authentification response
+    PT_CONNECT_REQ,	// want other node to contact me
+    PT_CONNECT_INFO,	// request connection to some node
+    PT_DATA_BRIDGED,  // uncompressed packet with foreign mac pot. larger than path mtu
+    PT_MAX
   };
+
+  u8 type;
+  u8 srcdst, src1, dst1;
+
+  void set_hdr (ptype type_, unsigned int dst);
+
+  unsigned int src () const
+  {
+    return src1 | ((srcdst >> 4) << 8);
+  }
+
+  unsigned int dst () const
+  {
+    return dst1 | ((srcdst & 0xf) << 8);
+  }
+
+  ptype typ () const
+  {
+    return (ptype) type;
+  }
+};
 
 ////////////////////////////////////////////////////////////////////////////////////////
 
 // a very simple fifo pkt-queue
 class pkt_queue
-  {
-    net_packet *queue[QUEUEDEPTH];
-    int i, j;
+{
+  net_packet *queue[QUEUEDEPTH];
+  int i, j;
 
-  public:
+public:
 
-    void put (net_packet *p);
-    net_packet *get ();
+  void put (net_packet *p);
+  net_packet *get ();
 
-    pkt_queue ();
-    ~pkt_queue ();
-  };
+  pkt_queue ();
+  ~pkt_queue ();
+};
 
 enum
-  {
-    FEATURE_COMPRESSION = 0x01,
-    FEATURE_ROHC        = 0x02,
-    FEATURE_BRIDGING    = 0x04,
-  };
+{
+  FEATURE_COMPRESSION = 0x01,
+  FEATURE_ROHC        = 0x02,
+  FEATURE_BRIDGING    = 0x04,
+};
 
 struct connection
-  {
-    conf_node *conf;
-    struct vpn *vpn;
+{
+  conf_node *conf;
+  struct vpn *vpn;
 
-    sockinfo si; // the current(!) destination ip to send packets to
-    int retry_cnt;
+  sockinfo si; // the current(!) destination ip to send packets to
+  int retry_cnt;
 
-    tstamp last_activity;	// time of last packet received
+  tstamp last_activity;	// time of last packet received
 
-    u32 oseqno;
-    sliding_window iseqno;
+  u32 oseqno;
+  sliding_window iseqno;
 
-    u8 protocol;
-    u8 features;
+  u8 protocol;
+  u8 features;
 
-    pkt_queue data_queue, vpn_queue;
+  pkt_queue data_queue, vpn_queue;
 
-    crypto_ctx *octx, *ictx;
+  crypto_ctx *octx, *ictx;
 
 #if ENABLE_DNS
-    struct dns_connection *dns;
+  struct dns_connection *dns;
 
-    void dnsv4_reset_connection ();
+  void dnsv4_reset_connection ();
 #endif
 
-    enum conf_node::connectmode connectmode;
-    u8 prot_minor; // minor number of other side
+  enum conf_node::connectmode connectmode;
+  u8 prot_minor; // minor number of other side
 
-    void reset_si ();
-    const sockinfo &forward_si (const sockinfo &si) const;
+  void reset_si ();
+  const sockinfo &forward_si (const sockinfo &si) const;
 
-    void shutdown ();
-    void connection_established ();
-    void reset_connection ();
+  void shutdown ();
+  void connection_established ();
+  void reset_connection ();
 
-    void establish_connection_cb (ev::timer &w, int revents); ev::timer establish_connection;
-    void rekey_cb (ev::timer &w, int revents); ev::timer rekey; // next rekying (actually current reset + reestablishing)
-    void keepalive_cb (ev::timer &w, int revents); ev::timer keepalive; // next keepalive probe
+  void establish_connection_cb (ev::timer &w, int revents); ev::timer establish_connection;
+  void rekey_cb (ev::timer &w, int revents); ev::timer rekey; // next rekying (actually current reset + reestablishing)
+  void keepalive_cb (ev::timer &w, int revents); ev::timer keepalive; // next keepalive probe
 
-    void send_connect_request (int id);
-    void send_auth_request (const sockinfo &si, bool initiate);
-    void send_auth_response (const sockinfo &si, const rsaid &id, const rsachallenge &chg);
-    void send_connect_info (int rid, const sockinfo &rsi, u8 rprotocols);
-    void send_reset (const sockinfo &dsi);
-    void send_ping (const sockinfo &dsi, u8 pong = 0);
-    void send_data_packet (tap_packet *pkt);
+  void send_connect_request (int id);
+  void send_auth_request (const sockinfo &si, bool initiate);
+  void send_auth_response (const sockinfo &si, const rsaid &id, const rsachallenge &chg);
+  void send_connect_info (int rid, const sockinfo &rsi, u8 rprotocols);
+  void send_reset (const sockinfo &dsi);
+  void send_ping (const sockinfo &dsi, u8 pong = 0);
+  void send_data_packet (tap_packet *pkt);
 
-    void inject_data_packet (tap_packet *pkt, bool broadcast = false);
-    void inject_vpn_packet (vpn_packet *pkt, int tos = 0); // for forwarding
+  void inject_data_packet (tap_packet *pkt, bool broadcast = false);
+  void inject_vpn_packet (vpn_packet *pkt, int tos = 0); // for forwarding
 
-    void recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi);
-    void send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos = 0);
+  void recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi);
+  void send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos = 0);
 
-    void script_init_env (const char *ext);
-    void script_init_connect_env ();
-    const char *script_node_up ();
-    const char *script_node_down ();
+  void script_init_env (const char *ext);
+  void script_init_connect_env ();
+  const char *script_node_up ();
+  const char *script_node_down ();
 
-    void dump_status ();
+  void dump_status ();
 
-    connection (struct vpn *vpn, conf_node *conf);
-    ~connection ();
-  };
+  connection (struct vpn *vpn, conf_node *conf);
+  ~connection ();
+};
 
 #endif
 

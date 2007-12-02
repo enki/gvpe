@@ -29,7 +29,8 @@
 #include "global.h"
 #include "util.h"
 
-struct net_packet {
+struct net_packet
+{
   u32 len; // actually u16, but padding...
 
   u8 &operator[] (u16 offset) const;
@@ -81,7 +82,8 @@ struct net_packet {
   void operator delete (void *p);
 };
 
-struct data_packet : net_packet {
+struct data_packet : net_packet
+{
   u8 data_[MAXSIZE];
 };
 
@@ -97,13 +99,15 @@ u8 *net_packet::at (u16 offset) const
   return &((*this)[offset]);
 }
 
-struct tap_packet : net_packet {
+struct tap_packet : net_packet
+{
   mac dst;
   mac src;
   u8 data[MAXSIZE - 12];
 };
 
-struct tap_device {
+struct tap_device
+{
   int fd;
 
   // network interface name or identifier

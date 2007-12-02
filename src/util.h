@@ -62,7 +62,8 @@ extern void id2mac (unsigned int id, void *m);
 
 #define mac2id(p) ((p)[0] & 0x01 ? 0 : ((p)[4] << 8) | (p)[5])
 
-struct sliding_window {
+struct sliding_window
+{
   u32 v[(WINDOWSIZE + 31) / 32];
   u32 seq;
 
