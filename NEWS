@@ -6,6 +6,10 @@ gvpe NEWS
           (http://software.schmorp.de/pkg/libev).
         - tcp connections were leaking in some cases.
         - save a lot of setsockopt calls when the tos doesn't change.
+        - changed callback mechanism to be slightly less portable
+          but more efficient mechanism (standards-compliant c++ compilers
+          should work).
+        - upgraded liblzf to version 3.1.
         - bugfixes.
 
 2.01 Thu Mar 29 19:26:04 CEST 2007

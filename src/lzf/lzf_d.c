@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000-2005 Marc Alexander Lehmann <schmorp@schmorp.de>
+ * Copyright (c) 2000-2007 Marc Alexander Lehmann <schmorp@schmorp.de>
  * 
  * Redistribution and use in source and binary forms, with or without modifica-
  * tion, are permitted provided that the following conditions are met:
@@ -10,9 +10,6 @@
  *   2.  Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- * 
- *   3.  The name of the author may not be used to endorse or promote products
- *       derived from this software without specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MER-
@@ -26,14 +23,15 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Alternatively, the contents of this file may be used under the terms of
- * the GNU General Public License version 2 (the "GPL"), in which case the
- * provisions of the GPL are applicable instead of the above. If you wish to
- * allow the use of your version of this file only under the terms of the
- * GPL and not to allow others to use your version of this file under the
- * BSD license, indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by the GPL. If
- * you do not delete the provisions above, a recipient may use your version
- * of this file under either the BSD or the GPL.
+ * the GNU General Public License ("GPL") version 2 or any later version,
+ * in which case the provisions of the GPL are applicable instead of
+ * the above. If you wish to allow the use of your version of this file
+ * only under the terms of the GPL and not to allow others to use your
+ * version of this file under the BSD license, indicate your decision
+ * by deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL. If you do not delete the
+ * provisions above, a recipient may use your version of this file under
+ * either the BSD or the GPL.
  */
 
 #include "lzfP.h"
@@ -43,6 +41,13 @@
 #else
 # include <errno.h>
 # define SET_ERRNO(n) errno = (n)
+#endif
+
+#if (__i386 || __amd64) && __GNUC__ >= 3
+# define lzf_movsb(dst, src, len)                \
+   asm ("rep movsb"                              \
+        : "=D" (dst), "=S" (src), "=c" (len)     \
+        :  "0" (dst),  "1" (src),  "2" (len));
 #endif
 
 unsigned int 
@@ -68,10 +73,16 @@ lzf_decompress (const void *const in_data,  unsigned int in_len,
               return 0;
             }
 
-#if USE_MEMCPY
-          memcpy (op, ip, ctrl);
-          op += ctrl;
-          ip += ctrl;
+#if CHECK_INPUT
+          if (ip + ctrl > in_end)
+            {
+              SET_ERRNO (EINVAL);
+              return 0;
+            }
+#endif
+
+#ifdef lzf_movsb
+          lzf_movsb (op, ip, ctrl);
 #else
           do
             *op++ = *ip++;
@@ -84,9 +95,25 @@ lzf_decompress (const void *const in_data,  unsigned int in_len,
 
           u8 *ref = op - ((ctrl & 0x1f) << 8) - 1;
 
+#if CHECK_INPUT
+          if (ip >= in_end)
+            {
+              SET_ERRNO (EINVAL);
+              return 0;
+            }
+#endif
           if (len == 7)
-            len += *ip++;
-          
+            {
+              len += *ip++;
+#if CHECK_INPUT
+              if (ip >= in_end)
+                {
+                  SET_ERRNO (EINVAL);
+                  return 0;
+                }
+#endif
+            }
+
           ref -= *ip++;
 
           if (op + len + 2 > out_end)
@@ -101,15 +128,20 @@ lzf_decompress (const void *const in_data,  unsigned int in_len,
               return 0;
             }
 
+#ifdef lzf_movsb
+          len += 2;
+          lzf_movsb (op, ref, len);
+#else
           *op++ = *ref++;
           *op++ = *ref++;
 
           do
             *op++ = *ref++;
           while (--len);
+#endif
         }
     }
-  while (op < out_end && ip < in_end);
+  while (ip < in_end);
 
   return op - (u8 *)out_data;
 }
