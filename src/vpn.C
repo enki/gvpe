@@ -48,6 +48,18 @@ vpn network; // THE vpn (bad design...)
 
 /////////////////////////////////////////////////////////////////////////////
 
+static void inline
+set_tos (int fd, int &tos_prev, int tos)
+{
+#if defined(SOL_IP) && defined(IP_TOS)
+  if (tos_prev == tos)
+    return;
+
+  tos_prev = tos;
+  setsockopt (fd, SOL_IP, IP_TOS, &tos, sizeof tos);
+#endif
+}
+
 void
 vpn::script_init_env ()
 {
@@ -100,7 +112,8 @@ const char *vpn::script_if_up ()
 int
 vpn::setup ()
 {
-  ipv4_fd = -1;
+  ipv4_tos = -1;
+  ipv4_fd  = -1;
 
   if (THISNODE->protocols & PROT_IPv4 && ::conf.ip_proto)
     {
@@ -133,7 +146,8 @@ vpn::setup ()
       ipv4_ev_watcher.start (ipv4_fd, EV_READ);
     }
 
-  udpv4_fd = -1;
+  udpv4_tos = -1;
+  udpv4_fd  = -1;
 
   if (THISNODE->protocols & PROT_UDPv4 && THISNODE->udp_port)
     {
@@ -172,7 +186,8 @@ vpn::setup ()
       udpv4_ev_watcher.start (udpv4_fd, EV_READ);
     }
 
-  icmpv4_fd = -1;
+  icmpv4_tos = -1;
+  icmpv4_fd  = -1;
 
 #if ENABLE_ICMP
   if (THISNODE->protocols & PROT_ICMPv4)
@@ -255,6 +270,9 @@ vpn::setup ()
     }
 #endif
 
+  dnsv4_tos = -1;
+  dnsv4_fd  = -1;
+
 #if ENABLE_DNS
   if (THISNODE->protocols & PROT_DNSv4)
     {
@@ -335,9 +353,7 @@ vpn::setup ()
 bool
 vpn::send_ipv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
-#if defined(SOL_IP) && defined(IP_TOS)
-  setsockopt (ipv4_fd, SOL_IP, IP_TOS, &tos, sizeof tos);
-#endif
+  set_tos (ipv4_fd, ipv4_tos, tos);
   sendto (ipv4_fd, &((*pkt)[0]), pkt->len, 0, si.sav4 (), si.salenv4 ());
 
   return true;
@@ -370,10 +386,6 @@ ipv4_checksum (u16 *data, unsigned int len)
 bool
 vpn::send_icmpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
-#if defined(SOL_IP) && defined(IP_TOS)
-  setsockopt (icmpv4_fd, SOL_IP, IP_TOS, &tos, sizeof tos);
-#endif
-
   pkt->unshift_hdr (4);
 
   icmp_header *hdr = (icmp_header *)&((*pkt)[0]);
@@ -382,6 +394,7 @@ vpn::send_icmpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
   hdr->checksum = 0;
   hdr->checksum = ipv4_checksum ((u16 *)hdr, pkt->len);
 
+  set_tos (icmpv4_fd, icmpv4_tos, tos);
   sendto (icmpv4_fd, &((*pkt)[0]), pkt->len, 0, si.sav4 (), si.salenv4 ());
 
   return true;
@@ -391,9 +404,7 @@ vpn::send_icmpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 bool
 vpn::send_udpv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 {
-#if defined(SOL_IP) && defined(IP_TOS)
-  setsockopt (udpv4_fd, SOL_IP, IP_TOS, &tos, sizeof tos);
-#endif
+  set_tos (udpv4_fd, udpv4_tos, tos);
   sendto (udpv4_fd, &((*pkt)[0]), pkt->len, 0, si.sav4 (), si.salenv4 ());
 
   return true;
@@ -465,8 +476,10 @@ vpn::send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos)
     {
       case PROT_IPv4:
         return send_ipv4_packet (pkt, si, tos);
+
       case PROT_UDPv4:
         return send_udpv4_packet (pkt, si, tos);
+
 #if ENABLE_TCP 
       case PROT_TCPv4:
         return send_tcpv4_packet (pkt, si, tos);
@@ -479,7 +492,6 @@ vpn::send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos)
       case PROT_DNSv4:
         return send_dnsv4_packet (pkt, si, tos);
 #endif
-
       default:
         slog (L_CRIT, _("%s: FATAL: trying to send packet with unsupported protocol"), (const char *)si);
     }

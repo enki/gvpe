@@ -29,8 +29,8 @@
 
 struct vpn
 {
-  int udpv4_fd, tcpv4_fd, ipv4_fd, icmpv4_fd, dnsv4_fd;
-  int udpv4_tos, tcpv4_tos, ipv4_tos, icmpv4_tos, dnsv4_tos;
+  int udpv4_fd , tcpv4_fd, ipv4_fd , icmpv4_fd , dnsv4_fd;
+  int udpv4_tos,           ipv4_tos, icmpv4_tos, dnsv4_tos;
 
   int events;
 
