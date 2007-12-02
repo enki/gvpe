@@ -5,6 +5,7 @@ gvpe NEWS
         - convert from iom.C to libev, a high-performance event loop
           (http://software.schmorp.de/pkg/libev).
         - tcp connections were leaking in some cases.
+        - save a lot of setsockopt calls when the tos doesn't change.
         - bugfixes.
 
 2.01 Thu Mar 29 19:26:04 CEST 2007

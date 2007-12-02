@@ -160,7 +160,7 @@ AC_CACHE_SAVE
 dnl Checks for libraries.
 
 AC_LANG(C++)
-AC_CHECK_HEADERS(ext/hash_map clocale)
+AC_CHECK_HEADERS(tr1/unordered_map ext/hash_map clocale)
 
 dnl Checks for header files.
 AC_CHECK_HEADERS([fcntl.h inttypes.h limits.h malloc.h stdint.h strings.h syslog.h unistd.h \

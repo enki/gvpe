@@ -71,6 +71,7 @@ struct tcp_si_map : public map<const sockinfo *, tcp_connection *, lt_sockinfo> 
 } tcp_si;
 
 struct tcp_connection : ev::io {
+  int tos;
   tstamp last_activity;
   const sockinfo si;
   vpn &v;
@@ -411,7 +412,11 @@ tcp_connection::send_packet (vpn_packet *pkt, int tos)
           // how this maps to the underlying tcp packets we don't know
           // and we don't care. at least we tried ;)
 #if defined(SOL_IP) && defined(IP_TOS)
-          setsockopt (fd, SOL_IP, IP_TOS, &tos, sizeof tos);
+          if (tos != this->tos)
+            {
+              this->tos = tos;
+              setsockopt (fd, SOL_IP, IP_TOS, &tos, sizeof tos);
+            }
 #endif
 
           w_pkt = pkt;
@@ -440,7 +445,8 @@ void tcp_connection::error ()
   if (fd >= 0)
     {
       close (fd);
-      fd = -1;
+      tos = -1;
+      fd  = -1;
     }
 
   delete r_pkt; r_pkt = 0;
@@ -458,6 +464,7 @@ tcp_connection::tcp_connection (int fd_, const sockinfo &si_, vpn &v_)
   last_activity = ev_now ();
   r_pkt = 0;
   w_pkt = 0;
+  tos = -1;
   fd = fd_;
 #if ENABLE_HTTP_PROXY
   proxy_req = 0;

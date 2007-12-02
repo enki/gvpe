@@ -7677,7 +7677,8 @@ done
 
 
 
-for ac_header in ext/hash_map clocale
+
+for ac_header in tr1/unordered_map ext/hash_map clocale
 do
 as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
 if { as_var=$as_ac_Header; eval "test \"\${$as_var+set}\" = set"; }; then
@@ -9955,6 +9956,7 @@ _ACEOF
 
 fi
 
+      unset ac_cv_func_clock_gettime
 
 for ac_func in clock_gettime
 do
