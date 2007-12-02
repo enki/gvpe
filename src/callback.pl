@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 
+use strict;
+
 print <<EOF;
 // THIS IS A GENERATED FILE: RUN callback.pl to regenerate it
 // THIS IS A GENERATED FILE: callback.pl is part of the GVPE
@@ -7,7 +9,7 @@ print <<EOF;
 
 /*
     callback.h -- C++ callback mechanism
-    Copyright (C) 2003-2006 Marc Lehmann <pcg\@goof.com>
+    Copyright (C) 2003-2007 Marc Lehmann <pcg\@goof.com>
  
     This file is part of GVPE.
 
@@ -29,7 +31,7 @@ print <<EOF;
 #ifndef CALLBACK_H__
 #define CALLBACK_H__
 
-#define CALLBACK_H_VERSION 2
+#define CALLBACK_H_VERSION 3
 
 template<class signature>
 struct callback_funtype_trait;
@@ -47,55 +49,40 @@ for my $a (0..10) {
    my $TYPEDEFS  = join " ", map "typedef A$_ arg$_\_type;", 1..$a;
    my $TYPEvoid  = $TYPE    ? $TYPE        : "void";
    my $_TYPE     = $TYPE    ? ", $TYPE"    : "";
-   my $_ARG      = $ARG     ? ", $ARG"     : "";
-   my $_TYPEARG  = $TYPEARG ? ", $TYPEARG" : "";
    my $_TTYPE    = $a       ? join "", map ", typename T::arg$_\_type", 1..$a : "";
    
    print <<EOF;
 template<class R$CLASS>
 class callback$a
 {
-  struct object { };
+  struct klass; // it is vital that this is never defined
 
-  typedef R (object::*ptr_type)($TYPE);
+  typedef R (klass::*ptr_type)($TYPE);
 
-  void *obj;
-  R (object::*meth)($TYPE);
-
-  /* a proxy is a kind of recipe on how to call a specific class method	*/
-  struct proxy_base {
-    virtual R call (void *obj, R (object::*meth)($TYPE)$_TYPEARG) const = 0;
-  };
-  template<class O1, class O2>
-  struct proxy : proxy_base {
-    virtual R call (void *obj, R (object::*meth)($TYPE)$_TYPEARG) const
-      {
-        return (R)((reinterpret_cast<O1 *>(obj)) ->* (reinterpret_cast<R (O2::*)($TYPE)>(meth)))
-          ($ARG);
-      }
-  };
-
-  proxy_base *prxy;
+  klass *o;
+  R (klass::*m)($TYPE);
 
 public:
   template<class O1, class O2>
   explicit callback$a (O1 *object, R (O2::*method)($TYPE))
-    {
-      static proxy<O1,O2> p;
-      obj  = reinterpret_cast<void *>(object);
-      meth = reinterpret_cast<R (object::*)($TYPE)>(method);
-      prxy = &p;
-    }
+  {
+    o = reinterpret_cast<klass *>(object);
+    m = reinterpret_cast<R (klass::*)($TYPE)>(method);
+  }
 
+  // this works because a standards-compliant C++ compiler
+  // basically can't help it: it doesn't have the knowledge
+  // required to miscompile (klass is not defined anywhere
+  // and nothing is known about the constructor arguments) :)
   R call($TYPEARG) const
-    {
-      return prxy->call (obj, meth$_ARG);
-    }
+  {
+    return (o->*m) ($ARG);
+  }
 
   R operator ()($TYPEARG) const
-    {
-      return call ($ARG);
-    }
+  {
+    return call ($ARG);
+  }
 };
 
 template<class R$CLASS>
@@ -131,9 +118,9 @@ struct callback : callback_get_impl<callback_funtype_trait<signature>::arity, si
 
   template<class O, class M>
   explicit callback (O object, M method)
-    : base_type (object, method)
-    {
-    }
+  : base_type (object, method)
+  {
+  }
 };
 
 #endif

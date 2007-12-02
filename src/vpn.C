@@ -1,6 +1,6 @@
 /*
     vpn.C -- handle the protocol, encryption, handshaking etc.
-    Copyright (C) 2003-2005 Marc Lehmann <gvpe@schmorp.de>
+    Copyright (C) 2003-2007 Marc Lehmann <gvpe@schmorp.de>
  
     This file is part of GVPE.
 
