@@ -84,7 +84,8 @@ rsa_hash (const rsaid &id, const rsachallenge &chg, rsaresponse &h)
   EVP_MD_CTX_cleanup (&ctx);
 }
 
-struct rsa_entry {
+struct rsa_entry
+{
   tstamp expire;
   rsaid id;
   rsachallenge chg;
@@ -193,7 +194,8 @@ pkt_queue::~pkt_queue ()
     delete queue[i];
 }
 
-struct net_rateinfo {
+struct net_rateinfo
+{
   u32    host;
   double pcnt, diff;
   tstamp last;

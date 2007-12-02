@@ -59,7 +59,8 @@ struct lt_sockinfo
   }
 };
 
-struct tcp_si_map : public map<const sockinfo *, tcp_connection *, lt_sockinfo> {
+struct tcp_si_map : public map<const sockinfo *, tcp_connection *, lt_sockinfo>
+{
   void cleaner_cb (ev::timer &w, int revents); ev::timer cleaner;
 
   tcp_si_map ()
@@ -70,7 +71,8 @@ struct tcp_si_map : public map<const sockinfo *, tcp_connection *, lt_sockinfo> 
 
 } tcp_si;
 
-struct tcp_connection : ev::io {
+struct tcp_connection : ev::io
+{
   int tos;
   tstamp last_activity;
   const sockinfo si;

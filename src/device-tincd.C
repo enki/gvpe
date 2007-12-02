@@ -67,7 +67,8 @@
 
 // BIGGEST hack of 'em all
 // will be casted to data_packet, due to structural similarity
-struct vpn_packet_t : net_packet {
+struct vpn_packet_t : net_packet
+{
   u8 data[MAXSIZE];
 };
 

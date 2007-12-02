@@ -27,7 +27,8 @@
 
 extern struct vpn network;
 
-struct ether_emu : map<u32, int> {
+struct ether_emu : map<u32, int>
+{
   typedef map<u32, int> ipv4map;
   ipv4map ipv4;
 
