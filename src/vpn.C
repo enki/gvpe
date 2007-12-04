@@ -331,15 +331,19 @@ vpn::setup ()
   
   fcntl (tap->fd, F_SETFD, FD_CLOEXEC);
 
+  run_script_cb cb;
+
+  callback_set (cb, this, vpn, script_if_init);
   if (tap->if_up () &&
-      !run_script (run_script_cb (this, &vpn::script_if_init), true))
+      !run_script (cb, true))
     {
       slog (L_ERR, _("interface initialization command '%s' failed, exiting."),
             tap->if_up ());
       exit (EXIT_FAILURE);
     }
 
-  if (!run_script (run_script_cb (this, &vpn::script_if_up), true))
+  callback_set (cb, this, vpn, script_if_up);
+  if (!run_script (cb, true))
     {
       slog (L_ERR, _("if-up command execution failed, exiting."));
       exit (EXIT_FAILURE);

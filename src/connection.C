@@ -808,8 +808,12 @@ connection::reset_connection ()
             conf->nodename, (const char *)si);
 
       if (::conf.script_node_down)
-        if (!run_script (run_script_cb (this, &connection::script_node_down), false))
-          slog (L_WARN, _("node-down command execution failed, continuing."));
+        {
+          run_script_cb cb;
+          callback_set (cb, this, connection, script_node_down);
+          if (!run_script (cb, false))
+            slog (L_WARN, _("node-down command execution failed, continuing."));
+        }
     }
 
   delete ictx; ictx = 0;
@@ -1043,8 +1047,12 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                                 p->prot_major, p->prot_minor);
 
                           if (::conf.script_node_up)
-                            if (!run_script (run_script_cb (this, &connection::script_node_up), false))
-                              slog (L_WARN, _("node-up command execution failed, continuing."));
+                            {
+                              run_script_cb cb;
+                              callback_set (cb, this, connection, script_node_up);
+                              if (!run_script (cb, false))
+                                slog (L_WARN, _("node-up command execution failed, continuing."));
+                            }
 
                           break;
                         }

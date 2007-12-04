@@ -28,6 +28,9 @@
 #include "sockinfo.h"
 #include "slog.h"
 
+#include <cstring>
+#include <cstdio>
+
 // all ipv4-based protocols
 #define PROTv4 (PROT_UDPv4 | PROT_TCPv4 | PROT_ICMPv4 | PROT_IPv4 | PROT_DNSv4)
 

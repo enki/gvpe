@@ -33,11 +33,10 @@ print <<EOF;
 
 #define CALLBACK_H_VERSION 3
 
-template<class signature>
-struct callback_funtype_trait;
+template<typename signature>
+struct callback;
 
-template<int arity, class signature>
-struct callback_get_impl;
+#define callback_set(callback,obj,klass,method) callback.set<klass, &klass::method> (obj)
 
 EOF
 
@@ -48,35 +47,51 @@ for my $a (0..10) {
    my $TYPEARG   = join ", ", map "A$_ a$_", 1..$a;
    my $TYPEDEFS  = join " ", map "typedef A$_ arg$_\_type;", 1..$a;
    my $TYPEvoid  = $TYPE    ? $TYPE        : "void";
+   my $_ARG      = $ARG     ? ", $ARG"     : "";
    my $_TYPE     = $TYPE    ? ", $TYPE"    : "";
+   my $_TYPEARG  = $TYPEARG ? ", $TYPEARG" : "";
    my $_TTYPE    = $a       ? join "", map ", typename T::arg$_\_type", 1..$a : "";
    
    print <<EOF;
 template<class R$CLASS>
-class callback$a
+struct callback<R ($TYPE)>
 {
-  struct klass; // it is vital that this is never defined
+  typedef R (*ptr_type)(void *self$_TYPE);
 
-  typedef R (klass::*ptr_type)($TYPE);
+private:
 
-  klass *o;
-  R (klass::*m)($TYPE);
+  void *self;
+  ptr_type func;
 
-public:
-  template<class O1, class O2>
-  explicit callback$a (O1 *object, R (O2::*method)($TYPE))
+protected:
+
+  template<typename method>
+  struct thunktype;
+
+  template<class klass>
+  struct thunktype<R (klass::*)>
   {
-    o = reinterpret_cast<klass *>(object);
-    m = reinterpret_cast<R (klass::*)($TYPE)>(method);
+    typedef klass K;
+  };
+
+  template<class klass, R (klass::*method)($TYPE)>
+  static R thunk (void *self$_TYPEARG)
+  {
+    klass *obj = static_cast<klass *>(self);
+    return (obj->*method) ($ARG);
   }
 
-  // this works because a standards-compliant C++ compiler
-  // basically can't help it: it doesn't have the knowledge
-  // required to miscompile (klass is not defined anywhere
-  // and nothing is known about the constructor arguments) :)
-  R call($TYPEARG) const
+public:
+  template<class K, R (K::*method)($TYPE)>
+  void set (K *object)
   {
-    return (o->*m) ($ARG);
+    self = object;
+    func = thunk<K, method>;
+  }
+
+  R call ($TYPEARG) const
+  {
+    return func (self$_ARG);
   }
 
   R operator ()($TYPEARG) const
@@ -85,43 +100,10 @@ public:
   }
 };
 
-template<class R$CLASS>
-struct callback_funtype_trait$a
-{
-  static const int arity = $a;
-  typedef R type ($TYPEvoid);
-  typedef R result_type;
-  $TYPEDEFS
-};
-
-template<class R$CLASS>
-struct callback_funtype_trait<R ($TYPE)> : callback_funtype_trait$a<R$_TYPE>
-{
-};
-
-template<class signature>
-struct callback_get_impl<$a, signature>
-{
-  typedef callback_funtype_trait<signature> T;
-  typedef callback$a<typename T::result_type$_TTYPE> type;
-};
-   
 EOF
 }
 
 print <<EOF
-
-template<class signature>
-struct callback : callback_get_impl<callback_funtype_trait<signature>::arity, signature>::type
-{
-  typedef typename callback_get_impl<callback_funtype_trait<signature>::arity, signature>::type base_type;
-
-  template<class O, class M>
-  explicit callback (O object, M method)
-  : base_type (object, method)
-  {
-  }
-};
 
 #endif
 EOF
