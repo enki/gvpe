@@ -44,6 +44,7 @@
 
 #include <map>
 
+#include <cstdio> /* bug in libgmp: gmp.h relies on cstdio being included */
 #include <gmp.h>
 
 #include "netcompat.h"
