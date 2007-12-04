@@ -727,8 +727,9 @@ dns_connection::dns_connection (connection *c)
 : c (c)
 , rcvdq (MAX_BACKLOG * 2)
 , snddq (MAX_BACKLOG)
-, tw (this, &dns_connection::time_cb)
 {
+  tw.set<dns_connection, &dns_connection::time_cb> (this);
+
   vpn = c->vpn;
 
   established = false;

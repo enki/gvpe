@@ -332,8 +332,8 @@ vpn::setup ()
   fcntl (tap->fd, F_SETFD, FD_CLOEXEC);
 
   run_script_cb cb;
+  cb.set<vpn, &vpn::script_if_init> (this);
 
-  callback_set (cb, this, vpn, script_if_init);
   if (tap->if_up () &&
       !run_script (cb, true))
     {
@@ -342,7 +342,7 @@ vpn::setup ()
       exit (EXIT_FAILURE);
     }
 
-  callback_set (cb, this, vpn, script_if_up);
+  cb.set<vpn, &vpn::script_if_up> (this);
   if (!run_script (cb, true))
     {
       slog (L_ERR, _("if-up command execution failed, exiting."));
@@ -782,20 +782,20 @@ vpn::dump_status ()
 }
 
 vpn::vpn (void)
-: event            (this, &vpn::event_cb)
-, udpv4_ev_watcher (this, &vpn::udpv4_ev)
-, ipv4_ev_watcher  (this, &vpn::ipv4_ev)
+{
+  event            .set<vpn, &vpn::event_cb > (this);
+  udpv4_ev_watcher .set<vpn, &vpn::udpv4_ev > (this);
+  ipv4_ev_watcher  .set<vpn, &vpn::ipv4_ev  > (this);
 #if ENABLE_TCP
-, tcpv4_ev_watcher (this, &vpn::tcpv4_ev)
+  tcpv4_ev_watcher .set<vpn, &vpn::tcpv4_ev > (this);
 #endif
 #if ENABLE_ICMP
-, icmpv4_ev_watcher(this, &vpn::icmpv4_ev)
+  icmpv4_ev_watcher.set<vpn, &vpn::icmpv4_ev> (this);
 #endif
 #if ENABLE_DNS
-, dnsv4_ev_watcher (this, &vpn::dnsv4_ev)
+  dnsv4_ev_watcher .set<vpn, &vpn::dnsv4_ev > (this);
 #endif
-, tap_ev_watcher   (this, &vpn::tap_ev)
-{
+  tap_ev_watcher   .set<vpn, &vpn::tap_ev   > (this);
 }
 
 vpn::~vpn ()

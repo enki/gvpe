@@ -36,8 +36,6 @@ print <<EOF;
 template<typename signature>
 struct callback;
 
-#define callback_set(callback,obj,klass,method) callback.set<klass, &klass::method> (obj)
-
 EOF
 
 for my $a (0..10) {

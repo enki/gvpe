@@ -64,8 +64,8 @@ struct tcp_si_map : public map<const sockinfo *, tcp_connection *, lt_sockinfo>
   void cleaner_cb (ev::timer &w, int revents); ev::timer cleaner;
 
   tcp_si_map ()
-  : cleaner(this, &tcp_si_map::cleaner_cb)
   {
+    cleaner.set<tcp_si_map, &tcp_si_map::cleaner_cb> (this);
     cleaner.start (::conf.keepalive / 2, ::conf.keepalive / 2);
   }
 
@@ -461,8 +461,10 @@ void tcp_connection::error ()
 }
 
 tcp_connection::tcp_connection (int fd_, const sockinfo &si_, vpn &v_)
-: v(v_), si(si_), ev::io(this, &tcp_connection::tcpv4_ev)
+: v(v_), si(si_)
 {
+  set<tcp_connection, &tcp_connection::tcpv4_ev> (this);
+
   last_activity = ev_now ();
   r_pkt = 0;
   w_pkt = 0;

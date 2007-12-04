@@ -132,8 +132,8 @@ struct rsa_cache : list<rsa_entry>
   }
 
   rsa_cache ()
-  : cleaner (this, &rsa_cache::cleaner_cb)
   {
+    cleaner.set<rsa_cache, &rsa_cache::cleaner_cb> (this);
     cleaner.set (RSA_TTL, RSA_TTL);
   }
 
@@ -810,7 +810,7 @@ connection::reset_connection ()
       if (::conf.script_node_down)
         {
           run_script_cb cb;
-          callback_set (cb, this, connection, script_node_down);
+          cb.set<connection, &connection::script_node_down> (this);
           if (!run_script (cb, false))
             slog (L_WARN, _("node-down command execution failed, continuing."));
         }
@@ -1049,7 +1049,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                           if (::conf.script_node_up)
                             {
                               run_script_cb cb;
-                              callback_set (cb, this, connection, script_node_up);
+                              cb.set<connection, &connection::script_node_up> (this);
                               if (!run_script (cb, false))
                                 slog (L_WARN, _("node-up command execution failed, continuing."));
                             }
@@ -1265,13 +1265,14 @@ const char *connection::script_node_down ()
 
 connection::connection (struct vpn *vpn, conf_node *conf)
 : vpn(vpn), conf(conf)
-, rekey (this, &connection::rekey_cb)
-, keepalive (this, &connection::keepalive_cb)
-, establish_connection (this, &connection::establish_connection_cb)
 #if ENABLE_DNS
 , dns (0)
 #endif
 {
+  rekey               .set<connection, &connection::rekey_cb               > (this);
+  keepalive           .set<connection, &connection::keepalive_cb           > (this);
+  establish_connection.set<connection, &connection::establish_connection_cb> (this);
+
   octx = ictx = 0;
   retry_cnt = 0;
 
