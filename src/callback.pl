@@ -56,30 +56,6 @@ struct callback<R ($TYPE)>
 {
   typedef R (*ptr_type)(void *self$_TYPE);
 
-private:
-
-  void *self;
-  ptr_type func;
-
-protected:
-
-  template<typename method>
-  struct thunktype;
-
-  template<class klass>
-  struct thunktype<R (klass::*)>
-  {
-    typedef klass K;
-  };
-
-  template<class klass, R (klass::*method)($TYPE)>
-  static R thunk (void *self$_TYPEARG)
-  {
-    klass *obj = static_cast<klass *>(self);
-    return (obj->*method) ($ARG);
-  }
-
-public:
   template<class K, R (K::*method)($TYPE)>
   void set (K *object)
   {
@@ -95,6 +71,18 @@ public:
   R operator ()($TYPEARG) const
   {
     return call ($ARG);
+  }
+
+private:
+
+  void *self;
+  ptr_type func;
+
+  template<class klass, R (klass::*method)($TYPE)>
+  static R thunk (void *self$_TYPEARG)
+  {
+    klass *obj = static_cast<klass *>(self);
+    return (obj->*method) ($ARG);
   }
 };
 
