@@ -93,7 +93,7 @@ struct rsa_entry
 
 struct rsa_cache : list<rsa_entry>
 {
-  void cleaner_cb (ev::timer &w, int revents); ev::timer cleaner;
+  inline void cleaner_cb (ev::timer &w, int revents); ev::timer cleaner;
   
   bool find (const rsaid &id, rsachallenge &chg)
   {
@@ -747,7 +747,7 @@ connection::send_connect_info (int rid, const sockinfo &rsi, u8 rprotocols)
   delete r;
 }
 
-void
+inline void
 connection::establish_connection_cb (ev::timer &w, int revents)
 {
   if (!ictx
@@ -841,7 +841,7 @@ connection::shutdown ()
   reset_connection ();
 }
 
-void
+inline void
 connection::rekey_cb (ev::timer &w, int revents)
 {
   reset_connection ();
@@ -1178,7 +1178,8 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
     }
 }
 
-void connection::keepalive_cb (ev::timer &w, int revents)
+inline void
+connection::keepalive_cb (ev::timer &w, int revents)
 {
   if (ev_now () >= last_activity + ::conf.keepalive + 30)
     {
@@ -1233,7 +1234,8 @@ void connection::script_init_connect_env ()
   asprintf (&env, "DESTPORT=%d", ntohs (si.port)); putenv (env);
 }
 
-const char *connection::script_node_up ()
+inline const char *
+connection::script_node_up ()
 {
   script_init_connect_env ();
 
@@ -1248,7 +1250,8 @@ const char *connection::script_node_up ()
   return filename;
 }
 
-const char *connection::script_node_down ()
+inline const char *
+connection::script_node_down ()
 {
   script_init_connect_env ();
 

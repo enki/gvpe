@@ -89,14 +89,16 @@ vpn::script_init_env ()
     }
 }
 
-const char *vpn::script_if_init ()
+inline const char *
+vpn::script_if_init ()
 {
   script_init_env ();
 
   return tap->if_up ();
 }
 
-const char *vpn::script_if_up ()
+inline const char *
+vpn::script_if_up ()
 {
   script_init_env ();
 
@@ -503,7 +505,7 @@ vpn::send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos)
   return false;
 }
 
-void
+inline void
 vpn::ipv4_ev (ev::io &w, int revents)
 {
   if (revents & EV_READ)
@@ -544,7 +546,7 @@ vpn::ipv4_ev (ev::io &w, int revents)
 }
 
 #if ENABLE_ICMP
-void
+inline void
 vpn::icmpv4_ev (ev::io &w, int revents)
 {
   if (revents & EV_READ)
@@ -592,7 +594,7 @@ vpn::icmpv4_ev (ev::io &w, int revents)
 }
 #endif
 
-void
+inline void
 vpn::udpv4_ev (ev::io &w, int revents)
 {
   if (revents & EV_READ)
@@ -629,7 +631,7 @@ vpn::udpv4_ev (ev::io &w, int revents)
     }
 }
 
-void
+inline void
 vpn::tap_ev (ev::io &w, int revents)
 {
   if (revents & EV_READ)
@@ -671,7 +673,7 @@ vpn::tap_ev (ev::io &w, int revents)
     abort ();
 }
 
-void
+inline void
 vpn::event_cb (ev::timer &w, int)
 {
   if (events)

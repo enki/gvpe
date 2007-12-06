@@ -562,7 +562,7 @@ struct dns_connection
   byte_stream rcvdq; int rcvseq; int repseq;
   byte_stream snddq; int sndseq;
 
-  void time_cb (ev::timer &w, int revents); ev::timer tw;
+  inline void time_cb (ev::timer &w, int revents); ev::timer tw;
   void receive_rep (dns_rcv *r);
 
   dns_connection (connection *c);

@@ -61,7 +61,7 @@ struct lt_sockinfo
 
 struct tcp_si_map : public map<const sockinfo *, tcp_connection *, lt_sockinfo>
 {
-  void cleaner_cb (ev::timer &w, int revents); ev::timer cleaner;
+  inline void cleaner_cb (ev::timer &w, int revents); ev::timer cleaner;
 
   tcp_si_map ()
   {
@@ -91,7 +91,7 @@ struct tcp_connection : ev::io
   int proxy_req_len;
 #endif
 
-  void tcpv4_ev (ev::io &w, int revents);
+  inline void tcpv4_ev (ev::io &w, int revents);
 
   bool send_packet (vpn_packet *pkt, int tos);
   bool write_packet ();
