@@ -65,6 +65,7 @@ struct tcp_si_map : public map<const sockinfo *, tcp_connection *, lt_sockinfo>
 
   tcp_si_map ()
   {
+    ev_default_loop (0);
     cleaner.set<tcp_si_map, &tcp_si_map::cleaner_cb> (this);
     cleaner.start (::conf.keepalive / 2, ::conf.keepalive / 2);
   }
