@@ -4,7 +4,7 @@ AC_PREREQ(2.59)
 AC_INIT
 AC_CONFIG_SRCDIR([src/gvpe.C])
 AC_CANONICAL_TARGET
-AM_INIT_AUTOMAKE(gvpe, 2.01)
+AM_INIT_AUTOMAKE(gvpe, 2.2)
 AC_CONFIG_HEADERS([config.h])
 AM_MAINTAINER_MODE
 
@@ -361,9 +361,9 @@ if $CXX -v --help 2>&1 | grep -q fno-rtti; then
    CXXFLAGS="$CXXFLAGS -fno-rtti"
 fi
 
-if $CXX -v --help 2>&1 | grep -q fexceptions; then
-   CXXFLAGS="$CXXFLAGS -fno-exceptions"
-fi
+#if $CXX -v --help 2>&1 | grep -q fexceptions; then
+#   CXXFLAGS="$CXXFLAGS -fno-exceptions"
+#fi
 
 LIBS="$EXTRA_LIBS $LIBS"
 
