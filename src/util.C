@@ -139,15 +139,25 @@ detach (int do_detach)
   return 0;
 }
 
-bool run_script (const run_script_cb &cb, bool wait)
+pid_t
+run_script (const run_script_cb &cb, bool wait)
 {
-  if (wait)
-    signal (SIGCHLD, SIG_DFL); // this is extremely ugly, but I did not feel like implementing a complete wait() event logic. It's easier to write this long comment to make your editor happy.
+  sigset_t oldset;
 
-  int pid = fork ();
+  if (wait)
+    {
+      sigset_t sigchld;
+      sigemptyset (&sigchld);
+      sigaddset (&sigchld, SIGCHLD);
+      sigprocmask (SIG_BLOCK, &sigchld, &oldset);
+    }
+
+  pid_t pid = fork ();
 
   if (pid == 0)
     {
+      sigprocmask (SIG_SETMASK, &oldset, 0);
+
       execl ("/bin/sh", "/bin/sh", "-c", cb (), (char *) 0);
       exit (EXIT_FAILURE);
     }
@@ -158,19 +168,19 @@ bool run_script (const run_script_cb &cb, bool wait)
           int status;
           int res = waitpid (pid, &status, 0);
 
-          signal (SIGCHLD, SIG_IGN);
+          sigprocmask (SIG_SETMASK, &oldset, 0);
 
           if (res < 0)
             {
               slog (L_WARN, _("waiting for an external command failed: %s."),
                     strerror (errno));
-              return false;
+              return 0;
             }
           else if (!WIFEXITED (status) || WEXITSTATUS (status) != EXIT_SUCCESS)
             {
               slog (L_WARN, _("external command returned with exit status %d (%04x)."),
                     WEXITSTATUS (status), status);
-              return false;
+              return 0;
             }
         }
     }
@@ -180,7 +190,7 @@ bool run_script (const run_script_cb &cb, bool wait)
       exit (EXIT_FAILURE);
     }
 
-  return true;
+  return pid;
 }
 
 #if ENABLE_HTTP_PROXY

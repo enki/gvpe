@@ -35,6 +35,7 @@
 #define UTIL_H__
 
 #include <cstring>
+#include <sys/types.h>
 
 #include <openssl/rsa.h>
 
@@ -127,7 +128,7 @@ struct sliding_window
 typedef callback<const char * ()> run_script_cb;
 
 // run a shell script (or actually an external program).
-bool run_script (const run_script_cb &cb, bool wait);
+pid_t run_script (const run_script_cb &cb, bool wait);
 
 #if ENABLE_HTTP_PROXY
 u8 *base64_encode (const u8 *data, unsigned int len);

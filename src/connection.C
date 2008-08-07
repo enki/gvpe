@@ -32,6 +32,8 @@
 #include "config.h"
 
 #include <list>
+#include <queue>
+#include <utility>
 
 #include <openssl/rand.h>
 #include <openssl/evp.h>
@@ -57,6 +59,47 @@
 #include "lzf/lzf.h"
 #include "lzf/lzf_c.c"
 #include "lzf/lzf_d.c"
+
+//////////////////////////////////////////////////////////////////////////////
+
+static std::queue< std::pair<run_script_cb *, const char *> > rs_queue;
+static ev::child rs_child_ev;
+
+void // c++ requires external linkage here, apparently :(
+rs_child_cb (ev::child &w, int revents)
+{
+  w.stop ();
+
+  if (rs_queue.empty ())
+    return;
+
+  pid_t pid = run_script (*rs_queue.front ().first, false);
+  if (pid)
+    {
+      w.set (pid);
+      w.start ();
+    }
+  else
+    slog (L_WARN, rs_queue.front ().second);
+
+  delete rs_queue.front ().first;
+  rs_queue.pop ();
+}
+
+// despite the fancy name, this is quite a hack
+static void
+run_script_queued (run_script_cb *cb, const char *warnmsg)
+{
+  rs_queue.push (std::make_pair (cb, warnmsg));
+
+  if (!rs_child_ev.is_active ())
+    {
+      rs_child_ev.set<rs_child_cb> ();
+      rs_child_ev ();
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
 
 struct crypto_ctx
 {
@@ -860,10 +903,9 @@ connection::reset_connection ()
 
       if (::conf.script_node_down)
         {
-          run_script_cb cb;
-          cb.set<connection, &connection::script_node_down> (this);
-          if (!run_script (cb, false))
-            slog (L_WARN, _("node-down command execution failed, continuing."));
+          run_script_cb *cb = new run_script_cb;
+          cb->set<connection, &connection::script_node_down> (this);
+          run_script_queued (cb, _("node-down command execution failed, continuing."));
         }
     }
 
@@ -1106,10 +1148,9 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 
                           if (::conf.script_node_up)
                             {
-                              run_script_cb cb;
-                              cb.set<connection, &connection::script_node_up> (this);
-                              if (!run_script (cb, false))
-                                slog (L_WARN, _("node-up command execution failed, continuing."));
+                              run_script_cb *cb = new run_script_cb;
+                              cb->set<connection, &connection::script_node_up> (this);
+                              run_script_queued (cb, _("node-up command execution failed, continuing."));
                             }
 
                           break;

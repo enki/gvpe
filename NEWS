@@ -16,6 +16,7 @@ gvpe NEWS
           should work).
         - upgraded liblzf to version 3.2.
         - dropped -fno-exceptions due to ev++.h using it.
+        - node-up/Down scripts are now run in sequence.
         - bugfixes.
 
 2.01 Thu Mar 29 19:26:04 CEST 2007

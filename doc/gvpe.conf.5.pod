@@ -302,10 +302,13 @@ argument to the gvpe daemon.
 
 =item node-up = relative-or-absolute-path
 
-Sets a command (default: no script) that should be called whenever a
-connection is established (even on rekeying operations). In addition to
-all the variables passed to C<if-up> scripts, the following environment
-variables will be set:
+Sets a command (default: none) that should be called whenever a connection
+is established (even on rekeying operations). Note that node-up/down
+scripts will be run asynchronously, but execution is serialised, so there
+will only ever be one such script running.
+
+In addition to all the variables passed to C<if-up> scripts, the following
+environment variables will be set:
 
 =over 4
 
