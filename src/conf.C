@@ -149,6 +149,8 @@ void configuration::init ()
   default_node.compress    = true;
   default_node.protocols   = 0;
   default_node.max_retry   = DEFAULT_MAX_RETRY;
+  default_node.max_ttl     = DEFAULT_MAX_TTL;
+  default_node.max_queue   = DEFAULT_MAX_QUEUE;
   default_node.if_up_data  = strdup ("");
 
 #if ENABLE_DNS
@@ -462,6 +464,10 @@ configuration_parser::parse_line (char *line)
     node->allow_direct.push_back (strdup (val));
   else if (!strcmp (var, "deny-direct"))
     node->deny_direct.push_back (strdup (val));
+  else if (!strcmp (var, "max-ttl"))
+    node->max_ttl = atof (val);
+  else if (!strcmp (var, "max-queue"))
+    node->max_queue = atoi (val);
 
   // unknown or misplaced
   else

@@ -103,15 +103,28 @@ struct vpn_packet : hmac_packet
 // a very simple fifo pkt-queue
 class pkt_queue
 {
-  net_packet *queue[QUEUEDEPTH];
   int i, j;
+  int max_queue;
+  double max_ttl;
+
+  struct pkt {
+    ev_tstamp tstamp;
+    net_packet *pkt;
+  } *queue;
+
+  void expire_cb (ev::timer &w, int revents); ev::timer expire;
 
 public:
 
   void put (net_packet *p);
   net_packet *get ();
 
-  pkt_queue ();
+  bool empty ()
+  {
+    return i == j;
+  }
+
+  pkt_queue (double max_ttl, int max_queue);
   ~pkt_queue ();
 };
 

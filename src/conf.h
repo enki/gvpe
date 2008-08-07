@@ -34,6 +34,8 @@
 #define DEFAULT_UDPPORT	       		655	// same as tinc, conflicts would be rare
 #define DEFAULT_MTU	       		1500	// let's ether-net
 #define DEFAULT_MAX_RETRY      		3600	// retry at least this often
+#define DEFAULT_MAX_TTL      		60	// packets expire after this many seconds
+#define DEFAULT_MAX_QUEUE      		512	// never queue more than this many packets
  
 #define DEFAULT_DNS_TIMEOUT_FACTOR	8.F	// initial retry timeout multiple
 #define DEFAULT_DNS_SEND_INTERVAL	.01F	// minimum send interval
@@ -73,6 +75,8 @@ struct conf_node
   u8 protocols;   // protocols this host can send & receive
   u16 udp_port, tcp_port;   // the port to bind to
   int max_retry;
+  double max_ttl;   // packets expire after this many seconds
+  int max_queue;    // maixmum send queue length
 
   enum connectmode { C_ONDEMAND, C_NEVER, C_ALWAYS, C_DISABLED } connectmode;
   bool compress;

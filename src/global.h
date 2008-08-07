@@ -67,9 +67,7 @@
 #define ETH_OVERHEAD  14			// the size of an ethernet header
 #define MAXSIZE       (MAX_MTU + VPE_OVERHEAD)	// slightly too large, but who cares
 
-#define PKTCACHESIZE	5	// the size of the memory pool for packets
-
-#define QUEUEDEPTH	16	// the number of packets that will be queued (should be low)
+#define PKTCACHESIZE	16	// the size of the memory pool for packets
 
 extern char *confbase;		// directory in which all config files are
 extern char *thisnode;		// config for current node (TODO: remove)

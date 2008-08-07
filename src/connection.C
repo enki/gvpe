@@ -155,43 +155,76 @@ void rsa_cache::cleaner_cb (ev::timer &w, int revents)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void pkt_queue::put (net_packet *p)
+pkt_queue::pkt_queue (double max_ttl, int max_queue)
+: max_ttl (max_ttl), max_queue (max_queue)
 {
-  if (queue[i])
-    {
-      delete queue[i];
-      j = (j + 1) % QUEUEDEPTH;
-    }
+  queue = new pkt [max_queue];
 
-  queue[i] = p;
-
-  i = (i + 1) % QUEUEDEPTH;
-}
-
-net_packet *pkt_queue::get ()
-{
-  net_packet *p = queue[j];
-
-  if (p)
-    {
-      queue[j] = 0;
-      j = (j + 1) % QUEUEDEPTH;
-    }
-
-  return p;
-}
-
-pkt_queue::pkt_queue ()
-{
-  memset (queue, 0, sizeof (queue));
   i = 0;
   j = 0;
+
+  expire.set<pkt_queue, &pkt_queue::expire_cb> (this);
 }
 
 pkt_queue::~pkt_queue ()
 {
-  for (i = QUEUEDEPTH; --i > 0; )
-    delete queue[i];
+  while (net_packet *p = get ())
+    delete p;
+
+  delete [] queue;
+}
+
+void pkt_queue::expire_cb (ev::timer &w, int revents)
+{
+  ev_tstamp expire = ev_now () - max_ttl;
+
+  for (;;)
+    {
+      if (empty ())
+        break;
+
+      double diff = queue[j].tstamp - expire;
+
+      if (diff >= 0.)
+        {
+          w.start (diff > 0.5 ? diff : 0.5);
+          break;
+        }
+
+      delete get ();
+    }
+}
+
+void pkt_queue::put (net_packet *p)
+{
+  ev_tstamp now = ev_now ();
+
+  // start expiry timer
+  if (empty ())
+    expire.start (max_ttl);
+
+  int ni = i + 1 == max_queue ? 0 : i + 1;
+
+  if (ni == j)
+    delete get ();
+
+  queue[i].pkt    = p;
+  queue[i].tstamp = now;
+
+  i = ni;
+}
+
+net_packet *pkt_queue::get ()
+{
+  if (empty ())
+    return 0;
+
+  net_packet *p = queue[j].pkt;
+  queue[j].pkt = 0;
+
+  j = j + 1 == max_queue ? 0 : j + 1;
+
+  return p;
 }
 
 struct net_rateinfo
@@ -592,8 +625,6 @@ connection::connection_established ()
 
   if (ictx && octx)
     {
-      connectmode = conf->connectmode;
-
       // make sure rekeying timeouts are slightly asymmetric
       ev::tstamp rekey_interval = ::conf.rekey + (conf->id > THISNODE->id ? 10 : 0);
       rekey.start (rekey_interval, rekey_interval);
@@ -604,13 +635,13 @@ connection::connection_established ()
         {
           while (tap_packet *p = (tap_packet *)data_queue.get ())
             {
-              send_data_packet (p);
+              if (p->len) send_data_packet (p);
               delete p;
             }
 
           while (vpn_packet *p = (vpn_packet *)vpn_queue.get ())
             {
-              send_vpn_packet (p, si, IPTOS_RELIABILITY);
+              if (p->len) send_vpn_packet (p, si, IPTOS_RELIABILITY);
               delete p;
             }
         }
@@ -756,6 +787,14 @@ connection::establish_connection_cb (ev::timer &w, int revents)
       && connectmode != conf_node::C_DISABLED
       && !w.is_active ())
     {
+      // a bit hacky, if ondemand, and packets are no longer queued, then reset the connection
+      // and stop trying. should probably be handled by a per-connection expire handler.
+      if (connectmode == conf_node::C_ONDEMAND && vpn_queue.empty () && data_queue.empty ())
+        {
+          reset_connection ();
+          return;
+        }
+
       ev::tstamp retry_int = ev::tstamp (retry_cnt & 3
                                          ? (retry_cnt & 3) + 1
                                          : 1 << (retry_cnt >> 2));
@@ -1267,10 +1306,12 @@ connection::script_node_down ()
 }
 
 connection::connection (struct vpn *vpn, conf_node *conf)
-: vpn(vpn), conf(conf)
+: vpn(vpn), conf(conf),
 #if ENABLE_DNS
-, dns (0)
+  dns (0),
 #endif
+  data_queue(conf->max_ttl, conf->max_queue),
+  vpn_queue(conf->max_ttl, conf->max_queue)
 {
   rekey               .set<connection, &connection::rekey_cb               > (this);
   keepalive           .set<connection, &connection::keepalive_cb           > (this);
@@ -1282,7 +1323,16 @@ connection::connection (struct vpn *vpn, conf_node *conf)
   if (!conf->protocols) // make sure some protocol is enabled
     conf->protocols = PROT_UDPv4;
 
-  connectmode = conf_node::C_ALWAYS; // initial setting
+  connectmode = conf->connectmode;
+
+  // queue a dummy packet to force an initial connection attempt
+  if (connectmode != conf_node::C_ALWAYS && connectmode != conf_node::C_DISABLED)
+    {
+      net_packet *p = new net_packet;
+      p->len = 0;
+      vpn_queue.put (p);
+    }
+
   reset_connection ();
 }
 
