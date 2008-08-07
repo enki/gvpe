@@ -431,7 +431,7 @@ vpn::inject_data_packet (tap_packet *pkt, int dst)
       // we have to connect to all hosts...
       for (conns_vector::iterator c = conns.begin (); c != conns.end (); ++c)
         if ((*c)->conf != THISNODE)
-          (*c)->inject_data_packet (pkt, true);
+          (*c)->inject_data_packet (pkt);
   }
 }
 

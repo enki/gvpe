@@ -795,6 +795,8 @@ connection::establish_connection_cb (ev::timer &w, int revents)
           return;
         }
 
+      last_establish_attempt = ev_now ();
+
       ev::tstamp retry_int = ev::tstamp (retry_cnt & 3
                                          ? (retry_cnt & 3) + 1
                                          : 1 << (retry_cnt >> 2));
@@ -827,7 +829,7 @@ connection::establish_connection_cb (ev::timer &w, int revents)
             }
         }
 
-      retry_int *= slow ? 8. : 0.7;
+      retry_int *= slow ? 8. : 0.9;
 
       if (retry_int < conf->max_retry)
         retry_cnt++;
@@ -907,16 +909,24 @@ connection::send_data_packet (tap_packet *pkt)
 }
 
 void
-connection::inject_data_packet (tap_packet *pkt, bool broadcast/*TODO DDD*/)
+connection::post_inject_queue ()
+{
+  // force a connection every now and when when packets are sent (max 1/s)
+  if (ev_now () - last_establish_attempt >= 0.95) // arbitrary
+    establish_connection.stop ();
+
+  establish_connection ();
+}
+
+void
+connection::inject_data_packet (tap_packet *pkt)
 {
   if (ictx && octx)
     send_data_packet (pkt);
   else
     {
-      if (!broadcast)
-        data_queue.put (new tap_packet (*pkt));
-
-      establish_connection ();
+      data_queue.put (new tap_packet (*pkt));
+      post_inject_queue ();
     }
 }
 
@@ -927,8 +937,7 @@ void connection::inject_vpn_packet (vpn_packet *pkt, int tos)
   else
     {
       vpn_queue.put ((vpn_packet *)new data_packet (*(data_packet *)pkt));
-
-      establish_connection ();
+      post_inject_queue ();
     }
 }
 
@@ -1317,8 +1326,8 @@ connection::connection (struct vpn *vpn, conf_node *conf)
   keepalive           .set<connection, &connection::keepalive_cb           > (this);
   establish_connection.set<connection, &connection::establish_connection_cb> (this);
 
+  last_establish_attempt = 0.;
   octx = ictx = 0;
-  retry_cnt = 0;
 
   if (!conf->protocols) // make sure some protocol is enabled
     conf->protocols = PROT_UDPv4;
@@ -1327,11 +1336,7 @@ connection::connection (struct vpn *vpn, conf_node *conf)
 
   // queue a dummy packet to force an initial connection attempt
   if (connectmode != conf_node::C_ALWAYS && connectmode != conf_node::C_DISABLED)
-    {
-      net_packet *p = new net_packet;
-      p->len = 0;
-      vpn_queue.put (p);
-    }
+    vpn_queue.put (new net_packet);
 
   reset_connection ();
 }

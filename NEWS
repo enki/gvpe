@@ -1,15 +1,20 @@
 gvpe NEWS
 
 2.2
-	- protocol version 0.1, compatible with older releases.
+	- protocol version 0.1, compatible with older releases,
+          but upgrade is recommended to due changed ondemand behaviour.
+        - new per-node options max-ttl and max-queue.
         - convert from iom.C to libev, a high-performance event loop
           (http://software.schmorp.de/pkg/libev).
         - tcp connections were leaking in some cases.
+        - retry more aggressively (once/s) to establish a connection if
+          new packets arrive for it.
         - save a lot of setsockopt calls when the tos doesn't change.
+        - honor disabled even on initial connect attempt.
         - changed callback mechanism to be slightly less portable
           but more efficient mechanism (standards-compliant c++ compilers
           should work).
-        - upgraded liblzf to version 3.1.
+        - upgraded liblzf to version 3.2.
         - dropped -fno-exceptions due to ev++.h using it.
         - bugfixes.
 

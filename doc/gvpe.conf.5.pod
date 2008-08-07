@@ -395,9 +395,9 @@ overhead at all, so enabling this is a good idea.
 Sets the connect mode (default: C<always>). It can be C<always> (always
 try to establish and keep a connection to the given host), C<never>
 (never initiate a connection to the given host, but accept connections),
-C<ondemand> (try to establish a connection on the first packet sent, and
-take it down after the keepalive interval) or C<disabled> (node is bad,
-don't talk to it).
+C<ondemand> (try to establish a connection when there are outstanding
+packets in the queue and take it down after the keepalive interval) or
+C<disabled> (node is bad, don't talk to it).
 
 =item deny-direct = nodename | *
 
@@ -531,6 +531,20 @@ be established, gvpe uses exponential backoff capped at this value. It's
 sometimes useful to set this to a much lower value (e.g. C<120>) on
 connections to routers that usually are stable but sometimes are down, to
 assure quick reconnections even after longer downtimes.
+
+=item max-ttl = seconds
+
+Expire packets that couldn't be sent after this many seconds
+(default: C<60>). Gvpe will normally queue packets for a node without an
+active connection, in the hope of establishing a connection soon. This
+value specifies the maximum lifetime a packet will stay in the queue, if a
+packet gets older, it will be thrown away.
+
+=item max-queue = positive-number
+
+The maximum number of packets that will be queued (default: C<512>)
+for this node. If more packets are sent then earlier packets will be
+expired. See C<max-ttl>, above.
 
 =item router-priority = 0 | 1 | positive-number>=2
 

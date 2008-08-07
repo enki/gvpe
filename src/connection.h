@@ -73,7 +73,7 @@ struct vpn_packet : hmac_packet
     PT_AUTH_RES,	// authentification response
     PT_CONNECT_REQ,	// want other node to contact me
     PT_CONNECT_INFO,	// request connection to some node
-    PT_DATA_BRIDGED,  // uncompressed packet with foreign mac pot. larger than path mtu
+    PT_DATA_BRIDGED,    // uncompressed packet with foreign mac pot. larger than path mtu (NYI)
     PT_MAX
   };
 
@@ -144,6 +144,7 @@ struct connection
   int retry_cnt;
 
   tstamp last_activity;	// time of last packet received
+  tstamp last_establish_attempt; 
 
   u32 oseqno;
   sliding_window iseqno;
@@ -183,7 +184,8 @@ struct connection
   void send_ping (const sockinfo &dsi, u8 pong = 0);
   void send_data_packet (tap_packet *pkt);
 
-  void inject_data_packet (tap_packet *pkt, bool broadcast = false);
+  void post_inject_queue ();
+  void inject_data_packet (tap_packet *pkt);
   void inject_vpn_packet (vpn_packet *pkt, int tos = 0); // for forwarding
 
   void recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi);
