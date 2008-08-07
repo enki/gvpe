@@ -1,8 +1,8 @@
-vpe author:
+Gvpe Author:
 
-Marc Lehmann <pether@plan9.de>
+Marc Lehmann <gvpe@schmorp.de>
 
-Although the actual vpe code was completely rewritten, the configuration
-setup and many utility functions were taken from the tinc package, by Guus
-Sliepen <guus@sliepen.eu.org> and Ivo Timmermans <ivo@o2w.nl>.
+Although the actual gvpe code was completely rewritten, some configure
+macros and were taken from the tinc package, by Guus Sliepen
+<guus@sliepen.eu.org> and Ivo Timmermans <ivo@o2w.nl>.
 
