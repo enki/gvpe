@@ -713,7 +713,7 @@ connection::reset_si ()
 {
   protocol = best_protocol (THISNODE->protocols & conf->protocols);
 
-  // mask out protocols we cannot establish
+  // mask out endpoints we can't connect to
   if (!conf->udp_port) protocol &= ~PROT_UDPv4;
   if (!conf->tcp_port) protocol &= ~PROT_TCPv4;
   if (!conf->dns_port) protocol &= ~PROT_DNSv4;
@@ -744,7 +744,7 @@ connection::forward_si (const sockinfo &si) const
           return r->si;
         }
       else
-        slog (L_DEBUG, _("%s: node unreachable, no common protocol"),
+        slog (L_DEBUG, _("%s: node unreachable, no common protocol, no router"),
               conf->nodename);
     }
 
