@@ -1370,8 +1370,8 @@ connection::connection (struct vpn *vpn, conf_node *conf)
 #if ENABLE_DNS
   dns (0),
 #endif
-  data_queue(conf->max_ttl, conf->max_queue),
-  vpn_queue(conf->max_ttl, conf->max_queue)
+  data_queue(conf->max_ttl, conf->max_queue + 1),
+  vpn_queue(conf->max_ttl, conf->max_queue + 1)
 {
   rekey               .set<connection, &connection::rekey_cb               > (this);
   keepalive           .set<connection, &connection::keepalive_cb           > (this);

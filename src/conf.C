@@ -477,7 +477,12 @@ configuration_parser::parse_line (char *line)
   else if (!strcmp (var, "max-ttl"))
     node->max_ttl = atof (val);
   else if (!strcmp (var, "max-queue"))
-    node->max_queue = atoi (val);
+    {
+      node->max_queue = atoi (val);
+
+      if (node->max_queue < 1)
+        node->max_queue = 1;
+    }
 
   // unknown or misplaced
   else
