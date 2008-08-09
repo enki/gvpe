@@ -778,8 +778,6 @@ connection::dump_status ()
         connectmode, conf->connectmode, (const char *)si, (int)prot_minor);
   slog (L_NOTICE, _("  ictx/octx %08lx/%08lx / oseqno %d / retry_cnt %d"),
         (long)ictx, (long)octx, (int)oseqno, (int)retry_cnt);
-  slog (L_NOTICE, _("  establish_conn %ld / rekey %ld / keepalive %ld"),
-        (long)(establish_connection.at), (long)(rekey.at), (long)(keepalive.at));
 }
 
 void
