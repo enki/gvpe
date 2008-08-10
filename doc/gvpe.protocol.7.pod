@@ -12,8 +12,8 @@ are used by GVPE to send it's data packets over the network.
 
 =head1 PART 1: Transport protocols
 
-GVPE offers a range of transport protocols that can be used to interchange
-data between nodes. Protocols differ in their overhead, speed,
+GVPE offers a wide range of transport protocols that can be used to
+interchange data between nodes. Protocols differ in their overhead, speed,
 reliability, and robustness.
 
 The following sections describe each transport protocol in more
@@ -35,9 +35,9 @@ between nodes.
 =head2 ICMP
 
 This protocol offers very low overhead (minimum 42 bytes), and can
-sometimes tunnel through firewalls when other protocols cannot.
+sometimes tunnel through firewalls when other protocols can not.
 
-It works by prepending a ICMP header with type C<icmp-type> and a code
+It works by prepending an ICMP header with type C<icmp-type> and a code
 of C<255>. The default C<icmp-type> is C<echo-reply>, so the resulting
 packets look like echo replies, which looks rather strange to network
 admins.
@@ -70,10 +70,10 @@ most proxies do not allow connections to other ports.
 It is an abuse of the usage a proxy was designed for, so make sure you are
 allowed to use it for GVPE.
 
-This protocol also has server and client sides. If the C<tcp-port> is set
-to zero, other nodes cannot connect to this node directly (and C<tcp-port>
-zero cannot be used). If the C<tcp-port> is non-zero, the node can act
-both as a client as well as a server.
+This protocol also has server and client sides. If the C<tcp-port> is
+set to zero, other nodes cannot connect to this node directly. If the
+C<tcp-port> is non-zero, the node can act both as a client as well as a
+server.
 
 =head2 DNS
 
@@ -91,18 +91,18 @@ traffic even if it doesn't need to transport packets.
 In addition, the same problems as the TCP transport also plague this
 protocol.
 
-Most configuration needs to be done by editing C<src/vpn_dns.C> directly.
-
 It's only use is to tunnel through firewalls that do not allow direct
 internet access. Similar to using a HTTP proxy (as the TCP transport
 does), it uses a local DNS server/forwarder (given by the C<dns-forw-host>
 configuration value) as a proxy to send and receive data as a client,
-and a C<NS> record pointing to the GVPE server (as given by the
+and an C<NS> record pointing to the GVPE server (as given by the
 C<dns-hostname> directive).
 
 The only good side of this protocol is that it can tunnel through most
-firewalls undetected, iff the local DNS server/forwarder is sane (which is
-true for most routers, wlan gateways and nameservers).
+firewalls mostly undetected, iff the local DNS server/forwarder is sane
+(which is true for most routers, WLAN gateways and nameservers).
+
+Finetuning needs to be done by editing C<src/vpn_dns.C> directly.
 
 =head1 PART 2: The GNU VPE protocol
 
@@ -130,10 +130,7 @@ The TYPE field is a single byte and determines the purpose of the packet
 CONNECT REQUEST/INFO etc.).
 
 SRCDST is a three byte field which contains the source and destination
-node ids (12 bits each). The protocol does not yet scale well beyond 30+
-hosts, since all hosts must connect to each other once on startup. But if
-restarts are rare or tolerable and most connections are on demand, much
-larger networks are feasible.
+node IDs (12 bits each).
 
 The DATA portion differs between each packet type, naturally, and is the
 only part that can be encrypted. Data packets contain more fields, as
@@ -149,22 +146,22 @@ the data for encryption purposes.
 SEQNO is a 32-bit sequence number. It is negotiated at every connection
 initialization and starts at some random 31 bit value. VPE currently uses
 a sliding window of 512 packets/sequence numbers to detect reordering,
-duplication and reply attacks.
+duplication and replay attacks.
 
-=head2 The authentification protocol
+=head2 The authentication protocol
 
 Before hosts can exchange packets, they need to establish authenticity of
 the other side and a key. Every host has a private RSA key and the public
 RSA keys of all other hosts.
 
-A host establishes a simplex connection by sending the other host a
+A host establishes a simplex connection by sending the other host an
 RSA encrypted challenge containing a random challenge (consisting of
 the encryption key to use when sending packets, more random data and
 PKCS1_OAEP padding) and a random 16 byte "challenge-id" (used to detect
 duplicate auth packets). The destination host will respond by replying
 with an (unencrypted) RIPEMD160 hash of the decrypted challenge, which
-will authentify that host. The destination host will also set the outgoing
-encryption parameters as given in the packet.
+will authenticate that host. The destination host will also set the
+outgoing encryption parameters as given in the packet.
 
 When the source host receives a correct auth reply (by verifying the
 hash and the id, which will expire after 120 seconds), it will start to
@@ -184,9 +181,10 @@ pair).
 
 When there is no response to an auth request, the host will send auth
 requests in bursts with an exponential backoff. After some time it will
-resort to PING packets, which are very small (8 bytes) and lightweight
-(no RSA operations required). A host that receives ping requests from an
-unconnected peer will respond by trying to create a connection.
+resort to PING packets, which are very small (8 bytes + protocol header)
+and lightweight (no RSA operations required). A host that receives ping
+requests from an unconnected peer will respond by trying to create a
+connection.
 
 In addition to the exponential backoff, there is a global rate-limit on
 a per-IP base. It allows long bursts but will limit total packet rate to
@@ -194,40 +192,64 @@ something like one control packet every ten seconds, to avoid accidental
 floods due to protocol problems (like a RSA key file mismatch between two
 hosts).
 
+The intervals between retries are limited by the C<max-retry>
+configuration value. A node with C<connect> = C<always> will always retry,
+a node with C<connect> = C<ondemand> will only try (and re-try) to connect
+as long as there are packets in the queue, usually this limits the retry
+period to C<max-ttl> seconds.
+
+Sending packets over the VPN will reset the retry intervals as well, which
+means as long as somebody is trying to send packets to a given node, GVPE
+will try to connect every few seconds.
+
 =head2 Routing and Protocol translation
 
-The gvpe routing algorithm is easy: there isn't any routing. GVPE always
-tries to establish direct connections, if the protocol abilities of the
-two hosts allow it.
+The GVPE routing algorithm is easy: there isn't much routing to speak
+of: When routing packets to another node, GVPE trues the following
+options, in order:
 
-If the two hosts should be able to reach each other (common protocol, ip
-and port all known), but cannot (network down), then there will be no
-connection, point.
+=over 4
+
+=item If the two hosts should be able to reach each other directly (common
+protocol, port known), then GVPE will send the packet directly to the
+other node.
+
+=item If this isn't possible (e.g. because the node doesn't have a
+C<hostname> or known port), but the nodes speak a common protocol and a
+router is available, then GVPE will ask a router to "mediate" between both
+nodes (see below).
+
+=item If a direct connection isn't possible (no common protocols) or
+forbidden (C<deny-direct>) and there are any routers, then GVPE will try
+to send packets to the router with the highest priority that is connected
+already I<and> is able (as specified by the config file) to connect
+directly to the target node.
+
+=item If no such router exists, then GVPE will simply send the packet to
+the node with the highest priority available.
+
+=item Failing all that, the packet will be dropped.
+
+=back
 
 A host can usually declare itself unreachable directly by setting it's
 port number(s) to zero. It can declare other hosts as unreachable by using
-a config-file that disables all protocols for these other hosts.
+a config-file that disables all protocols for these other hosts. Another
+option is to disable all protocols on that host in the other config files.
 
 If two hosts cannot connect to each other because their IP address(es)
-are not known (such as dialup hosts), one side will send a connection
-request to a router (routers must be configured to act as routers!), which
-will send both the originating and the destination host a connection info
-request with protocol information and IP address of the other host (if
-known). Both hosts will then try to establish a connection to the other
-peer, which is usually possible even when both hosts are behind a NAT
-gateway.
+are not known (such as dialup hosts), one side will send a I<mediated>
+connection request to a router (routers must be configured to act as
+routers!), which will send both the originating and the destination host
+a connection info request with protocol information and IP address of the
+other host (if known). Both hosts will then try to establish a direct
+connection to the other peer, which is usually possible even when both
+hosts are behind a NAT gateway.
 
-If the hosts cannot reach each other because they have no common protocol,
-the originator instead use the router with highest priority and matching
-protocol as peer. Since the SRCDST field is not encrypted, the router host
-can just forward the packet to the destination host. Since each host uses
-it's own private key, the router will not be able to decrypt or encrypt
-packets, it will just act as a simple router and protocol translator.
+Routing via other nodes works because the SRCDST field is not encrypted,
+so the router can just forward the packet to the destination host. Since
+each host uses it's own private key, the router will not be able to
+decrypt or encrypt packets, it will just act as a simple router and
+protocol translator.
 
-When no router is connected, the host will aggressively try to connect to
-all routers, and if a router is asked for an unconnected host it will try
-to ask another router to establish the connection.
-
-... more not yet written about the details of the routing, please bug me
-...
 
