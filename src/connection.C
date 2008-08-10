@@ -1145,8 +1145,9 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                           si = rsi;
                           protocol = rsi.prot;
 
-                          slog (L_INFO, _("%s(%s): connection established, protocol version %d.%d."),
+                          slog (L_INFO, _("%s(%s): connection established (%s), protocol version %d.%d."),
                                 conf->nodename, (const char *)rsi,
+                                is_direct ? "direct" : "routed",
                                 p->prot_major, p->prot_minor);
 
                           connection_established ();
