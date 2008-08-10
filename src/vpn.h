@@ -69,7 +69,7 @@ struct vpn
   void tap_ev (ev::io &w, int revents); ev::io tap_ev_watcher;
   void inject_data_packet (tap_packet *pkt, int dst);
 
-  void send_connect_request (int id);
+  void send_connect_request (connection *c);
 
   void recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi);
   bool send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos = 0);

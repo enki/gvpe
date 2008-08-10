@@ -862,7 +862,7 @@ connection::establish_connection_cb (ev::timer &w, int revents)
         {
           /*TODO*/ /* start the timer so we don't recurse endlessly */
           w.start (1);
-          vpn->send_connect_request (conf->id);
+          vpn->send_connect_request (this);
         }
       else
         {

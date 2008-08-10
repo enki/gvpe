@@ -726,13 +726,11 @@ vpn::reconnect_all ()
 
   connection_init ();
 
-  for (configuration::node_vector::iterator i = conf.nodes.begin ();
-       i != conf.nodes.end (); ++i)
-    {
-      connection *conn = new connection (this, *i);
-      conns.push_back (conn);
-      conn->establish_connection ();
-    }
+  for (configuration::node_vector::iterator i = conf.nodes.begin (); i != conf.nodes.end (); ++i)
+    conns.push_back (new connection (this, *i));
+
+  for (conns_vector::iterator c = conns.begin (); c != conns.end (); ++c)
+    (*c)->establish_connection ();
 }
 
 bool vpn::can_direct (conf_node *src, conf_node *dst) const
@@ -821,18 +819,19 @@ void vpn::connection_established (connection *c)
     }
 }
 
-void vpn::send_connect_request (int id)
+void vpn::send_connect_request (connection *c)
 {
-  connection *c = find_router_for (conns[id]);
+  connection *r = find_router_for (c);
 
-  if (c)
+  if (r)
     {
       slog (L_TRACE, _("%s: no way to connect, sending mediated connection request via %s."),
-            conns[id]->conf->nodename, c->conf->nodename);
-      c->send_connect_request (id);
+            c->conf->nodename, r->conf->nodename);
+      r->send_connect_request (c->conf->id);
     }
   else
-    slog (L_DEBUG, _("%s: no way to connect and no router found: unable to connect."), conns[id]->conf->nodename);
+    slog (L_DEBUG, _("%s: no way to connect and no router found: unable to connect."),
+          c->conf->nodename);
 }
 
 void
