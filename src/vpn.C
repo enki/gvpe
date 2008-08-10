@@ -767,7 +767,8 @@ connection *vpn::find_router_for (const connection *dst)
 {
   connection *router = 0;
 
-  // first try to find a router with a direct connection
+  // first try to find a router with a direct connection, route there
+  // regardless of any other considerations.
   {
     u32 prio = 1;
 
@@ -777,16 +778,11 @@ connection *vpn::find_router_for (const connection *dst)
 
         if (c->conf->routerprio > prio
             && c->conf != THISNODE
-            && c != dst
-            && can_direct (c->conf, dst->conf))
+            && can_direct (c->conf, dst->conf)
+            && c->ictx && c->octx)
           {
-            if (c->ictx && c->octx)
-              {
-                prio = c->conf->routerprio;
-                router = c;
-              }
-            else
-              c->establish_connection ();
+            prio = c->conf->routerprio;
+            router = c;
           }
       }
   }
@@ -794,29 +790,25 @@ connection *vpn::find_router_for (const connection *dst)
   if (router)
     return router;
 
-  // second try find the router with the highest priority higher than ours
+  // second try find the router with the highest priority, higher than ours
   {
-    u32 prio = 1;
+    u32 prio = THISNODE->routerprio ? THISNODE->routerprio : 1;
 
     for (conns_vector::iterator i = conns.begin (); i != conns.end (); ++i)
       {
         connection *c = *i;
 
         if (c->conf->routerprio > prio
-            && c->conf->routerprio > THISNODE->routerprio
             && c != dst
-            && c->conf != THISNODE)
+            && c->conf != THISNODE
+            && c->ictx && c->octx)
           {
-            if (c->ictx && c->octx)
-              {
-                prio = c->conf->routerprio;
-                router = c;
-              }
-            else
-              c->establish_connection ();
+            prio = c->conf->routerprio;
+            router = c;
           }
       }
   }
+
   return router;
 }
 

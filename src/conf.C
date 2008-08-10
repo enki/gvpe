@@ -496,7 +496,7 @@ void conf_node::finalise ()
       max_queue = 1;
     }
 
-  if (routerprio && (connectmode != C_ALWAYS && connectmode != C_DISABLED))
+  if (routerprio > 1 && (connectmode != C_ALWAYS && connectmode != C_DISABLED))
     {
       //slog (L_WARN, _("%s: has non-zero router-priority but either 'never' or 'ondemand' as connectmode, setting it to 'always'."), nodename);
       connectmode = C_ALWAYS;

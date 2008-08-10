@@ -1,5 +1,8 @@
 gvpe NEWS
 
+TODO: udpoate dcumentation, algorithm
+todo: keepalive more aggressive?
+
 2.2
 	- protocol version 0.1, compatible with older releases,
           but upgrade is recommended to due changed ondemand behaviour.
@@ -14,6 +17,10 @@ gvpe NEWS
         - changed callback mechanism to be slightly less portable
           but more efficient mechanism (standards-compliant c++ compilers
           should work).
+        - increased receive window positive size, to allow for massive
+          packet loss due to occasional longer drop-outs.
+        - send RST when a positive window size violation is detected, but
+          not in other cases, to reconnect more quickly.
         - upgraded liblzf to version 3.2.
         - dropped -fno-exceptions due to ev++.h using it.
         - node-up/Down scripts are now run in sequence.
