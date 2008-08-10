@@ -1214,13 +1214,16 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                         //        conf->nodename, (const char *)si, (const char *)rsi);
                       }
                   }
-                else if (seqclass == 1) // silently ignore
-                  slog (L_ERR, _("received duplicate packet (received %08lx, expected %08lx)\n"
-                                 "possible replay attack, or just packet duplication, ignoring."), seqno, iseqno.seq + 1);
-                else if (seqclass == 2) // reset
+                else if (seqclass == 1) // far history
+                  slog (L_ERR, _("received very old packet (received %08lx, expected %08lx). "
+                                 "possible replay attack, or just packet duplication/delay, ignoring."), seqno, iseqno.seq + 1);
+                else if (seqclass == 2) // in-window duplicate, happens often on wireless
+                  slog (L_DEBUG, _("received recent duplicated packet (received %08lx, expected %08lx). "
+                                   "possible replay attack, or just packet duplication, ignoring."), seqno, iseqno.seq + 1);
+                else if (seqclass == 3) // reset
                   {
-                    slog (L_ERR, _("received duplicate or out-of-sync packet (received %08lx, expected %08lx)\n"
-                                   "possible replay attack, or just massive packet loss, resetting connection."), seqno, iseqno.seq + 1);
+                    slog (L_ERR, _("received out-of-sync (far future) packet (received %08lx, expected %08lx). "
+                                   "probably just massive packet loss, sending reset."), seqno, iseqno.seq + 1);
                     send_reset (rsi);
                   }
 

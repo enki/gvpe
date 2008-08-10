@@ -86,13 +86,13 @@ struct sliding_window
       seq = seqno;
     }
 
-  // 0 == ok, 1 == silently ignore, 2 == error, reset
+  // 0 == ok, 1 == far history, 2 == duplicate in-window, 3 == far future
   int seqno_classify (u32 seqno)
     {
       if (seqno <= seq - WINDOWSIZE)
         return 1;
       else if (seqno > seq + WINDOWSIZE * 16)
-        return 2;
+        return 3;
       else
         {
           while (seqno > seq)
@@ -111,7 +111,7 @@ struct sliding_window
           u32 mask = 1 << (s & 31);
 
           if (*cell & mask)
-            return 1;
+            return 2;
           else
             {
               *cell |= mask;
