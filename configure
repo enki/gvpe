@@ -1343,7 +1343,6 @@ Optional Features:
                           Broken combinations are: "tincd/cygwin"; The default
                           is to autodetect.
   --enable-static-daemon  enable statically linked daemon.
-  --enable-rohc           enable robust header compression (rfc3095).
   --enable-icmp           enable icmp protocol support (default disabled).
   --enable-tcp            enable tcp protocol support (default disabled).
   --enable-dns            enable dns tunnel protocol support (DOES NOT WORK).
@@ -9559,7 +9558,8 @@ fi
 
 
 
-for ac_header in sys/inotify.h sys/epoll.h sys/event.h sys/queue.h port.h poll.h sys/select.h
+
+for ac_header in sys/inotify.h sys/epoll.h sys/event.h sys/queue.h port.h poll.h sys/select.h sys/eventfd.h
 do
 as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
 if { as_var=$as_ac_Header; eval "test \"\${$as_var+set}\" = set"; }; then
@@ -9705,7 +9705,8 @@ done
 
 
 
-for ac_func in inotify_init epoll_ctl kqueue port_create poll select
+
+for ac_func in inotify_init epoll_ctl kqueue port_create poll select eventfd
 do
 as_ac_var=`echo "ac_cv_func_$ac_func" | $as_tr_sh`
 { echo "$as_me:$LINENO: checking for $ac_func" >&5
@@ -11113,26 +11114,6 @@ if test "${enable_static_daemon+set}" = set; then
 fi
 
 
-
-# Check whether --enable-rohc was given.
-if test "${enable_rohc+set}" = set; then
-  enableval=$enable_rohc;
-  echo
-  echo "**********************************************************************"
-  echo "**********************************************************************"
-  echo "**** --enable-rohc is highly experimental, do not use ****************"
-  echo "**********************************************************************"
-  echo "**********************************************************************"
-  echo
-  rohc=true
-
-cat >>confdefs.h <<_ACEOF
-#define ENABLE_ROHC 1
-_ACEOF
-
-
-
-fi
 
 
 

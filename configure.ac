@@ -252,20 +252,20 @@ AC_ARG_ENABLE(static-daemon,
 )
 AC_SUBST(LDFLAGS_DAEMON)
 
-AC_ARG_ENABLE(rohc,
-  [AS_HELP_STRING(--enable-rohc,enable robust header compression (rfc3095).)],
-  [
-  echo
-  echo "**********************************************************************"
-  echo "**********************************************************************"
-  echo "**** --enable-rohc is highly experimental, do not use ****************"
-  echo "**********************************************************************"
-  echo "**********************************************************************"
-  echo
-  rohc=true
-  AC_DEFINE_UNQUOTED(ENABLE_ROHC, 1, [ROHC support])
-  ]
-)
+dnl AC_ARG_ENABLE(rohc,
+dnl   [AS_HELP_STRING(--enable-rohc,enable robust header compression (rfc3095).)],
+dnl   [
+dnl   echo
+dnl   echo "**********************************************************************"
+dnl   echo "**********************************************************************"
+dnl   echo "**** --enable-rohc is highly experimental, do not use ****************"
+dnl   echo "**********************************************************************"
+dnl   echo "**********************************************************************"
+dnl   echo
+dnl   rohc=true
+dnl   AC_DEFINE_UNQUOTED(ENABLE_ROHC, 1, [ROHC support])
+dnl   ]
+dnl )
 
 AM_CONDITIONAL(ROHC, test x$rohc = xtrue)
 
