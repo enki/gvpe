@@ -698,6 +698,8 @@ connection::connection_established ()
               delete p;
             }
         }
+
+      vpn->connection_established (this);
     }
   else
     {
@@ -711,22 +713,17 @@ connection::connection_established ()
 void
 connection::reset_si ()
 {
-  protocol = best_protocol (THISNODE->protocols & conf->protocols);
-
-  // mask out endpoints we can't connect to
-  if (!conf->udp_port) protocol &= ~PROT_UDPv4;
-  if (!conf->tcp_port) protocol &= ~PROT_TCPv4;
-  if (!conf->dns_port) protocol &= ~PROT_DNSv4;
-
-  if (protocol
-      && (!conf->can_direct (THISNODE)
-          || !THISNODE->can_direct (conf)))
+  if (vpn->can_direct (THISNODE, conf))
+    protocol = best_protocol (THISNODE->protocols & conf->connectable_protocols ());
+  else
     {
-      slog (L_DEBUG, _("%s: direct connection denied"), conf->nodename);
+      slog (L_TRACE, _("%s: direct connection denied by config."), conf->nodename);
       protocol = 0;
     }
 
   si.set (conf, protocol);
+
+  is_direct = si.valid ();
 }
 
 // ensure sockinfo is valid, forward if necessary
@@ -735,16 +732,16 @@ connection::forward_si (const sockinfo &si) const
 {
   if (!si.valid ())
     {
-      connection *r = vpn->find_router ();
+      connection *r = vpn->find_router_for (this);
 
       if (r)
         {
-          slog (L_DEBUG, _("%s: no common protocol, trying indirectly through %s (%s)"),
-                conf->nodename, r->conf->nodename, (const char *)r->si);
+          slog (L_DEBUG, _("%s: no common protocol, trying to route through %s."),
+                conf->nodename, r->conf->nodename);
           return r->si;
         }
       else
-        slog (L_DEBUG, _("%s: node unreachable, no common protocol, no router"),
+        slog (L_DEBUG, _("%s: node unreachable, no common protocol or no router available."),
               conf->nodename);
     }
 
@@ -764,6 +761,9 @@ connection::send_ping (const sockinfo &si, u8 pong)
   ping_packet *pkt = new ping_packet;
 
   pkt->setup (conf->id, pong ? ping_packet::PT_PONG : ping_packet::PT_PING);
+
+  slog (L_TRACE, ">>%d %s [%s]", conf->id, pong ? "PT_PONG" : "PT_PING", (const char *)si);
+
   send_vpn_packet (pkt, si, IPTOS_LOWDELAY);
 
   delete pkt;
@@ -858,16 +858,17 @@ connection::establish_connection_cb (ev::timer &w, int revents)
 
       bool slow = si.prot & PROT_SLOW;
 
-      if (si.prot && !si.host)
+      if (si.prot && !si.host && vpn->can_direct (THISNODE, conf))
         {
-          slog (L_TRACE, _("%s: connection request (indirect)"), conf->nodename);
           /*TODO*/ /* start the timer so we don't recurse endlessly */
           w.start (1);
           vpn->send_connect_request (conf->id);
         }
       else
         {
-          slog (L_TRACE, _("%s: connection request (direct)"), conf->nodename, !!ictx, !!octx);
+          if (si.valid ())
+            slog (L_DEBUG, _("%s: sending direct connection request to %s."),
+                  conf->nodename, (const char *)si);
 
           const sockinfo &dsi = forward_si (si);
 
@@ -917,7 +918,8 @@ connection::reset_connection ()
 
   si.host = 0;
 
-  last_activity = 0;
+  last_activity = 0.;
+  //last_si_change = 0.;
   retry_cnt = 0;
 
   rekey.stop ();
@@ -934,6 +936,7 @@ connection::shutdown ()
   reset_connection ();
 }
 
+// poor-man's rekeying
 inline void
 connection::rekey_cb (ev::timer &w, int revents)
 {
@@ -998,7 +1001,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 {
   last_activity = ev_now ();
 
-  slog (L_NOISE, "<<%d received packet type %d from %d to %d", 
+  slog (L_NOISE, "<<%d received packet type %d from %d to %d.", 
         conf->id, pkt->typ (), pkt->src (), pkt->dst ());
 
   if (connectmode == conf_node::C_DISABLED)
@@ -1016,6 +1019,8 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
               send_auth_request (rsi, true);
           }
         else
+          // we would love to change thre socket address here, but ping's aren't
+          // authenticated, so we best ignore it.
           send_ping (rsi, 1); // pong
 
         break;
@@ -1031,7 +1036,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 
           if (!p->chk_config ())
             {
-              slog (L_WARN, _("%s(%s): protocol mismatch, disabling node"),
+              slog (L_WARN, _("%s(%s): protocol mismatch, disabling node."),
                     conf->nodename, (const char *)rsi);
               connectmode = conf_node::C_DISABLED;
             }
@@ -1083,7 +1088,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                   }
               }
             else
-              slog (L_WARN, _("%s(%s): protocol mismatch"),
+              slog (L_WARN, _("%s(%s): protocol mismatch."),
                     conf->nodename, (const char *)rsi);
 
             send_reset (rsi);
@@ -1108,7 +1113,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 
               if (!rsa_cache.find (p->id, chg))
                 {
-                  slog (L_ERR, _("%s(%s): unrequested auth response ignored"),
+                  slog (L_ERR, _("%s(%s): unrequested auth response, ignoring."),
                         conf->nodename, (const char *)rsi);
                   break;
                 }
@@ -1119,7 +1124,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                   if (!p->hmac_chk (cctx))
                     {
                       slog (L_ERR, _("%s(%s): hmac authentication error on auth response, received invalid packet\n"
-                                     "could be an attack, or just corruption or a synchronization error"),
+                                     "could be an attack, or just corruption or a synchronization error."),
                             conf->nodename, (const char *)rsi);
                       break;
                     }
@@ -1140,11 +1145,11 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                           si = rsi;
                           protocol = rsi.prot;
 
-                          connection_established ();
-
-                          slog (L_INFO, _("%s(%s): connection established, protocol version %d.%d"),
+                          slog (L_INFO, _("%s(%s): connection established, protocol version %d.%d."),
                                 conf->nodename, (const char *)rsi,
                                 p->prot_major, p->prot_minor);
+
+                          connection_established ();
 
                           if (::conf.script_node_up)
                             {
@@ -1156,7 +1161,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                           break;
                         }
                       else
-                        slog (L_ERR, _("%s(%s): sent and received challenge do not match"),
+                        slog (L_ERR, _("%s(%s): sent and received challenge do not match."),
                               conf->nodename, (const char *)rsi);
                     }
 
@@ -1182,25 +1187,41 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 
             if (!p->hmac_chk (ictx))
               slog (L_ERR, _("%s(%s): hmac authentication error, received invalid packet\n"
-                             "could be an attack, or just corruption or a synchronization error"),
+                             "could be an attack, or just corruption or a synchronization error."),
                     conf->nodename, (const char *)rsi);
             else
               {
                 u32 seqno;
                 tap_packet *d = p->unpack (this, seqno);
+                int seqclass = iseqno.seqno_classify (seqno);
 
-                if (iseqno.recv_ok (seqno))
+                if (seqclass == 0) // ok
                   {
                     vpn->tap->send (d);
 
                     if (si != rsi)
                       {
                         // fast re-sync on source address changes, useful especially for tcp/ip
-                        si = rsi;
+                        //if (last_si_change < ev_now () + 5.)
+                        //  {
+                            si = rsi;
 
-                        slog (L_INFO, _("%s(%s): socket address changed to %s"),
-                              conf->nodename, (const char *)si, (const char *)rsi);
+                            slog (L_INFO, _("%s(%s): socket address changed to %s."),
+                                  conf->nodename, (const char *)si, (const char *)rsi);
+                        //  }
+                        //else
+                        //  slog (L_INFO, _("%s(%s): accepted packet from %s, not (yet) redirecting traffic."),
+                        //        conf->nodename, (const char *)si, (const char *)rsi);
                       }
+                  }
+                else if (seqclass == 1) // silently ignore
+                  slog (L_ERR, _("received duplicate packet (received %08lx, expected %08lx)\n"
+                                 "possible replay attack, or just packet duplication, ignoring."), seqno, iseqno.seq + 1);
+                else if (seqclass == 2) // reset
+                  {
+                    slog (L_ERR, _("received duplicate or out-of-sync packet (received %08lx, expected %08lx)\n"
+                                   "possible replay attack, or just massive packet loss, resetting connection."), seqno, iseqno.seq + 1);
+                    send_reset (rsi);
                   }
 
                 delete d;

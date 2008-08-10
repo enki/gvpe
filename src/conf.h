@@ -97,7 +97,20 @@ struct conf_node
 
   u32 routerprio;
 
-  bool can_direct (struct conf_node *other);
+  u8 connectable_protocols () const
+  {
+    u8 protocols = this->protocols;
+
+    // mask out endpoints we can't connect to
+    if (!udp_port) protocols &= ~PROT_UDPv4;
+    if (!tcp_port) protocols &= ~PROT_TCPv4;
+    if (!dns_port) protocols &= ~PROT_DNSv4;
+
+    return protocols;
+  }
+
+  bool may_direct (struct conf_node *other);
+  void finalise ();
 
   void print ();
 

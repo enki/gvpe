@@ -94,7 +94,7 @@ match_list (const vector<const char *> &list, const char *str)
 }
 
 bool
-conf_node::can_direct (struct conf_node *other)
+conf_node::may_direct (struct conf_node *other)
 {
   if (match_list (allow_direct, other->nodename))
     return true;
@@ -112,9 +112,11 @@ conf_node::print ()
           id,
           id >> 8, id & 0xff,
           compress ? 'Y' : 'N',
-          connectmode   == C_ONDEMAND ? "ondemand" :
-            connectmode == C_NEVER    ? "never" :
-            connectmode == C_ALWAYS   ? "always" : "",
+          connectmode   == C_ONDEMAND ? "ondemand"
+          : connectmode == C_NEVER    ? "never"
+          : connectmode == C_ALWAYS   ? "always"
+          : connectmode == C_DISABLED ? "disabled"
+          :                             "",
           nodename,
           hostname ? hostname : "",
           hostname ? ":" : "",
@@ -477,18 +479,28 @@ configuration_parser::parse_line (char *line)
   else if (!strcmp (var, "max-ttl"))
     node->max_ttl = atof (val);
   else if (!strcmp (var, "max-queue"))
-    {
-      node->max_queue = atoi (val);
-
-      if (node->max_queue < 1)
-        node->max_queue = 1;
-    }
+    node->max_queue = atoi (val);
 
   // unknown or misplaced
   else
     return _("unknown configuration directive. (ignored)");
 
   return 0;
+}
+
+void conf_node::finalise ()
+{
+  if (max_queue < 1)
+    {
+      slog (L_WARN, _("%s: max-queue value invalid, setting it to 1."), nodename);
+      max_queue = 1;
+    }
+
+  if (routerprio && (connectmode != C_ALWAYS && connectmode != C_DISABLED))
+    {
+      //slog (L_WARN, _("%s: has non-zero router-priority but either 'never' or 'ondemand' as connectmode, setting it to 'always'."), nodename);
+      connectmode = C_ALWAYS;
+    }
 }
 
 void configuration_parser::parse_argv ()
@@ -603,6 +615,9 @@ configuration_parser::configuration_parser (configuration &conf,
       }
 
   free (fname);
+
+  for (configuration::node_vector::iterator i = conf.nodes.begin(); i != conf.nodes.end(); ++i)
+    (*i)->finalise ();
 }
 
 char *configuration::config_filename (const char *name, const char *dflt)

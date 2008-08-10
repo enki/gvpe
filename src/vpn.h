@@ -56,8 +56,12 @@ struct vpn
   typedef vector<connection *> conns_vector;
   conns_vector conns;
 
-  connection *find_router ();
-  connection *find_forwarder ();
+  // called when any conenction has been established
+  void connection_established (connection *c);
+
+  // return true if src can connect directly to dst
+  bool can_direct (conf_node *src, conf_node *dst) const;
+  connection *find_router_for (const connection *dst);
 
   void reconnect_all ();
   void shutdown_all ();

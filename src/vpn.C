@@ -151,7 +151,7 @@ vpn::setup ()
 
       if (bind (ipv4_fd, si.sav4 (), si.salenv4 ()))
         {
-          slog (L_ERR, _("can't bind ipv4 socket on %s: %s"), (const char *)si, strerror (errno));
+          slog (L_ERR, _("can't bind ipv4 socket on %s: %s, exiting."), (const char *)si, strerror (errno));
           exit (EXIT_FAILURE);
         }
 
@@ -191,7 +191,7 @@ vpn::setup ()
 
       if (bind (udpv4_fd, si.sav4 (), si.salenv4 ()))
         {
-          slog (L_ERR, _("can't bind udpv4 on %s: %s"), (const char *)si, strerror (errno));
+          slog (L_ERR, _("can't bind udpv4 on %s: %s, exiting."), (const char *)si, strerror (errno));
           exit (EXIT_FAILURE);
         }
 
@@ -237,7 +237,7 @@ vpn::setup ()
 
       if (bind (icmpv4_fd, si.sav4 (), si.salenv4 ()))
         {
-          slog (L_ERR, _("can't bind icmpv4 on %s: %s"), (const char *)si, strerror (errno));
+          slog (L_ERR, _("can't bind icmpv4 on %s: %s, exiting."), (const char *)si, strerror (errno));
           exit (EXIT_FAILURE);
         }
 
@@ -268,13 +268,13 @@ vpn::setup ()
 
       if (bind (tcpv4_fd, si.sav4 (), si.salenv4 ()))
         {
-          slog (L_ERR, _("can't bind tcpv4 on %s: %s"), (const char *)si, strerror (errno));
+          slog (L_ERR, _("can't bind tcpv4 on %s: %s, exiting."), (const char *)si, strerror (errno));
           exit (EXIT_FAILURE);
         }
 
       if (listen (tcpv4_fd, 5))
         {
-          slog (L_ERR, _("can't listen tcpv4 on %s: %s"), (const char *)si, strerror (errno));
+          slog (L_ERR, _("can't listen tcpv4 on %s: %s, exiting."), (const char *)si, strerror (errno));
           exit (EXIT_FAILURE);
         }
 
@@ -320,7 +320,7 @@ vpn::setup ()
 
       if (bind (dnsv4_fd, si.sav4 (), si.salenv4 ()))
         {
-          slog (L_ERR, _("can't bind dnsv4 on %s: %s"), (const char *)si, strerror (errno));
+          slog (L_ERR, _("can't bind dnsv4 on %s: %s, exiting."), (const char *)si, strerror (errno));
           exit (EXIT_FAILURE);
         }
 
@@ -337,7 +337,7 @@ vpn::setup ()
   tap = new tap_device ();
   if (!tap) //D this, of course, never catches
     {
-      slog (L_ERR, _("cannot create network interface '%s'"), conf.ifname);
+      slog (L_ERR, _("cannot create network interface '%s', exiting."), conf.ifname);
       exit (EXIT_FAILURE);
     }
   
@@ -451,23 +451,23 @@ vpn::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
   unsigned int src = pkt->src ();
   unsigned int dst = pkt->dst ();
 
-  slog (L_NOISE, _("<<?/%s received possible vpn packet type %d from %d to %d, length %d"),
+  slog (L_NOISE, _("<<?/%s received possible vpn packet type %d from %d to %d, length %d."),
         (const char *)rsi, pkt->typ (), pkt->src (), pkt->dst (), pkt->len);
 
   if (src == 0 || src > conns.size ()
       || dst > conns.size ()
       || pkt->typ () >= vpn_packet::PT_MAX)
-    slog (L_WARN, _("(%s): received corrupted packet type %d (src %d, dst %d)"),
+    slog (L_WARN, _("(%s): received corrupted packet type %d (src %d, dst %d)."),
           (const char *)rsi, pkt->typ (), pkt->src (), pkt->dst ());
   else if (dst > conns.size ())
-    slog (L_WARN, _("(%s): received corrupted packet type %d (src %d, dst %d)"),
+    slog (L_WARN, _("(%s): received corrupted packet type %d (src %d, dst %d)."),
           (const char *)rsi, pkt->typ (), pkt->src (), pkt->dst ());
   else
     {
       connection *c = conns[src - 1];
 
       if (dst == 0)
-        slog (L_WARN, _("%s(%s): received broadcast (protocol violation)"),
+        slog (L_WARN, _("%s(%s): received broadcast (protocol violation)."),
               c->conf->nodename, (const char *)rsi);
       else if (dst != THISNODE->id)
         {
@@ -476,7 +476,7 @@ vpn::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
             conns[dst - 1]->inject_vpn_packet (pkt);
           else
             slog (L_WARN,
-                  _("%s(%s): forwarding request (=> %s), but we are no router"),
+                  _("%s(%s): request to forward packet to %s, but we are no router (config mismatch?)."),
                   c->conf->nodename, (const char *)rsi,
                   conns[dst - 1]->conf->nodename);
         }
@@ -509,7 +509,7 @@ vpn::send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos)
         return send_dnsv4_packet (pkt, si, tos);
 #endif
       default:
-        slog (L_CRIT, _("%s: FATAL: trying to send packet with unsupported protocol"), (const char *)si);
+        slog (L_CRIT, _("%s: FATAL: trying to send packet with unsupported protocol."), (const char *)si);
     }
 
   return false;
@@ -541,7 +541,7 @@ vpn::ipv4_ev (ev::io &w, int revents)
       else
         {
           // probably ECONNRESET or somesuch
-          slog (L_DEBUG, _("%s: %s"), (const char *)si, strerror (errno));
+          slog (L_DEBUG, _("%s: %s."), (const char *)si, strerror (errno));
         }
 
       delete pkt;
@@ -549,7 +549,7 @@ vpn::ipv4_ev (ev::io &w, int revents)
   else
     {
       slog (L_ERR,
-            _("FATAL: unknown revents %08x in socket, terminating\n"),
+            _("FATAL: unknown revents %08x in socket, exiting.\n"),
             revents);
       exit (EXIT_FAILURE);
     }
@@ -589,7 +589,7 @@ vpn::icmpv4_ev (ev::io &w, int revents)
       else
         {
           // probably ECONNRESET or somesuch
-          slog (L_DEBUG, _("%s: %s"), (const char *)si, strerror (errno));
+          slog (L_DEBUG, _("%s: %s."), (const char *)si, strerror (errno));
         }
 
       delete pkt;
@@ -597,7 +597,7 @@ vpn::icmpv4_ev (ev::io &w, int revents)
   else
     {
       slog (L_ERR,
-              _("FATAL: unknown revents %08x in socket, terminating\n"),
+              _("FATAL: unknown revents %08x in socket, exiting.\n"),
               revents);
       exit (EXIT_FAILURE);
     }
@@ -627,7 +627,7 @@ vpn::udpv4_ev (ev::io &w, int revents)
       else
         {
           // probably ECONNRESET or somesuch
-          slog (L_DEBUG, _("%s: fd %d, %s"), (const char *)si, w.fd, strerror (errno));
+          slog (L_DEBUG, _("%s: fd %d, %s."), (const char *)si, w.fd, strerror (errno));
         }
 
       delete pkt;
@@ -635,7 +635,7 @@ vpn::udpv4_ev (ev::io &w, int revents)
   else
     {
       slog (L_ERR,
-              _("FATAL: unknown revents %08x in socket, terminating\n"),
+              _("FATAL: unknown revents %08x in socket, exiting.\n"),
               revents);
       exit (EXIT_FAILURE);
     }
@@ -694,13 +694,13 @@ vpn::event_cb (ev::timer &w, int)
 
           shutdown_all ();
           remove_pid (conf.pidfilename);
-          slog (L_INFO, _("terminating"));
+          slog (L_INFO, _("exiting."));
           exit (EXIT_SUCCESS);
         }
 
       if (events & EVENT_RECONNECT)
         {
-          slog (L_INFO, _("forced reconnect"));
+          slog (L_INFO, _("forced reconnect."));
 
           reconnect_all ();
         }
@@ -735,39 +735,104 @@ vpn::reconnect_all ()
     }
 }
 
-connection *vpn::find_router ()
+bool vpn::can_direct (conf_node *src, conf_node *dst) const
 {
-  u32 prio = 1;
+  return src != dst
+      && src->may_direct (dst)
+      && dst->may_direct (src)
+      && (((src->protocols & dst->protocols) && src->connectmode == conf_node::C_ALWAYS)
+          || (src->protocols & dst->connectable_protocols ()));
+}
+
+// only works for indirect and routed connections: find a router
+// from THISNODE to dst
+connection *vpn::find_router_for (const connection *dst)
+{
   connection *router = 0;
 
+  // first try to find a router with a direct connection
+  {
+    u32 prio = 1;
+
+    for (conns_vector::iterator i = conns.begin (); i != conns.end (); ++i)
+      {
+        connection *c = *i;
+
+        if (c->conf->routerprio > prio
+            && c->conf != THISNODE
+            && c != dst
+            && can_direct (c->conf, dst->conf))
+          {
+            if (c->ictx && c->octx)
+              {
+                prio = c->conf->routerprio;
+                router = c;
+              }
+            else
+              c->establish_connection ();
+          }
+      }
+  }
+
+  if (router)
+    return router;
+
+  // second try find the router with the highest priority higher than ours
+  {
+    u32 prio = 1;
+
+    for (conns_vector::iterator i = conns.begin (); i != conns.end (); ++i)
+      {
+        connection *c = *i;
+
+        if (c->conf->routerprio > prio
+            && c->conf->routerprio > THISNODE->routerprio
+            && c != dst
+            && c->conf != THISNODE)
+          {
+            if (c->ictx && c->octx)
+              {
+                prio = c->conf->routerprio;
+                router = c;
+              }
+            else
+              c->establish_connection ();
+          }
+      }
+  }
+  return router;
+}
+
+void vpn::connection_established (connection *c)
+{
   for (conns_vector::iterator i = conns.begin (); i != conns.end (); ++i)
     {
-      connection *c = *i;
+      connection *o = *i;
 
-      if (c->conf->routerprio > prio
-          && c->connectmode == conf_node::C_ALWAYS // so we don't drop the connection if in use
-          && c->ictx && c->octx
-          && c->conf != THISNODE)                  // redundant, since ictx==octx==0 always on thisnode
+      if (!o->is_direct
+          && o->si.valid ()
+          && c->si != o->si
+          && c == find_router_for (o))
         {
-          prio = c->conf->routerprio;
-          router = c;
+          slog (L_DEBUG, _("%s: can now route packets via %s, re-keying connection."),
+                o->conf->nodename, c->conf->nodename);
+          o->rekey ();
         }
     }
-
-  return router;
 }
 
 void vpn::send_connect_request (int id)
 {
-  connection *c = find_router ();
+  connection *c = find_router_for (conns[id]);
 
   if (c)
-    c->send_connect_request (id);
+    {
+      slog (L_TRACE, _("%s: no way to connect, sending mediated connection request via %s."),
+            conns[id]->conf->nodename, c->conf->nodename);
+      c->send_connect_request (id);
+    }
   else
-    // no router found, aggressively connect to all routers
-    for (conns_vector::iterator i = conns.begin (); i != conns.end (); ++i)
-      if ((*i)->conf->routerprio && (*i)->conf != THISNODE)
-        (*i)->establish_connection ();
+    slog (L_DEBUG, _("%s: no way to connect and no router found: unable to connect."), conns[id]->conf->nodename);
 }
 
 void

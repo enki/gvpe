@@ -86,14 +86,13 @@ struct sliding_window
       seq = seqno;
     }
 
-  bool recv_ok (u32 seqno)
+  // 0 == ok, 1 == silently ignore, 2 == error, reset
+  int seqno_classify (u32 seqno)
     {
       if (seqno <= seq - WINDOWSIZE)
-        slog (L_ERR, _("received duplicate or outdated packet (received %08lx, expected %08lx)\n"
-                       "possible replay attack, or just massive packet reordering"), seqno, seq + 1);
-      else if (seqno > seq + WINDOWSIZE * 4)
-        slog (L_ERR, _("received duplicate or out-of-sync packet (received %08lx, expected %08lx)\n"
-                       "possible replay attack, or just massive packet loss"), seqno, seq + 1);
+        return 1;
+      else if (seqno > seq + WINDOWSIZE * 16)
+        return 2;
       else
         {
           while (seqno > seq)
@@ -112,16 +111,13 @@ struct sliding_window
           u32 mask = 1 << (s & 31);
 
           if (*cell & mask)
-            slog (L_ERR, _("received duplicate packet (received %08lx, expected %08lx)\n"
-                           "possible replay attack, or just packet duplication"), seqno, seq + 1);
+            return 1;
           else
             {
               *cell |= mask;
-              return true;
+              return 0;
             }
         }
-
-      return false;
     }
 };
 

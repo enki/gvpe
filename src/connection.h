@@ -155,12 +155,14 @@ struct connection
 
   tstamp last_activity;	// time of last packet received
   tstamp last_establish_attempt; 
+  //tstamp last_si_change; // time we last changed the socket address
 
   u32 oseqno;
   sliding_window iseqno;
 
   u8 protocol;
   u8 features;
+  bool is_direct; // current connection (si) is direct?
 
   pkt_queue data_queue, vpn_queue;
 
