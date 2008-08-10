@@ -124,6 +124,8 @@ vpn::script_if_up ()
 int
 vpn::setup ()
 {
+  int success = 0;
+
   ipv4_tos = -1;
   ipv4_fd  = -1;
 
@@ -156,7 +158,10 @@ vpn::setup ()
         }
 
       ipv4_ev_watcher.start (ipv4_fd, EV_READ);
+      ++success;
     }
+  else
+    THISNODE->protocols &= ~PROT_IPv4;
 
   udpv4_tos = -1;
   udpv4_fd  = -1;
@@ -196,7 +201,10 @@ vpn::setup ()
         }
 
       udpv4_ev_watcher.start (udpv4_fd, EV_READ);
+      ++success;
     }
+  else
+    THISNODE->protocols &= ~PROT_UDPv4;
 
   icmpv4_tos = -1;
   icmpv4_fd  = -1;
@@ -242,6 +250,7 @@ vpn::setup ()
         }
 
       icmpv4_ev_watcher.start (icmpv4_fd, EV_READ);
+      ++success;
     }
 #endif
 
@@ -279,7 +288,10 @@ vpn::setup ()
         }
 
       tcpv4_ev_watcher.start (tcpv4_fd, EV_READ);
+      ++success;
     }
+  else
+    THISNODE->protocols &= ~PROT_TCPv4;
 #endif
 
   dnsv4_tos = -1;
@@ -325,10 +337,17 @@ vpn::setup ()
         }
 
       dnsv4_ev_watcher.start (dnsv4_fd, EV_READ);
+      ++success;
     }
 #endif
 
   /////////////////////////////////////////////////////////////////////////////
+
+  if (!success)
+    {
+      slog (L_ERR, _("no protocols enabled, exiting."));
+      exit (EXIT_FAILURE);
+    }
 
   reconnect_all ();
 

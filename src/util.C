@@ -134,7 +134,7 @@ detach (int do_detach)
   else
     log_to (LOGTO_SYSLOG | LOGTO_STDERR);
 
-  slog (L_INFO, _("gvpe daemon %s (%s %s) starting"), VERSION, __DATE__, __TIME__);
+  slog (L_INFO, _("gvpe daemon %s (%s %s) starting up."), VERSION, __DATE__, __TIME__);
 
   return 0;
 }
