@@ -1205,10 +1205,10 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                         // fast re-sync on source address changes, useful especially for tcp/ip
                         //if (last_si_change < ev_now () + 5.)
                         //  {
-                            si = rsi;
+                            slog (L_INFO, _("%s(%s): changing socket address to %s."),
+                                  conf->nodename, (const char *)si, (const char *)rsi);
 
-                            slog (L_INFO, _("%s(%s): socket address changed."),
-                                  conf->nodename, (const char *)si);
+                            si = rsi;
                         //  }
                         //else
                         //  slog (L_INFO, _("%s(%s): accepted packet from %s, not (yet) redirecting traffic."),
