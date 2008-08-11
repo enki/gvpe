@@ -23,7 +23,8 @@ todo: keepalive more aggressive?
           not in other cases, to reconnect more quickly.
         - upgraded liblzf to version 3.2.
         - dropped -fno-exceptions due to ev++.h using it.
-        - node-up/Down scripts are now run in sequence.
+        - node-up/down scripts are now run in sequence.
+        - new -q switch for gvpectrl, for when you run it often.
         - bugfixes.
 
 2.01 Thu Mar 29 19:26:04 CEST 2007

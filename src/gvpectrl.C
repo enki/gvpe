@@ -70,6 +70,9 @@ static int kill_gvpe;
 /* If nonzero, it will attempt to kill a running gvpe and exit. */
 static int show_config;
 
+/* If nonzero, do not output anything but warnings/errors/very unusual conditions */
+static int quiet;
+
 /* If nonzero, generate public/private keypair for this net. */
 static int generate_keys;
 
@@ -80,6 +83,7 @@ static struct option const long_options[] =
       {"help", no_argument, &show_help, 1},
       {"version", no_argument, &show_version, 1},
       {"generate-keys", no_argument, NULL, 'g'},
+      {"quiet", no_argument, &quiet, 1},
       {"show-config", no_argument, &show_config, 's'},
       {NULL, 0, NULL, 0}
     };
@@ -97,6 +101,7 @@ usage (int status)
                "  -k, --kill[=SIGNAL]        Attempt to kill a running gvpe and exit.\n"
                "  -g, --generate-keys        Generate public/private RSA keypair.\n"
                "  -s, --show-config          Display the configuration information.\n"
+               "  -q, --quiet                Be quite quiet.\n"
                "      --help                 Display this help and exit.\n"
                "      --version              Output version information and exit.\n\n"));
       printf (_("Report bugs to <gvpe@schmorp.de>.\n"));
@@ -111,9 +116,7 @@ parse_options (int argc, char **argv, char **envp)
   int r;
   int option_index = 0;
 
-  while ((r =
-            getopt_long (argc, argv, "c:k::gs", long_options,
-                         &option_index)) != EOF)
+  while ((r = getopt_long (argc, argv, "c:k::qgs", long_options, &option_index)) != EOF)
     {
       switch (r)
         {
@@ -168,6 +171,10 @@ parse_options (int argc, char **argv, char **envp)
           show_config = 1;
           break;
 
+        case 'q':
+          quiet = 1;
+          break;
+
         case '?':
           usage (1);
 
@@ -182,6 +189,9 @@ parse_options (int argc, char **argv, char **envp)
 void
 indicator (int a, int b, void *p)
 {
+  if (quiet)
+    return;
+
   switch (a)
     {
     case 0:
@@ -252,8 +262,10 @@ keygen (int bits)
 
       if (ftell (f))
         {
-          fprintf (stderr, "'%s' already exists, skipping this node\n",
-                   fname);
+          if (!quiet)
+            fprintf (stderr, "'%s' already exists, skipping this node %d\n",
+                     fname, quiet);
+
           fclose (f);
           continue;
         }

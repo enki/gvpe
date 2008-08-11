@@ -23,6 +23,10 @@ Read configuration options from I<DIR>.
 
 Generate public/private RSA keypair and exit.
 
+=item B<-q>, B<--quiet>
+
+Suppresses messages the author finds nonessential for scripting purposes.
+
 =item B<--help>
 
 Display short list of options.

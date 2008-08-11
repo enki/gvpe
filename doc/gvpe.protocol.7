@@ -307,48 +307,62 @@ pair).
 .IX Subsection "Retrying"
 When there is no response to an auth request, the host will send auth
 requests in bursts with an exponential backoff. After some time it will
-resort to \s-1PING\s0 packets, which are very small (8 bytes) and lightweight
-(no \s-1RSA\s0 operations required). A host that receives ping requests from an
-unconnected peer will respond by trying to create a connection.
+resort to \s-1PING\s0 packets, which are very small (8 bytes + protocol header)
+and lightweight (no \s-1RSA\s0 operations required). A host that receives ping
+requests from an unconnected peer will respond by trying to create a
+connection.
 .PP
 In addition to the exponential backoff, there is a global rate-limit on
 a per-IP base. It allows long bursts but will limit total packet rate to
 something like one control packet every ten seconds, to avoid accidental
 floods due to protocol problems (like a \s-1RSA\s0 key file mismatch between two
 hosts).
+.PP
+The intervals between retries are limited by the \f(CW\*(C`max\-retry\*(C'\fR
+configuration value. A node with \f(CW\*(C`connect\*(C'\fR = \f(CW\*(C`always\*(C'\fR will always retry,
+a node with \f(CW\*(C`connect\*(C'\fR = \f(CW\*(C`ondemand\*(C'\fR will only try (and re\-try) to connect
+as long as there are packets in the queue, usually this limits the retry
+period to \f(CW\*(C`max\-ttl\*(C'\fR seconds.
+.PP
+Sending packets over the \s-1VPN\s0 will reset the retry intervals as well, which
+means as long as somebody is trying to send packets to a given node, \s-1GVPE\s0
+will try to connect every few seconds.
 .Sh "Routing and Protocol translation"
 .IX Subsection "Routing and Protocol translation"
-The gvpe routing algorithm is easy: there isn't any routing. \s-1GVPE\s0 always
-tries to establish direct connections, if the protocol abilities of the
-two hosts allow it.
-.PP
-If the two hosts should be able to reach each other (common protocol, ip
-and port all known), but cannot (network down), then there will be no
-connection, point.
+The \s-1GVPE\s0 routing algorithm is easy: there isn't much routing to speak
+of: When routing packets to another node, \s-1GVPE\s0 trues the following
+options, in order:
+.IP "If the two hosts should be able to reach each other directly (common protocol, port known), then \s-1GVPE\s0 will send the packet directly to the other node." 4
+.IX Item "If the two hosts should be able to reach each other directly (common protocol, port known), then GVPE will send the packet directly to the other node."
+.PD 0
+.ie n .IP "If this isn't possible (e.g. because the node doesn't have a \*(C`hostname\*(C' or known port), but the nodes speak a common protocol and a router is available, then \s-1GVPE\s0 will ask a router to ""mediate"" between both nodes (see below)." 4
+.el .IP "If this isn't possible (e.g. because the node doesn't have a \f(CW\*(C`hostname\*(C'\fR or known port), but the nodes speak a common protocol and a router is available, then \s-1GVPE\s0 will ask a router to ``mediate'' between both nodes (see below)." 4
+.IX Item "If this isn't possible (e.g. because the node doesn't have a hostname or known port), but the nodes speak a common protocol and a router is available, then GVPE will ask a router to mediate between both nodes (see below)."
+.ie n .IP "If a direct connection isn't possible (no common protocols) or forbidden (\*(C`deny\-direct\*(C'\fR) and there are any routers, then \s-1GVPE\s0 will try to send packets to the router with the highest priority that is connected already \fIand is able (as specified by the config file) to connect directly to the target node." 4
+.el .IP "If a direct connection isn't possible (no common protocols) or forbidden (\f(CW\*(C`deny\-direct\*(C'\fR) and there are any routers, then \s-1GVPE\s0 will try to send packets to the router with the highest priority that is connected already \fIand\fR is able (as specified by the config file) to connect directly to the target node." 4
+.IX Item "If a direct connection isn't possible (no common protocols) or forbidden (deny-direct) and there are any routers, then GVPE will try to send packets to the router with the highest priority that is connected already and is able (as specified by the config file) to connect directly to the target node."
+.IP "If no such router exists, then \s-1GVPE\s0 will simply send the packet to the node with the highest priority available." 4
+.IX Item "If no such router exists, then GVPE will simply send the packet to the node with the highest priority available."
+.IP "Failing all that, the packet will be dropped." 4
+.IX Item "Failing all that, the packet will be dropped."
+.PD
 .PP
 A host can usually declare itself unreachable directly by setting it's
 port number(s) to zero. It can declare other hosts as unreachable by using
-a config-file that disables all protocols for these other hosts.
+a config-file that disables all protocols for these other hosts. Another
+option is to disable all protocols on that host in the other config files.
 .PP
 If two hosts cannot connect to each other because their \s-1IP\s0 address(es)
-are not known (such as dialup hosts), one side will send a connection
-request to a router (routers must be configured to act as routers!), which
-will send both the originating and the destination host a connection info
-request with protocol information and \s-1IP\s0 address of the other host (if
-known). Both hosts will then try to establish a connection to the other
-peer, which is usually possible even when both hosts are behind a \s-1NAT\s0
-gateway.
+are not known (such as dialup hosts), one side will send a \fImediated\fR
+connection request to a router (routers must be configured to act as
+routers!), which will send both the originating and the destination host
+a connection info request with protocol information and \s-1IP\s0 address of the
+other host (if known). Both hosts will then try to establish a direct
+connection to the other peer, which is usually possible even when both
+hosts are behind a \s-1NAT\s0 gateway.
 .PP
-If the hosts cannot reach each other because they have no common protocol,
-the originator instead use the router with highest priority and matching
-protocol as peer. Since the \s-1SRCDST\s0 field is not encrypted, the router host
-can just forward the packet to the destination host. Since each host uses
-it's own private key, the router will not be able to decrypt or encrypt
-packets, it will just act as a simple router and protocol translator.
-.PP
-When no router is connected, the host will aggressively try to connect to
-all routers, and if a router is asked for an unconnected host it will try
-to ask another router to establish the connection.
-.PP
-\&... more not yet written about the details of the routing, please bug me
-\&...
+Routing via other nodes works because the \s-1SRCDST\s0 field is not encrypted,
+so the router can just forward the packet to the destination host. Since
+each host uses it's own private key, the router will not be able to
+decrypt or encrypt packets, it will just act as a simple router and
+protocol translator.
