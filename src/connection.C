@@ -1207,8 +1207,8 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                         //  {
                             si = rsi;
 
-                            slog (L_INFO, _("%s(%s): socket address changed to %s."),
-                                  conf->nodename, (const char *)si, (const char *)rsi);
+                            slog (L_INFO, _("%s(%s): socket address changed."),
+                                  conf->nodename, (const char *)si);
                         //  }
                         //else
                         //  slog (L_INFO, _("%s(%s): accepted packet from %s, not (yet) redirecting traffic."),
