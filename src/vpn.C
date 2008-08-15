@@ -836,12 +836,12 @@ void vpn::send_connect_request (connection *c)
 
   if (r)
     {
-      slog (L_TRACE, _("%s: no way to connect, sending mediated connection request via %s."),
+      slog (L_TRACE, _("%s: no address known, sending mediated connection request via %s."),
             c->conf->nodename, r->conf->nodename);
       r->send_connect_request (c->conf->id);
     }
   else
-    slog (L_DEBUG, _("%s: no way to connect and no router found: unable to connect."),
+    slog (L_DEBUG, _("%s: no way to connect and no router found: unable to connect at this time."),
           c->conf->nodename);
 }
 
