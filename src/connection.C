@@ -674,7 +674,7 @@ struct connect_info_packet : vpn_packet
 void
 connection::connection_established ()
 {
-  slog (L_TRACE, _("%s: possible connection establish (ictx %d, octx %d)"), conf->nodename, !!ictx, !!octx);
+  slog (L_NOISE, _("%s: possible connection establish (ictx %d, octx %d)"), conf->nodename, !!ictx, !!octx);
 
   if (ictx && octx)
     {
@@ -762,7 +762,7 @@ connection::send_ping (const sockinfo &si, u8 pong)
 
   pkt->setup (conf->id, pong ? ping_packet::PT_PONG : ping_packet::PT_PING);
 
-  slog (L_TRACE, ">>%d %s [%s]", conf->id, pong ? "PT_PONG" : "PT_PING", (const char *)si);
+  slog (L_TRACE, "%s << %s [%s]", conf->nodename, pong ? "PT_PONG" : "PT_PING", (const char *)si);
 
   send_vpn_packet (pkt, si, IPTOS_LOWDELAY);
 
@@ -792,7 +792,7 @@ connection::send_auth_request (const sockinfo &si, bool initiate)
   rsa_cache.gen (pkt->id, chg);
   rsa_encrypt (conf->rsa_key, chg, pkt->encr);
 
-  slog (L_TRACE, ">>%d PT_AUTH_REQ [%s]", conf->id, (const char *)si);
+  slog (L_TRACE, "%s >> PT_AUTH_REQ [%s]", conf->nodename, (const char *)si);
 
   send_vpn_packet (pkt, si, IPTOS_RELIABILITY | IPTOS_LOWDELAY); // rsa is very very costly
 
@@ -810,7 +810,7 @@ connection::send_auth_response (const sockinfo &si, const rsaid &id, const rsach
 
   pkt->hmac_set (octx);
 
-  slog (L_TRACE, ">>%d PT_AUTH_RES [%s]", conf->id, (const char *)si);
+  slog (L_TRACE, "%s >> PT_AUTH_RES [%s]", conf->nodename, (const char *)si);
 
   send_vpn_packet (pkt, si, IPTOS_RELIABILITY); // rsa is very very costly
 
@@ -820,8 +820,8 @@ connection::send_auth_response (const sockinfo &si, const rsaid &id, const rsach
 void
 connection::send_connect_info (int rid, const sockinfo &rsi, u8 rprotocols)
 {
-  slog (L_TRACE, ">>%d PT_CONNECT_INFO(%d,%s)",
-                 conf->id, rid, (const char *)rsi);
+  slog (L_TRACE, "%s >> PT_CONNECT_INFO(%s,%s)", conf->nodename,
+                 vpn->conns[rid - 1]->conf->nodename, (const char *)rsi);
 
   connect_info_packet *r = new connect_info_packet (conf->id, rid, rsi, rprotocols);
 
@@ -1001,8 +1001,8 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 {
   last_activity = ev_now ();
 
-  slog (L_NOISE, "<<%d received packet type %d from %d to %d.", 
-        conf->id, pkt->typ (), pkt->src (), pkt->dst ());
+  slog (L_NOISE, "%s >> received packet type %d from %d to %d.", 
+        conf->nodename, pkt->typ (), pkt->src (), pkt->dst ());
 
   if (connectmode == conf_node::C_DISABLED)
     return;
@@ -1010,6 +1010,8 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
   switch (pkt->typ ())
     {
       case vpn_packet::PT_PING:
+        slog (L_TRACE, "%s >> PT_PING", conf->nodename);
+
         // we send pings instead of auth packets after some retries,
         // so reset the retry counter and establish a connection
         // when we receive a ping.
@@ -1026,6 +1028,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
         break;
 
       case vpn_packet::PT_PONG:
+        slog (L_TRACE, "%s >> PT_PONG", conf->nodename);
         break;
 
       case vpn_packet::PT_RESET:
@@ -1050,7 +1053,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
           {
             auth_req_packet *p = (auth_req_packet *) pkt;
 
-            slog (L_TRACE, "<<%d PT_AUTH_REQ(%d)", conf->id, p->initiate);
+            slog (L_TRACE, "%s << PT_AUTH_REQ(%s)", conf->nodename, p->initiate ? "initiate" : "reply");
 
             if (p->chk_config () && !strncmp (p->magic, MAGIC, 8))
               {
@@ -1098,9 +1101,9 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 
       case vpn_packet::PT_AUTH_RES:
         {
-          auth_res_packet *p = (auth_res_packet *) pkt;
+          auth_res_packet *p = (auth_res_packet *)pkt;
 
-          slog (L_TRACE, "<<%d PT_AUTH_RES", conf->id);
+          slog (L_TRACE, "%s << PT_AUTH_RES", conf->nodename);
 
           if (p->chk_config ())
             {
@@ -1246,8 +1249,8 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                 connection *c = vpn->conns[p->id - 1];
                 conf->protocols = p->protocols;
 
-                slog (L_TRACE, "<<%d PT_CONNECT_REQ(%d) [%d]",
-                               conf->id, p->id, c->ictx && c->octx);
+                slog (L_TRACE, "%s << PT_CONNECT_REQ(%s) [%d]",
+                               conf->nodename, vpn->conns[p->id - 1]->conf->nodename, c->ictx && c->octx);
 
                 if (c->ictx && c->octx)
                   {
@@ -1280,8 +1283,9 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                 protocol = best_protocol (c->conf->protocols & THISNODE->protocols & p->si.supported_protocols (c->conf));
                 p->si.upgrade_protocol (protocol, c->conf);
 
-                slog (L_TRACE, "<<%d PT_CONNECT_INFO(%d,%s) (%d)",
-                               conf->id, p->id, (const char *)p->si, !c->ictx && !c->octx);
+                slog (L_TRACE, "%s << PT_CONNECT_INFO(%s,%s) [%d]",
+                               conf->nodename, vpn->conns[p->id - 1]->conf->nodename,
+                               (const char *)p->si, !c->ictx && !c->octx);
 
                 const sockinfo &dsi = forward_si (p->si);
 
@@ -1330,7 +1334,8 @@ void connection::send_connect_request (int id)
 {
   connect_req_packet *p = new connect_req_packet (conf->id, id, conf->protocols);
 
-  slog (L_TRACE, ">>%d PT_CONNECT_REQ(%d)", conf->id, id);
+  slog (L_TRACE, "%s >> PT_CONNECT_REQ(%s)",
+                 conf->nodename, vpn->conns[id - 1]->conf->nodename);
   p->hmac_set (octx);
   send_vpn_packet (p, si);
 
