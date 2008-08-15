@@ -810,7 +810,7 @@ connection::send_auth_response (const sockinfo &si, const rsaid &id, const rsach
 
   pkt->hmac_set (octx);
 
-  slog (L_TRACE, "%s >> PT_AUTH_RES [%s]", conf->nodename, (const char *)si);
+  slog (L_TRACE, "%s << PT_AUTH_RES [%s]", conf->nodename, (const char *)si);
 
   send_vpn_packet (pkt, si, IPTOS_RELIABILITY); // rsa is very very costly
 
@@ -820,7 +820,7 @@ connection::send_auth_response (const sockinfo &si, const rsaid &id, const rsach
 void
 connection::send_connect_info (int rid, const sockinfo &rsi, u8 rprotocols)
 {
-  slog (L_TRACE, "%s >> PT_CONNECT_INFO(%s,%s)", conf->nodename,
+  slog (L_TRACE, "%s << PT_CONNECT_INFO(%s,%s)", conf->nodename,
                  vpn->conns[rid - 1]->conf->nodename, (const char *)rsi);
 
   connect_info_packet *r = new connect_info_packet (conf->id, rid, rsi, rprotocols);
