@@ -94,7 +94,7 @@ sub parse_pod {
          out "\@end itemize\n\n";
 
       } elsif ($t eq "item") {
-         out "\n\n\@item\n\@b{" . $n->title . "}\n\n";
+         out "\n\n\@item\n" . $n->title . "\n\n";
 
          if ($n->title->present (TXT::) =~ /^\s*([a-zA-Z0-9\-\_]+)\s*=/) {
             out "\@cindex $1\n";

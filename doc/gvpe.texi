@@ -20,7 +20,7 @@
 
 This is the info manual for vpe, the Virtual Private Ethernet daemon.
 
-Copyright @copyright{} 2003-2005 Marc Lehmann <gvpe@@schmorp.de>.
+Copyright @copyright{} 2003-2008 Marc Lehmann <gvpe@@schmorp.de>.
 
 Permission is granted to make and distribute verbatim copies of this
 manual provided the copyright notice and this permission notice are
@@ -41,7 +41,7 @@ permission notice identical to this one.
 @vskip 0pt plus 1filll
 @cindex copyright
 
-Copyright @copyright{} 2003-2005 Marc Lehmann <gvpe@@schmorp.de>.
+Copyright @copyright{} 2003-2008 Marc Lehmann <gvpe@@schmorp.de>.
 
 Permission is granted to make and distribute verbatim copies of this
 manual provided the copyright notice and this permission notice are
@@ -100,9 +100,9 @@ VPN is an acronym, it stands for:
 
 
 @item
-@b{
+
 @cindex Virtual
-Virtual}
+Virtual
 
 Virtual means that no physical network is created (of course), but a network is @emph{emulated} by creating multiple tunnels between the member nodes by encapsulating and sending data over another transport network.
 @refill
@@ -111,9 +111,9 @@ Usually the emulated network is a normal IP or Ethernet, and the transport netwo
 
 
 @item
-@b{
+
 @cindex Private
-Private}
+Private
 
 Private means that non-participating nodes cannot decode ("sniff)" nor inject ("spoof") packets. This means that nodes can be connected over untrusted networks such as the public Internet without fear of being eavesdropped while at the same time being able to trust data sent by other nodes.
 @refill
@@ -122,9 +122,9 @@ In the case of GVPE, even participating nodes cannot sniff packets send to other
 
 
 @item
-@b{
+
 @cindex Network
-Network}
+Network
 
 Network means that more than two parties can participate in the network, so for instance it's possible to connect multiple branches of a company into a single network. Many so-called "vpn" solutions only create point-to-point tunnels, which in turn can be used to build larger networks.
 @refill
@@ -141,21 +141,21 @@ GVPE provides a true multi-point network in wich any number of nodes (at least a
 
 
 @item
-@b{SIMPLE DESIGN}
+SIMPLE DESIGN
 
 Cipher, HMAC algorithms and other key parameters must be selected at compile time - this makes it possible to only link in algorithms you actually need. It also makes the crypto part of the source very transparent and easy to inspect, and last not least this makes it possible to hardcode the layout of all packets into the binary. GVPE goes a step further and internally reserves blocks of the same length for all packets, which virtually removes all possibilities of buffer overflows, as there is only a single type of buffer and it's always of fixed length.
 @refill
 
 
 @item
-@b{EASY TO SETUP}
+EASY TO SETUP
 
 A few lines of config (the config file is shared unmodified between all hosts) and a single run of @t{gvpectrl} to generate the keys suffices to make it work.
 @refill
 
 
 @item
-@b{MAC-BASED SECURITY}
+MAC-BASED SECURITY
 
 Since every host has it's own private key, other hosts cannot spoof traffic from this host. That makes it possible to filter packet by MAC address, e.g. to ensure that packets from a specific IP address come, in fact, from a specific host that is associated with that IP and not from another host.
 @refill
@@ -172,14 +172,14 @@ Vpe comes with two programs: one daemon (@t{gvpe}) and one control program (@t{g
 
 
 @item
-@b{gvpectrl}
+gvpectrl
 
 Is used to generate the keys, check and give an overview of of the configuration and contorl the daemon (restarting etc.).
 @refill
 
 
 @item
-@b{gvpe}
+gvpe
 
 Is the daemon used to establish and maintain connections to the other network members. It should be run on the gateway machine.
 @refill
@@ -647,7 +647,7 @@ All settings are executed "in order", that is, later settings of the same variab
 @section ANATOMY OF A CONFIG FILE
 Usually, a config file starts with global settings (like the udp port to listen on), followed by node-specific sections that begin with a @t{node = nickname} line.
 @refill
-Every node that is part of the network must have a section that starts with @t{node = nickname}. The number and order of the nodes is important and must be the same on all hosts. It is not uncommon for node sections to be completely empty - if the default values are right.
+Every node that is part of the network must have a section that starts with @t{node = nickname}. The number and order of the nodes is important and must be the same on all nodes. It is not uncommon for node sections to be completely empty - if the default values are right.
 @refill
 Node-specific settings can be used at any time. If used before the first node section they will set the default values for all following nodes.
 @refill
@@ -665,7 +665,7 @@ Global settings will affect the behaviour of the running gvpe daemon, that is, t
 
 
 @item
-@b{dns-forw-host = hostname/ip}
+dns-forw-host = hostname/ip
 
 @cindex dns-forw-host
 The dns server to forward dns requests to for the DNS tunnel protocol (default: @t{127.0.0.1}, changing it is highly recommended).
@@ -673,7 +673,7 @@ The dns server to forward dns requests to for the DNS tunnel protocol (default: 
 
 
 @item
-@b{dns-forw-port = port-number}
+dns-forw-port = port-number
 
 @cindex dns-forw-port
 The port where the @t{dns-forw-host} is to be contacted (default: @t{53}, which is fine in most cases).
@@ -681,7 +681,7 @@ The port where the @t{dns-forw-host} is to be contacted (default: @t{53}, which 
 
 
 @item
-@b{dns-max-outstanding = integer-number-of-requests}
+dns-max-outstanding = integer-number-of-requests
 
 @cindex dns-max-outstanding
 The maximum number of outstanding DNS transport requests (default: @t{100}). GVPE will never issue more requests then the given limit without receiving replies. In heavily overloaded situations it might help to set this to a low number (e.g. @t{3} or even @t{1}) to limit the number of parallel requests.
@@ -691,7 +691,7 @@ The default should be working ok for most links.
 
 
 @item
-@b{dns-overlap-factor = float}
+dns-overlap-factor = float
 
 @cindex dns-overlap-factor
 The DNS transport uses the minimum request latency (@strong{min_latency}) seen during a connection as it's timing base. This factor (default: @t{0.5}, must be > 0) is multiplied by @strong{min_latency} to get the maximum sending rate (= minimum send interval), i.e. a factor of @t{1} means that a new request might be generated every @strong{min_latency} seconds, which means on average there should only ever be one outstanding request.  A factor of @t{0.5} means that GVPE will send requests twice as often as the minimum latency measured.
@@ -703,7 +703,7 @@ The default should be working ok for most links.
 
 
 @item
-@b{dns-send-interval = send-interval-in-seconds}
+dns-send-interval = send-interval-in-seconds
 
 @cindex dns-send-interval
 The minimum send interval (= maximum rate) that the DNS transport will use to send new DNS requests. GVPE will not exceed this rate even when the latency is very low. The default is @t{0.01}, which means GVPE will not send more than 100 DNS requests per connection per second. For high-bandwidth links you could go lower, e.g. to @t{0.001} or so. For congested or rate-limited links, you might want to go higher, say @t{0.1}, @t{0.2} or even higher.
@@ -713,7 +713,7 @@ The default should be working ok for most links.
 
 
 @item
-@b{dns-timeout-factor = float}
+dns-timeout-factor = float
 
 @cindex dns-timeout-factor
 Factor to multiply the @t{min_latency} (see @t{dns-overlap-factor}) by to get request timeouts. The default of @t{8} means that the DNS transport will resend the request when no reply has been received for longer than eight times the minimum (= expected) latency, assuming the request or reply has been lost.
@@ -725,7 +725,7 @@ The default should be working ok for most links but will result in low throughpu
 
 
 @item
-@b{if-up = relative-or-absolute-path}
+if-up = relative-or-absolute-path
 
 @cindex if-up
 Sets the path of a script that should be called immediately after the network interface is initialized (but not neccessarily up). The following environment variables are passed to it (the values are just examples).
@@ -738,7 +738,7 @@ Variables that have the same value on all nodes:
 
 
 @item
-@b{CONFBASE=/etc/gvpe}
+CONFBASE=/etc/gvpe
 
 @cindex CONFBASE
 The configuration base directory.
@@ -746,7 +746,7 @@ The configuration base directory.
 
 
 @item
-@b{IFNAME=vpn0}
+IFNAME=vpn0
 
 @cindex IFNAME
 The network interface to initialize.
@@ -754,13 +754,13 @@ The network interface to initialize.
 
 
 @item
-@b{IFTYPE=native # or tincd}
+IFTYPE=native # or tincd
 
 @cindex IFTYPE
 
 
 @item
-@b{IFSUBTYPE=linux # or freebsd, darwin etc..}
+IFSUBTYPE=linux # or freebsd, darwin etc..
 
 @cindex IFSUBTYPE
 The interface type (@t{native} or @t{tincd}) and the subtype (usually the OS name in lowercase) that this GVPE was configured for. Can be used to select the correct syntax to use for network-related commands.
@@ -768,15 +768,15 @@ The interface type (@t{native} or @t{tincd}) and the subtype (usually the OS nam
 
 
 @item
-@b{MTU=1436}
+MTU=1436
 
 @cindex MTU
-The MTU to set the interface to. You can use lower values (if done consistently on all hosts), but this is usually ineffective.
+The MTU to set the interface to. You can use lower values (if done consistently on all nodes), but this is usually either inefficient or simply ineffective.
 @refill
 
 
 @item
-@b{NODES=5}
+NODES=5
 
 @cindex NODES
 The number of nodes in this GVPE network.
@@ -791,7 +791,7 @@ Variables that are node-specific and with values pertaining to the node running 
 
 
 @item
-@b{IFUPDATA=string}
+IFUPDATA=string
 
 @cindex IFUPDATA
 The value of the configuration directive @t{if-up-data}.
@@ -799,7 +799,7 @@ The value of the configuration directive @t{if-up-data}.
 
 
 @item
-@b{MAC=fe:fd:80:00:00:01}
+MAC=fe:fd:80:00:00:01
 
 @cindex MAC
 The MAC address the network interface has to use.
@@ -809,7 +809,7 @@ Might be used to initialize interfaces on platforms where GVPE does not do this 
 
 
 @item
-@b{NODENAME=branch1}
+NODENAME=branch1
 
 @cindex NODENAME
 The nickname of the node.
@@ -817,7 +817,7 @@ The nickname of the node.
 
 
 @item
-@b{NODEID=1}
+NODEID=1
 
 @cindex NODEID
 The numerical node ID of the node running this instance of GVPE. The first node mentioned in the config file gets ID 1, the second ID 2 and so on.
@@ -843,7 +843,7 @@ More complicated examples (using routing to reduce arp traffic) can be found in 
 
 
 @item
-@b{ifname = devname}
+ifname = devname
 
 @cindex ifname
 Sets the tun interface name to the given name. The default is OS-specific and most probably something like @t{tun0}.
@@ -851,7 +851,7 @@ Sets the tun interface name to the given name. The default is OS-specific and mo
 
 
 @item
-@b{ifpersist = yes|true|on | no|false|off}
+ifpersist = yes|true|on | no|false|off
 
 @cindex ifpersist
 Should the tun/tap device be made persistent, that is, should the device stay up even when gvpe exits? Some versions of the tunnel device have problems sending packets when gvpe is restarted in persistent mode, so if the connections can be established but you cannot send packets from the local node, try to set this to @t{off} and do an ifconfig down on the device.
@@ -859,17 +859,17 @@ Should the tun/tap device be made persistent, that is, should the device stay up
 
 
 @item
-@b{ip-proto = numerical-ip-protocol}
+ip-proto = numerical-ip-protocol
 
 @cindex ip-proto
-Sets the protocol number to be used for the rawip protocol. This is a global option because all hosts must use the same protocol, and since there are no port numbers, you cannot easily run more than one gvpe instance using the same protocol, nor can you share the protocol with other programs.
+Sets the protocol number to be used for the rawip protocol. This is a global option because all nodes must use the same protocol, and since there are no port numbers, you cannot easily run more than one gvpe instance using the same protocol, nor can you share the protocol with other programs.
 @refill
 The default is 47 (GRE), which has a good chance of tunneling through firewalls (but note that the rawip protocol is not GRE compatible). Other common choices are 50 (IPSEC, ESP), 51 (IPSEC, AH), 4 (IPIP tunnels) or 98 (ENCAP, rfc1241)
 @refill
 
 
 @item
-@b{http-proxy-host = hostname/ip}
+http-proxy-host = hostname/ip
 
 @cindex http-proxy-host
 The @t{http-proxy-*} family of options are only available if gvpe was compiled with the @t{--enable-http-proxy} option and enable tunneling of tcp connections through a http proxy server.
@@ -878,9 +878,9 @@ The @t{http-proxy-*} family of options are only available if gvpe was compiled w
 @refill
 Please note that gvpe will still try to resolve all hostnames in the configuration file, so if you are behind a proxy without access to a dns server better use numerical IP addresses.
 @refill
-To make best use of this option disable all protocols except tcp in your config file and make sure your routers (or all other hosts) are listening on a port that the proxy allows (443, https, is a common choice).
+To make best use of this option disable all protocols except tcp in your config file and make sure your routers (or all other nodes) are listening on a port that the proxy allows (443, https, is a common choice).
 @refill
-If you have a router, connecting to it will suffice. Otherwise tcp must be enabled on all hosts.
+If you have a router, connecting to it will suffice. Otherwise tcp must be enabled on all nodes.
 @refill
 Example:
 @refill
@@ -895,7 +895,7 @@ Example:
 
 
 @item
-@b{http-proxy-port = proxy-tcp-port}
+http-proxy-port = proxy-tcp-port
 
 @cindex http-proxy-port
 The port where your proxy server listens.
@@ -903,7 +903,7 @@ The port where your proxy server listens.
 
 
 @item
-@b{http-proxy-auth = login:password}
+http-proxy-auth = login:password
 
 @cindex http-proxy-auth
 The optional login and password used to authenticate to the proxy server, seperated by a literal colon (@t{:}). Only basic authentication is currently supported.
@@ -911,7 +911,7 @@ The optional login and password used to authenticate to the proxy server, sepera
 
 
 @item
-@b{keepalive = seconds}
+keepalive = seconds
 
 @cindex keepalive
 Sets the keepalive probe interval in seconds (default: @t{60}). After this many seconds of inactivity the daemon will start to send keepalive probe every 5 seconds until it receives a reply from the other end.  If no reply is received within 30 seconds, the peer is considered unreachable and the connection is closed.
@@ -919,7 +919,7 @@ Sets the keepalive probe interval in seconds (default: @t{60}). After this many 
 
 
 @item
-@b{loglevel = noise|trace|debug|info|notice|warn|error|critical}
+loglevel = noise|trace|debug|info|notice|warn|error|critical
 
 @cindex loglevel
 Set the logging level. Connection established messages are logged at level @t{info}, notable errors are logged with @t{error}. Default is @t{info}.
@@ -927,19 +927,19 @@ Set the logging level. Connection established messages are logged at level @t{in
 
 
 @item
-@b{mtu = bytes}
+mtu = bytes
 
 @cindex mtu
 Sets the maximum MTU that should be used on outgoing packets (basically the MTU of the outgoing interface) The daemon will automatically calculate maximum overhead (e.g. udp header size, encryption blocksize...) and pass this information to the @t{if-up} script.
 @refill
 Recommended values are 1500 (ethernet), 1492 (pppoe), 1472 (pptp).
 @refill
-This value must be the minimum of the mtu values of all hosts.
+This value must be the minimum of the mtu values of all nodes.
 @refill
 
 
 @item
-@b{node = nickname}
+node = nickname
 
 @cindex node
 Not really a config setting but introduces a node section. The nickname is used to select the right configuration section and must be passed as an argument to the gvpe daemon.
@@ -947,10 +947,12 @@ Not really a config setting but introduces a node section. The nickname is used 
 
 
 @item
-@b{node-up = relative-or-absolute-path}
+node-up = relative-or-absolute-path
 
 @cindex node-up
-Sets a command (default: no script) that should be called whenever a connection is established (even on rekeying operations). In addition to all the variables passed to @t{if-up} scripts, the following environment variables will be set:
+Sets a command (default: none) that should be called whenever a connection is established (even on rekeying operations). Note that node-up/down scripts will be run asynchronously, but execution is serialised, so there will only ever be one such script running.
+@refill
+In addition to all the variables passed to @t{if-up} scripts, the following environment variables will be set:
 @refill
 
 
@@ -958,7 +960,7 @@ Sets a command (default: no script) that should be called whenever a connection 
 
 
 @item
-@b{DESTNODE=branch2}
+DESTNODE=branch2
 
 @cindex DESTNODE
 The name of the remote node.
@@ -966,7 +968,7 @@ The name of the remote node.
 
 
 @item
-@b{DESTID=2}
+DESTID=2
 
 @cindex DESTID
 The node id of the remote node.
@@ -974,15 +976,15 @@ The node id of the remote node.
 
 
 @item
-@b{DESTIP=188.13.66.8}
+DESTIP=188.13.66.8
 
 @cindex DESTIP
-The numerical IP address of the remote host (gvpe accepts connections from everywhere, as long as the other host can authenticate itself).
+The numerical IP address of the remote node (gvpe accepts connections from everywhere, as long as the other node can authenticate itself).
 @refill
 
 
 @item
-@b{DESTPORT=655 # deprecated}
+DESTPORT=655 # deprecated
 
 @cindex DESTPORT
 The UDP port used by the other side.
@@ -990,7 +992,7 @@ The UDP port used by the other side.
 
 
 @item
-@b{STATE=UP}
+STATE=UP
 
 @cindex STATE
 Node-up scripts get called with STATE=UP, node-down scripts get called with STATE=DOWN.
@@ -1013,7 +1015,7 @@ Here is a nontrivial example that uses nsupdate to update the name => ip mapping
 
 
 @item
-@b{node-down = relative-or-absolute-path}
+node-down = relative-or-absolute-path
 
 @cindex node-down
 Same as @t{node-up}, but gets called whenever a connection is lost.
@@ -1021,7 +1023,7 @@ Same as @t{node-up}, but gets called whenever a connection is lost.
 
 
 @item
-@b{pid-file = path}
+pid-file = path
 
 @cindex pid-file
 The path to the pid file to check and create (default: @t{LOCALSTATEDIR/run/gvpe.pid}).
@@ -1029,17 +1031,17 @@ The path to the pid file to check and create (default: @t{LOCALSTATEDIR/run/gvpe
 
 
 @item
-@b{private-key = relative-path-to-key}
+private-key = relative-path-to-key
 
 @cindex private-key
 Sets the path (relative to the config directory) to the private key (default: @t{hostkey}). This is a printf format string so every @t{%} must be doubled. A single @t{%s} is replaced by the hostname, so you could use paths like @t{hostkeys/%s} to fetch the files at the location where @t{gvpectrl} puts them.
 @refill
-Since only the private key file of the current node is used and the private key file should be kept secret per-host to avoid spoofings, it is not recommended to use this feature.
+Since only the private key file of the current node is used and the private key file should be kept secret per-node to avoid spoofings, it is not recommended to use this feature.
 @refill
 
 
 @item
-@b{rekey = seconds}
+rekey = seconds
 
 @cindex rekey
 Sets the rekeying interval in seconds (default: @t{3600}). Connections are reestablished every @t{rekey} seconds.
@@ -1057,7 +1059,7 @@ The following settings are node-specific, that is, every node can have different
 
 
 @item
-@b{allow-direct = nodename}
+allow-direct = nodename
 
 @cindex allow-direct
 Allow direct connections to this node. See @t{deny-direct} for more info.
@@ -1065,23 +1067,25 @@ Allow direct connections to this node. See @t{deny-direct} for more info.
 
 
 @item
-@b{compress = yes|true|on | no|false|off}
+compress = yes|true|on | no|false|off
 
 @cindex compress
-Wether to compress data packets sent to this host (default: @t{yes}). Compression is really cheap even on slow computers and has no size overhead at all, so enabling this is a good idea.
+Wether to compress data packets sent to this node (default: @t{yes}). Compression is really cheap even on slow computers and has no size overhead at all, so enabling this is a good idea.
 @refill
 
 
 @item
-@b{connect = ondemand | never | always | disabled}
+connect = ondemand | never | always | disabled
 
 @cindex connect
-Sets the connect mode (default: @t{always}). It can be @t{always} (always try to establish and keep a connection to the given host), @t{never} (never initiate a connection to the given host, but accept connections), @t{ondemand} (try to establish a connection on the first packet sent, and take it down after the keepalive interval) or @t{disabled} (node is bad, don't talk to it).
+Sets the connect mode (default: @t{always}). It can be @t{always} (always try to establish and keep a connection to the given node), @t{never} (never initiate a connection to the given host, but accept connections), @t{ondemand} (try to establish a connection when there are outstanding packets in the queue and take it down after the keepalive interval) or @t{disabled} (node is bad, don't talk to it).
+@refill
+Routers will automatically be forced to @t{always} unless they are @t{disabled}, to ensure all nodes can talk to each other.
 @refill
 
 
 @item
-@b{deny-direct = nodename | *}
+deny-direct = nodename | *
 
 @cindex deny-direct
 Deny direct connections to the specified node (or all nodes when @t{*} is given). Only one node can be specified, but you can use multiple @t{allow-direct} and @t{deny-direct} statements. This only makes sense in networks with routers, as routers are required for indirect connections.
@@ -1103,7 +1107,7 @@ The check is done in both directions, i.e. both nodes must allow a direct connec
 
 
 @item
-@b{dns-domain = domain-suffix}
+dns-domain = domain-suffix
 
 @cindex dns-domain
 The DNS domain suffix that points to the DNS tunnel server for this node.
@@ -1129,7 +1133,7 @@ Corresponds to the following DNS entries in the @t{example.net} domain:
 
 
 @item
-@b{dns-hostname = hostname/ip}
+dns-hostname = hostname/ip
 
 @cindex dns-hostname
 The address to bind the DNS tunnel socket to, similar to the @t{hostname}, but for the DNS tunnel protocol only. Default: @t{0.0.0.0}, but that might change.
@@ -1137,7 +1141,7 @@ The address to bind the DNS tunnel socket to, similar to the @t{hostname}, but f
 
 
 @item
-@b{dns-port = port-number}
+dns-port = port-number
 
 @cindex dns-port
 The port to bind the DNS tunnel socket to. Must be @t{53} on DNS tunnel servers.
@@ -1145,7 +1149,7 @@ The port to bind the DNS tunnel socket to. Must be @t{53} on DNS tunnel servers.
 
 
 @item
-@b{enable-dns = yes|true|on | no|false|off}
+enable-dns = yes|true|on | no|false|off
 
 @cindex enable-dns
 See gvpe.protocol(7) for a description of the DNS transport protocol. Avoid this protocol if you can.
@@ -1155,7 +1159,7 @@ Enable the DNS tunneling protocol on this node, either as server or as client. S
 
 
 @item
-@b{enable-icmp = yes|true|on | no|false|off}
+enable-icmp = yes|true|on | no|false|off
 
 @cindex enable-icmp
 See gvpe.protocol(7) for a description of the ICMP transport protocol.
@@ -1165,7 +1169,7 @@ Enable the ICMP transport using icmp packets of type @t{icmp-type} on this node.
 
 
 @item
-@b{enable-rawip = yes|true|on | no|false|off}
+enable-rawip = yes|true|on | no|false|off
 
 @cindex enable-rawip
 See gvpe.protocol(7) for a description of the RAW IP transport protocol.
@@ -1175,7 +1179,7 @@ Enable the RAW IPv4 transport using the @t{ip-proto} protocol (default: @t{no}).
 
 
 @item
-@b{enable-tcp = yes|true|on | no|false|off}
+enable-tcp = yes|true|on | no|false|off
 
 @cindex enable-tcp
 See gvpe.protocol(7) for a description of the TCP transport protocol.
@@ -1185,7 +1189,7 @@ Enable the TCPv4 transport using the @t{tcp-port} port (default: @t{no}). Suppor
 
 
 @item
-@b{enable-udp = yes|true|on | no|false|off}
+enable-udp = yes|true|on | no|false|off
 
 @cindex enable-udp
 See gvpe.protocol(7) for a description of the UDP transport protocol.
@@ -1197,7 +1201,7 @@ NOTE: Please specify @t{enable-udp = yes} if you want t use it even though it mi
 
 
 @item
-@b{hostname = hostname | ip    [can not be defaulted]}
+hostname = hostname | ip    [can not be defaulted]
 
 @cindex hostname
 Forces the address of this node to be set to the given dns hostname or ip address. It will be resolved before each connect request, so dyndns should work fine. If this setting is not specified and a router is available, then the router will be queried for the address of this node. Otherwise, the connection attempt will fail.
@@ -1205,7 +1209,7 @@ Forces the address of this node to be set to the given dns hostname or ip addres
 
 
 @item
-@b{icmp-type = integer}
+icmp-type = integer
 
 @cindex icmp-type
 Sets the type value to be used for outgoing (and incoming) packets sent via the ICMP transport.
@@ -1215,7 +1219,7 @@ The default is @t{0} (which is @t{echo-reply}, also known as "ping-replies"). Ot
 
 
 @item
-@b{if-up-data = value}
+if-up-data = value
 
 @cindex if-up-data
 The value specified using this directive will be passed to the @t{if-up} script in the environment variable @t{IFUPDATA}.
@@ -1223,7 +1227,7 @@ The value specified using this directive will be passed to the @t{if-up} script 
 
 
 @item
-@b{inherit-tos = yes|true|on | no|false|off}
+inherit-tos = yes|true|on | no|false|off
 
 @cindex inherit-tos
 Wether to inherit the TOS settings of packets sent to the tunnel when sending packets to this node (default: @t{yes}). If set to @t{yes} then outgoing tunnel packets will have the same TOS setting as the packets sent to the tunnel device, which is usually what you want.
@@ -1231,7 +1235,7 @@ Wether to inherit the TOS settings of packets sent to the tunnel when sending pa
 
 
 @item
-@b{max-retry = positive-number}
+max-retry = positive-number
 
 @cindex max-retry
 The maximum interval in seconds (default: @t{3600}, one hour) between retries to establish a connection to this node. When a connection cannot be established, gvpe uses exponential backoff capped at this value. It's sometimes useful to set this to a much lower value (e.g. @t{120}) on connections to routers that usually are stable but sometimes are down, to assure quick reconnections even after longer downtimes.
@@ -1239,19 +1243,41 @@ The maximum interval in seconds (default: @t{3600}, one hour) between retries to
 
 
 @item
-@b{router-priority = 0 | 1 | positive-number>=2}
+max-ttl = seconds
 
-@cindex router-priority
-Sets the router priority of the given host (default: @t{0}, disabled). If some host tries to connect to another host without a hostname, it asks the router host for it's IP address. The router host is the one with the highest priority larger than @t{1} that is currently reachable.
-@refill
-Make sure all hosts always connect (@t{connect = always}) to the router hosts, otherwise connecting to them might be impossible.
-@refill
-The special value @t{1} allows other hosts to route through the router host, but they will never route through it by default. The value @t{0} disables routing. The idea behind this is that some hosts can, if required, bump the @t{router-priority} setting to higher than @t{1} in their local config to route through specific hosts. If @t{router-priority} is @t{0}, then routing will be refused, so @t{1} serves as a "enable, but do not use by default" switch.
+@cindex max-ttl
+Expire packets that couldn't be sent after this many seconds (default: @t{60}). Gvpe will normally queue packets for a node without an active connection, in the hope of establishing a connection soon. This value specifies the maximum lifetime a packet will stay in the queue, if a packet gets older, it will be thrown away.
 @refill
 
 
 @item
-@b{tcp-port = port-number}
+max-queue = positive-number>=1
+
+@cindex max-queue
+The maximum number of packets that will be queued (default: @t{512}) for this node. If more packets are sent then earlier packets will be expired. See @t{max-ttl}, above.
+@refill
+
+
+@item
+router-priority = 0 | 1 | positive-number>=2
+
+@cindex router-priority
+Sets the router priority of the given node (default: @t{0}, disabled).
+@refill
+If some node tries to connect to another node but it doesn't have a hostname, it asks a router node for it's IP address. The router node chosen is the one with the highest priority larger than @t{1} that is currently reachable. This is called a @emph{mediated} connection, as the connection itself will still be direct, but it uses another node to mediate between the two nodes.
+@refill
+The value @t{0} disables routing, that means if the node receives a packet not for itself it will not forward it but instead drop it.
+@refill
+The special value @t{1} allows other hosts to route through the router host, but they will never route through it by default (i.e. the config file of another node needs to specify a router priority higher than one to choose such a node for routing).
+@refill
+The idea behind this is that some hosts can, if required, bump the @t{router-priority} setting to higher than @t{1} in their local config to route through specific hosts. If @t{router-priority} is @t{0}, then routing will be refused, so @t{1} serves as a "enable, but do not use by default" switch.
+@refill
+Nodes with @t{router-priority} set to @t{2} or higher will always be forced to @t{connect} = @t{always} (unless they are @t{disabled}).
+@refill
+
+
+@item
+tcp-port = port-number
 
 @cindex tcp-port
 Similar to @t{udp-port} (default: @t{655}), but sets the TCP port number.
@@ -1259,7 +1285,7 @@ Similar to @t{udp-port} (default: @t{655}), but sets the TCP port number.
 
 
 @item
-@b{udp-port = port-number}
+udp-port = port-number
 
 @cindex udp-port
 Sets the port number used by the UDP protocol (default: @t{655}, not officially assigned by IANA!).
@@ -1277,47 +1303,47 @@ The default (or recommended) directory layout for the config directory is:
 
 
 @item
-@b{
+
 @cindex gvpe.conf
-gvpe.conf}
+gvpe.conf
 
 The config file.
 @refill
 
 
 @item
-@b{
+
 @cindex if-up
-if-up}
+if-up
 
 The if-up script
 @refill
 
 
 @item
-@b{
+
 @cindex node-up
 node-up, 
 @cindex node-down
-node-down}
+node-down
 
 If used the node up or node-down scripts.
 @refill
 
 
 @item
-@b{
+
 @cindex hostkey
-hostkey}
+hostkey
 
 The private key (taken from @t{hostkeys/nodename}) of the current host.
 @refill
 
 
 @item
-@b{
+
 @cindex pubkey/nodename
-pubkey/nodename}
+pubkey/nodename
 
 The public keys of the other nodes, one file per node.
 @refill
@@ -1352,42 +1378,49 @@ This is the control program for the @t{gvpe}, the virtual private ethernet daemo
 
 
 @item
-@b{@strong{-c}, @strong{--config=}@emph{DIR}}
+@strong{-c}, @strong{--config=}@emph{DIR}
 
 Read configuration options from @emph{DIR}.
 @refill
 
 
 @item
-@b{@strong{-g}, @strong{--generate-keys}}
+@strong{-g}, @strong{--generate-keys}
 
 Generate public/private RSA keypair and exit.
 @refill
 
 
 @item
-@b{@strong{--help}}
+@strong{-q}, @strong{--quiet}
+
+Suppresses messages the author finds nonessential for scripting purposes.
+@refill
+
+
+@item
+@strong{--help}
 
 Display short list of options.
 @refill
 
 
 @item
-@b{@strong{--kill}[@strong{=}@emph{SIGNAL}]}
+@strong{--kill}[@strong{=}@emph{SIGNAL}]
 
 Attempt to kill a running @t{gvpectrl} (optionally with the specified @emph{SIGNAL} instead of @t{SIGTERM}) and exit.
 @refill
 
 
 @item
-@b{@strong{--show-config}}
+@strong{--show-config}
 
 Show a summary of the configuration, and how gvpe interprets it. Can also be very useful when designing firewall scripts.
 @refill
 
 
 @item
-@b{@strong{--version}}
+@strong{--version}
 
 Output version information and exit.
 @refill
@@ -1449,42 +1482,42 @@ For example, to start @t{gvpe} in the foreground, with log-level @t{info} on the
 
 
 @item
-@b{@strong{-c}, @strong{--config=}@emph{DIR}}
+@strong{-c}, @strong{--config=}@emph{DIR}
 
 Read configuration options from @emph{DIR}
 @refill
 
 
 @item
-@b{@strong{-d}, @strong{--l=}@emph{LEVEL}}
+@strong{-d}, @strong{--l=}@emph{LEVEL}
 
 Set logging level to @emph{LEVEL} (one of: noise, trace, debug, info, notice, warn, error, critical).
 @refill
 
 
 @item
-@b{@strong{--help}}
+@strong{--help}
 
 Display short list of options.
 @refill
 
 
 @item
-@b{@strong{-D}, @strong{--no-detach}}
+@strong{-D}, @strong{--no-detach}
 
 Don't fork and detach but stay in foreground and log messages to stderr in addition to syslog.
 @refill
 
 
 @item
-@b{@strong{-L}, @strong{--mlock}}
+@strong{-L}, @strong{--mlock}
 
 Lock @t{gvpe} into main memory.  This will prevent sensitive data like shared private keys to be written to the system swap files/partitions.
 @refill
 
 
 @item
-@b{@strong{--version}}
+@strong{--version}
 
 Output version information and exit.
 @refill
@@ -1499,21 +1532,21 @@ Output version information and exit.
 
 
 @item
-@b{HUP}
+HUP
 
 Closes/resets all connections, resets the retry time and will start connecting again (it will NOT re-read the config file). This is useful e.g. in a @t{/etc/ppp/if-up} script.
 @refill
 
 
 @item
-@b{TERM}
+TERM
 
 Closes/resets all connections and exits.
 @refill
 
 
 @item
-@b{USR1}
+USR1
 
 Dump current network status into the syslog (at loglevel @t{notice}, so make sure your loglevel allows this).
 @refill
@@ -1528,42 +1561,42 @@ Dump current network status into the syslog (at loglevel @t{notice}, so make sur
 
 
 @item
-@b{@t{/etc/gvpe/gvpe.conf}}
+@t{/etc/gvpe/gvpe.conf}
 
 The configuration file for @t{gvpe}.
 @refill
 
 
 @item
-@b{@t{/etc/gvpe/if-up}}
+@t{/etc/gvpe/if-up}
 
 Script which is executed as soon as the virtual network device has been allocated.  Purpose is to further configure that device.
 @refill
 
 
 @item
-@b{@t{/etc/gvpe/node-up}}
+@t{/etc/gvpe/node-up}
 
 Script which is executed whenever a node connects to this node. This can be used for example to run nsupdate.
 @refill
 
 
 @item
-@b{@t{/etc/gvpe/node-down}}
+@t{/etc/gvpe/node-down}
 
 Script which is executed whenever a connection to another node is lost. for example to run nsupdate.
 @refill
 
 
 @item
-@b{@t{/etc/gvpe/pubkey/*}}
+@t{/etc/gvpe/pubkey/*}
 
 The directory containing the public keys for every node, usually autogenerated by executing @t{gvpectrl --generate-keys}.
 @refill
 
 
 @item
-@b{@t{/var/run/gvpe.pid}}
+@t{/var/run/gvpe.pid}
 
 The PID of the currently running @t{gvpe} is stored in this file.
 @refill
@@ -1594,7 +1627,7 @@ The first part of this document describes the transport protocols which are used
 
 
 @section PART 1: Transport protocols
-GVPE offers a range of transport protocols that can be used to interchange data between nodes. Protocols differ in their overhead, speed, reliability, and robustness.
+GVPE offers a wide range of transport protocols that can be used to interchange data between nodes. Protocols differ in their overhead, speed, reliability, and robustness.
 @refill
 The following sections describe each transport protocol in more detail. They are sorted by overhead/efficiency, the most efficient transport is listed first:
 @refill
@@ -1610,9 +1643,9 @@ Using raw ip frames has the drawback that many firewalls block "unknown" protoco
 
 
 @subsection ICMP
-This protocol offers very low overhead (minimum 42 bytes), and can sometimes tunnel through firewalls when other protocols cannot.
+This protocol offers very low overhead (minimum 42 bytes), and can sometimes tunnel through firewalls when other protocols can not.
 @refill
-It works by prepending a ICMP header with type @t{icmp-type} and a code of @t{255}. The default @t{icmp-type} is @t{echo-reply}, so the resulting packets look like echo replies, which looks rather strange to network admins.
+It works by prepending an ICMP header with type @t{icmp-type} and a code of @t{255}. The default @t{icmp-type} is @t{echo-reply}, so the resulting packets look like echo replies, which looks rather strange to network admins.
 @refill
 This transport should only be used if other transports (i.e. raw ip) are not available or undesirable (due to their overhead).
 @refill
@@ -1632,7 +1665,7 @@ It's only useful when tunneling through firewalls that block better protocols. I
 @refill
 It is an abuse of the usage a proxy was designed for, so make sure you are allowed to use it for GVPE.
 @refill
-This protocol also has server and client sides. If the @t{tcp-port} is set to zero, other nodes cannot connect to this node directly (and @t{tcp-port} zero cannot be used). If the @t{tcp-port} is non-zero, the node can act both as a client as well as a server.
+This protocol also has server and client sides. If the @t{tcp-port} is set to zero, other nodes cannot connect to this node directly. If the @t{tcp-port} is non-zero, the node can act both as a client as well as a server.
 @refill
 
 
@@ -1643,11 +1676,11 @@ This is the worst choice of transport protocol with respect to overhead (overhea
 @refill
 In addition, the same problems as the TCP transport also plague this protocol.
 @refill
-Most configuration needs to be done by editing @t{src/vpn_dns.C} directly.
+It's only use is to tunnel through firewalls that do not allow direct internet access. Similar to using a HTTP proxy (as the TCP transport does), it uses a local DNS server/forwarder (given by the @t{dns-forw-host} configuration value) as a proxy to send and receive data as a client, and an @t{NS} record pointing to the GVPE server (as given by the @t{dns-hostname} directive).
 @refill
-It's only use is to tunnel through firewalls that do not allow direct internet access. Similar to using a HTTP proxy (as the TCP transport does), it uses a local DNS server/forwarder (given by the @t{dns-forw-host} configuration value) as a proxy to send and receive data as a client, and a @t{NS} record pointing to the GVPE server (as given by the @t{dns-hostname} directive).
+The only good side of this protocol is that it can tunnel through most firewalls mostly undetected, iff the local DNS server/forwarder is sane (which is true for most routers, WLAN gateways and nameservers).
 @refill
-The only good side of this protocol is that it can tunnel through most firewalls undetected, iff the local DNS server/forwarder is sane (which is true for most routers, wlan gateways and nameservers).
+Finetuning needs to be done by editing @t{src/vpn_dns.C} directly.
 @refill
 
 
@@ -1671,7 +1704,7 @@ The HMAC field is present in all packets, even if not used (e.g. in auth request
 @refill
 The TYPE field is a single byte and determines the purpose of the packet (e.g. RESET, COMPRESSED/UNCOMPRESSED DATA, PING, AUTH REQUEST/RESPONSE, CONNECT REQUEST/INFO etc.).
 @refill
-SRCDST is a three byte field which contains the source and destination node ids (12 bits each). The protocol does not yet scale well beyond 30+ hosts, since all hosts must connect to each other once on startup. But if restarts are rare or tolerable and most connections are on demand, much larger networks are feasible.
+SRCDST is a three byte field which contains the source and destination node IDs (12 bits each).
 @refill
 The DATA portion differs between each packet type, naturally, and is the only part that can be encrypted. Data packets contain more fields, as shown:
 @refill
@@ -1685,14 +1718,14 @@ The DATA portion differs between each packet type, naturally, and is the only pa
 
 RAND is a sequence of fully random bytes, used to increase the entropy of the data for encryption purposes.
 @refill
-SEQNO is a 32-bit sequence number. It is negotiated at every connection initialization and starts at some random 31 bit value. VPE currently uses a sliding window of 512 packets/sequence numbers to detect reordering, duplication and reply attacks.
+SEQNO is a 32-bit sequence number. It is negotiated at every connection initialization and starts at some random 31 bit value. VPE currently uses a sliding window of 512 packets/sequence numbers to detect reordering, duplication and replay attacks.
 @refill
 
 
-@subsection The authentification protocol
+@subsection The authentication protocol
 Before hosts can exchange packets, they need to establish authenticity of the other side and a key. Every host has a private RSA key and the public RSA keys of all other hosts.
 @refill
-A host establishes a simplex connection by sending the other host a RSA encrypted challenge containing a random challenge (consisting of the encryption key to use when sending packets, more random data and PKCS1_OAEP padding) and a random 16 byte "challenge-id" (used to detect duplicate auth packets). The destination host will respond by replying with an (unencrypted) RIPEMD160 hash of the decrypted challenge, which will authentify that host. The destination host will also set the outgoing encryption parameters as given in the packet.
+A host establishes a simplex connection by sending the other host an RSA encrypted challenge containing a random challenge (consisting of the encryption key to use when sending packets, more random data and PKCS1_OAEP padding) and a random 16 byte "challenge-id" (used to detect duplicate auth packets). The destination host will respond by replying with an (unencrypted) RIPEMD160 hash of the decrypted challenge, which will authenticate that host. The destination host will also set the outgoing encryption parameters as given in the packet.
 @refill
 When the source host receives a correct auth reply (by verifying the hash and the id, which will expire after 120 seconds), it will start to accept data packets from the destination host.
 @refill
@@ -1703,26 +1736,54 @@ This protocol is completely symmetric, so to be able to send packets the destina
 
 
 @subsection Retrying
-When there is no response to an auth request, the host will send auth requests in bursts with an exponential backoff. After some time it will resort to PING packets, which are very small (8 bytes) and lightweight (no RSA operations required). A host that receives ping requests from an unconnected peer will respond by trying to create a connection.
+When there is no response to an auth request, the host will send auth requests in bursts with an exponential backoff. After some time it will resort to PING packets, which are very small (8 bytes + protocol header) and lightweight (no RSA operations required). A host that receives ping requests from an unconnected peer will respond by trying to create a connection.
 @refill
 In addition to the exponential backoff, there is a global rate-limit on a per-IP base. It allows long bursts but will limit total packet rate to something like one control packet every ten seconds, to avoid accidental floods due to protocol problems (like a RSA key file mismatch between two hosts).
+@refill
+The intervals between retries are limited by the @t{max-retry} configuration value. A node with @t{connect} = @t{always} will always retry, a node with @t{connect} = @t{ondemand} will only try (and re-try) to connect as long as there are packets in the queue, usually this limits the retry period to @t{max-ttl} seconds.
+@refill
+Sending packets over the VPN will reset the retry intervals as well, which means as long as somebody is trying to send packets to a given node, GVPE will try to connect every few seconds.
 @refill
 
 
 @subsection Routing and Protocol translation
-The gvpe routing algorithm is easy: there isn't any routing. GVPE always tries to establish direct connections, if the protocol abilities of the two hosts allow it.
+The GVPE routing algorithm is easy: there isn't much routing to speak of: When routing packets to another node, GVPE trues the following options, in order:
 @refill
-If the two hosts should be able to reach each other (common protocol, ip and port all known), but cannot (network down), then there will be no connection, point.
+
+
+@itemize
+
+
+@item
+If the two hosts should be able to reach each other directly (common protocol, port known), then GVPE will send the packet directly to the other node.
+
+
+
+@item
+If this isn't possible (e.g. because the node doesn't have a @t{hostname} or known port), but the nodes speak a common protocol and a router is available, then GVPE will ask a router to "mediate" between both nodes (see below).
+
+
+
+@item
+If a direct connection isn't possible (no common protocols) or forbidden (@t{deny-direct}) and there are any routers, then GVPE will try to send packets to the router with the highest priority that is connected already @emph{and} is able (as specified by the config file) to connect directly to the target node.
+
+
+
+@item
+If no such router exists, then GVPE will simply send the packet to the node with the highest priority available.
+
+
+
+@item
+Failing all that, the packet will be dropped.
+
+@end itemize
+
+A host can usually declare itself unreachable directly by setting it's port number(s) to zero. It can declare other hosts as unreachable by using a config-file that disables all protocols for these other hosts. Another option is to disable all protocols on that host in the other config files.
 @refill
-A host can usually declare itself unreachable directly by setting it's port number(s) to zero. It can declare other hosts as unreachable by using a config-file that disables all protocols for these other hosts.
+If two hosts cannot connect to each other because their IP address(es) are not known (such as dialup hosts), one side will send a @emph{mediated} connection request to a router (routers must be configured to act as routers!), which will send both the originating and the destination host a connection info request with protocol information and IP address of the other host (if known). Both hosts will then try to establish a direct connection to the other peer, which is usually possible even when both hosts are behind a NAT gateway.
 @refill
-If two hosts cannot connect to each other because their IP address(es) are not known (such as dialup hosts), one side will send a connection request to a router (routers must be configured to act as routers!), which will send both the originating and the destination host a connection info request with protocol information and IP address of the other host (if known). Both hosts will then try to establish a connection to the other peer, which is usually possible even when both hosts are behind a NAT gateway.
-@refill
-If the hosts cannot reach each other because they have no common protocol, the originator instead use the router with highest priority and matching protocol as peer. Since the SRCDST field is not encrypted, the router host can just forward the packet to the destination host. Since each host uses it's own private key, the router will not be able to decrypt or encrypt packets, it will just act as a simple router and protocol translator.
-@refill
-When no router is connected, the host will aggressively try to connect to all routers, and if a router is asked for an unconnected host it will try to ask another router to establish the connection.
-@refill
-... more not yet written about the details of the routing, please bug me ...
+Routing via other nodes works because the SRCDST field is not encrypted, so the router can just forward the packet to the destination host. Since each host uses it's own private key, the router will not be able to decrypt or encrypt packets, it will just act as a simple router and protocol translator.
 @refill
 
 

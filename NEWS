@@ -25,6 +25,8 @@ todo: keepalive more aggressive?
         - dropped -fno-exceptions due to ev++.h using it.
         - node-up/down scripts are now run in sequence.
         - new -q switch for gvpectrl, for when you run it often.
+        - work around the horribly inconsistent, ad-hoc, ever-changing
+          and broken texinfo syntax. YMMV. avoid texinfo.
         - bugfixes.
 
 2.01 Thu Mar 29 19:26:04 CEST 2007
