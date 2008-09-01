@@ -10,17 +10,19 @@ I<NODENAME> [I<option...>]
 
 =head1 DESCRIPTION
 
-See the gvpe(5) manpage for an introduction to the gvpe suite.
+See the gvpe(5) man page for an introduction to the gvpe suite.
 
 This is the manual page for gvpe, the virtual private ethernet daemon.
 When started, C<gvpe> will read it's configuration file to determine the
 network topology, and other configuration information, assuming the role
-of node I<NODENAME>. It will then connect to the tun/tap device and set
-up a socket for incoming connections.  Then a script will be executed to
-further configure the virtual device.  If that succeeds, it will detach
+of node I<NODENAME>
+
+It will then create/connect to the tun/tap device and set up a socket for
+incoming connections. Then a C<if-up> script will be executed to further
+configure the virtual network device. If that succeeds, it will detach
 from the controlling terminal and continue in the background, accepting
 and setting up connections to other gvpe daemons that are part of the
-virtual private ethernet.
+same virtual private ethernet.
 
 The optional arguments after the node name have to be of the form:
 
@@ -28,7 +30,7 @@ The optional arguments after the node name have to be of the form:
 
 If the argument has a prefix of C<nodename.>
 (i.e. C<laptop.enable-dns=yes>) then it will be parsed after all the
-config directives for that node, if not, it is parsed befroe the first
+config directives for that node, if not, it is parsed before the first
 node directive in the config file, and can be used to set global options
 or default variables.
 
@@ -64,7 +66,7 @@ addition to syslog.
 
 =item B<-L>, B<--mlock>
 
-Lock C<gvpe> into main memory.  This will prevent sensitive data like
+Lock C<gvpe> into main memory. This will prevent sensitive data like
 shared private keys to be written to the system swap files/partitions.
 
 =item B<--version>
@@ -142,7 +144,7 @@ gvpe(5) for an introduction, gvpe.conf(5), gvpectrl(8).
 The GVPE mailing list, at L<http://lists.schmorp.de/> or
 C<gvpe@lists.schmorp.de>.
 
-gvpe comes with ABSOLUTELY NO WARRANTY.  This is free software, and you are
+GVPE comes with ABSOLUTELY NO WARRANTY.  This is free software, and you are
 welcome to redistribute it under certain conditions; see the file COPYING
 for details.
 
@@ -152,5 +154,5 @@ Marc Lehmann C<< <gvpe@schmorp.de> >>.
 
 And thanks to many others for their contributions to gvpe, especially the
 tincd authors, who inspired me to write this program (after scavenging
-their sourcecode ;).
+their source code ;).
 

@@ -11,7 +11,7 @@ quirks and platform limitations, as known.
 
 Most operating systems nowadays support something called a
 I<tunnel>-device, which makes it possible to divert IPv4 (and often other
-protocols, too) into a userspace daemon like C<gvpe>. This is being
+protocols, too) into a user space daemon like C<gvpe>. This is being
 referred to as a TUN-device.
 
 This is fine for point-to-point tunnels, but for a virtual ethernet, an
@@ -169,7 +169,7 @@ send me an C<ifconfig> command invocation that does that.
 
 See C<tincd/netbsd> for more information.
 
-Completely unstested so far.
+Completely untested so far.
 
 =head2 tincd/mingw
 
@@ -190,12 +190,12 @@ Completely untested so far.
 
 =head2 tincd/uml_socket
 
-TAP-device; purpose unknown and untested, probably creates a unix datagram
+TAP-device; purpose unknown and untested, probably creates a UNIX datagram
 socket (path given by C<ifname>) and reads and writes raw packets, so
 might be useful in other than UML contexts.
 
 No network interface is created, and the MAC and MTU must be set as
-approriate on the other side of the socket.  GVPE will exit if the MAC
+appropriate on the other side of the socket.  GVPE will exit if the MAC
 address doesn't match what it expects.
 
 Completely untested so far.

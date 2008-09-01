@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000-2007 Marc Alexander Lehmann <schmorp@schmorp.de>
+ * Copyright (c) 2000-2008 Marc Alexander Lehmann <schmorp@schmorp.de>
  * 
  * Redistribution and use in source and binary forms, with or without modifica-
  * tion, are permitted provided that the following conditions are met:
@@ -208,7 +208,7 @@ lzf_compress (const void *const in_data, unsigned int in_len,
               break;
             }
 
-          len -= 2;
+          len -= 2; /* len is now #octets - 1 */
           ip++;
 
           if (len < 7)
@@ -222,24 +222,32 @@ lzf_compress (const void *const in_data, unsigned int in_len,
             }
 
           *op++ = off;
+          lit = 0; op++; /* start run */
+
+          ip += len + 1;
+
+          if (expect_false (ip > in_end - 2))
+            break;
 
 #if ULTRA_FAST || VERY_FAST
-          ip += len;
-#if VERY_FAST && !ULTRA_FAST
           --ip;
-#endif
+# if VERY_FAST && !ULTRA_FAST
+          --ip;
+# endif
           hval = FRST (ip);
 
           hval = NEXT (hval, ip);
           htab[IDX (hval)] = ip;
           ip++;
 
-#if VERY_FAST && !ULTRA_FAST
+# if VERY_FAST && !ULTRA_FAST
           hval = NEXT (hval, ip);
           htab[IDX (hval)] = ip;
           ip++;
-#endif
+# endif
 #else
+          ip -= len + 1;
+
           do
             {
               hval = NEXT (hval, ip);
@@ -248,8 +256,6 @@ lzf_compress (const void *const in_data, unsigned int in_len,
             }
           while (len--);
 #endif
-
-          lit = 0; op++; /* start run */
         }
       else
         {

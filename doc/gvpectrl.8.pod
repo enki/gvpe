@@ -21,7 +21,7 @@ Read configuration options from I<DIR>.
 
 =item B<-g>, B<--generate-keys>
 
-Generate public/private RSA keypair and exit.
+Generate public/private RSA key-pair and exit.
 
 =item B<-q>, B<--quiet>
 
@@ -55,7 +55,7 @@ If you find any bugs, report them to C<gvpe@schmorp.de>.
 
 gvpe(5), gvpe.conf(5), gvpe(8).
 
-gvpe comes with ABSOLUTELY NO WARRANTY.  This is free software, and you are
+GVPE comes with ABSOLUTELY NO WARRANTY.  This is free software, and you are
 welcome to redistribute it under certain conditions; see the file COPYING
 for details.
 

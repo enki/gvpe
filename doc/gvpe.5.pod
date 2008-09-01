@@ -40,11 +40,11 @@ communications between any two nodes is private to those two nodes.
 
 Network means that more than two parties can participate in the network,
 so for instance it's possible to connect multiple branches of a company
-into a single network. Many so-called "vpn" solutions only create
+into a single network. Many so-called "VPN" solutions only create
 point-to-point tunnels, which in turn can be used to build larger
 networks.
 
-GVPE provides a true multi-point network in wich any number of nodes (at
+GVPE provides a true multi-point network in which any number of nodes (at
 least a few dozen in practise, the theoretical limit is 4095 nodes) can
 participate.
 
@@ -83,20 +83,20 @@ another host.
 
 =head1 PROGRAMS
 
-Vpe comes with two programs: one daemon (C<gvpe>) and one control program
+Gvpe comes with two programs: one daemon (C<gvpe>) and one control program
 (C<gvpectrl>).
 
 =over 4
 
 =item gvpectrl
 
-Is used to generate the keys, check and give an overview of of the
-configuration and contorl the daemon (restarting etc.).
+This program is used to generate the keys, check and give an overview of of the
+configuration and to control the daemon (restarting etc.).
 
 =item gvpe
 
-Is the daemon used to establish and maintain connections to the other
-network members. It should be run on the gateway machine.
+This is the daemon used to establish and maintain connections to the other
+network nodes. It should be run on the gateway of each VPN subnet.
 
 =back
 
@@ -105,9 +105,13 @@ network members. It should be run on the gateway machine.
 Please have a look at the C<gvpe.osdep(5)> manpage for platform-specific
 information.
 
+Gvpe hardcodes most encryption parameters. While this reduces flexibility,
+it makes the program much simpler and helps making buffer overflows
+impossible under most circumstances.
+
 Here are a few recipes for compiling your gvpe, showing the extremes
-(fast, small, insecure OR slow, large, more secure), between you should
-choose:
+(fast, small, insecure OR slow, large, more secure), between which you
+should choose:
 
 =head2 AS LOW PACKET OVERHEAD AS POSSIBLE
 
@@ -116,14 +120,15 @@ choose:
 Minimize the header overhead of VPN packets (the above will result in
 only 4 bytes of overhead over the raw ethernet frame). This is a insecure
 configuration because a HMAC length of 4 makes collision attacks based on
-the birthday paradox easy, though.
+the birthday paradox pretty easy.
 
 =head2 MINIMIZE CPU TIME REQUIRED
 
    ./configure --enable-cipher=bf --enable-digest=md4
 
 Use the fastest cipher and digest algorithms currently available in
-gvpe. MD4 has been broken and is quite insecure, though.
+gvpe. MD4 has been broken and is quite insecure, though, so using another
+digest algorithm is recommended.
 
 =head2 MAXIMIZE SECURITY
 
@@ -132,13 +137,13 @@ gvpe. MD4 has been broken and is quite insecure, though.
 This uses a 16 byte HMAC checksum to authenticate packets (I guess 8-12
 would also be pretty secure ;) and will additionally prefix each packet
 with 8 bytes of random data. In the long run, people should move to
-SHA-224 and beyond, but support in openssl is missing as of writing this
-document.
+SHA-256 and beyond).
 
-In general, remember that AES-128 seems to be more secure and faster than
+In general, remember that AES-128 seems to be as secure but faster than
 AES-192 or AES-256, more randomness helps against sniffing and a longer
-HMAC helps against spoofing. MD4 is a fast digest, SHA1 or RIPEMD160 are
-better, and Blowfish is a fast cipher (and also quite secure).
+HMAC helps against spoofing. MD4 is a fast digest, SHA1, RIPEMD160, SHA256
+are consecutively better, and Blowfish is a fast cipher (and also quite
+secure).
 
 =head1 HOW TO SET UP A SIMPLE VPN
 
@@ -147,9 +152,9 @@ three hosts up and running.
 
 =head2 STEP 1: configuration
 
-First you have to create a daemon configuation file and put it into the
+First you have to create a daemon configuration file and put it into the
 configuration directory. This is usually C</etc/gvpe>, depending on how you
-configured gvpe, and can be overwritten using the C<-c> commandline switch.
+configured gvpe, and can be overwritten using the C<-c> command line switch.
 
 Put the following lines into C</etc/gvpe/gvpe.conf>:
 
@@ -166,9 +171,9 @@ Put the following lines into C</etc/gvpe/gvpe.conf>:
    node = third
    hostname = third.example.net
 
-The only other file neccessary if the C<if-up> script that initializes the
-local ethernet interface. Put the following lines into C</etc/gvpe/if-up>
-and make it execute (C<chmod 755 /etc/gvpe/if-up>):
+The only other file necessary is the C<if-up> script that initializes the
+virtual ethernet interface on the local host. Put the following lines into
+C</etc/gvpe/if-up> and make it executable (C<chmod 755 /etc/gvpe/if-up>):
 
    #!/bin/sh
    ip link set $IFNAME address $MAC mtu $MTU up
@@ -178,19 +183,19 @@ and make it execute (C<chmod 755 /etc/gvpe/if-up>):
    ip route add 10.0.0.0/16 dev $IFNAME
 
 This script will give each node a different IP address in the C<10.0/16>
-network.  The internal network (e.g. the C<eth0> interface) should then be
+network.  The internal network (if gvpe runs on a router) should then be
 set to a subset of that network, e.g.  C<10.0.1.0/24> on node C<first>,
 C<10.0.2.0/24> on node C<second>, and so on.
 
 By enabling routing on the gateway host that runs C<gvpe> all nodes will
-be able to reach the other nodes. You can, of course, also use proxy arp
-or other means of pseudo-bridging (or even real briding), or (best) full
-routing - the choice is yours.
+be able to reach the other nodes. You can, of course, also use proxy ARP
+or other means of pseudo-bridging, or (best) full routing - the choice is
+yours.
 
 =head2 STEP 2: create the RSA key pairs for all hosts
 
-Run the following command to generate all key pairs (that might take a
-while):
+Run the following command to generate all key pairs for all nodes (that
+might take a while):
 
    gvpectrl -c /etc/gvpe -g
 
@@ -200,8 +205,11 @@ This command will put the public keys into C<<
 
 =head2 STEP 3: distribute the config files to all nodes
 
-Now distribute the config files to the other nodes. This should be done in two steps, since the
-private keys should not be distributed. The example uses rsync-over-ssh
+Now distribute the config files and private keys to the other nodes. This
+should be done in two steps, since only the private keys meant for a node
+should be distributed (so each node has only it's own private key).
+
+The example uses rsync-over-ssh
 
 First all the config files without the hostkeys should be distributed:
 
@@ -215,25 +223,25 @@ Then the hostkeys should be copied:
    rsync -avzessh /etc/gvpe/hostkeys/second 133.55.82.9:/etc/hostkey
    rsync -avzessh /etc/gvpe/hostkeys/third  third.example.net:/etc/hostkey
 
-You should now check the configration by issuing the command C<gvpectrl -c
+You should now check the configuration by issuing the command C<gvpectrl -c
 /etc/gvpe -s> on each node and verify it's output.
 
 =head2 STEP 4: starting gvpe
 
 You should then start gvpe on each node by issuing a command like:
 
-   gvpe -D -linfo first # first is the nodename
+   gvpe -D -l info first # first is the nodename
 
-This will make the gvpe stay in foreground. You should then see
+This will make the gvpe daemon stay in foreground. You should then see
 "connection established" messages. If you don't see them check your
 firewall and routing (use tcpdump ;).
 
 If this works you should check your networking setup by pinging various
 endpoints.
 
-To make gvpe run more permanently you can either run it as a daemon
-(by starting it without the C<-D> switch), or, much better, from your
-inittab. I use a line like this on my systems:
+To make gvpe run more permanently you can either run it as a daemon (by
+starting it without the C<-D> switch), or, much better, from your inittab
+or equivalent. I use a line like this on all my systems:
 
    t1:2345:respawn:/opt/gvpe/sbin/gvpe -D -L first >/dev/null 2>&1
 
@@ -247,11 +255,11 @@ again.
 
 =head1 SEE ALSO
 
-gvpe.osdep(5) for OS-depedendent information, gvpe.conf(5), gvpectrl(8),
+gvpe.osdep(5) for OS-dependent information, gvpe.conf(5), gvpectrl(8),
 and for a description of the transports, protocol, and routing algorithm,
 gvpe.protocol(7).
 
-The GVPE mailinglist, at L<http://lists.schmorp.de/>, or
+The GVPE mailing list, at L<http://lists.schmorp.de/>, or
 C<gvpe@lists.schmorp.de>.
 
 =head1 AUTHOR

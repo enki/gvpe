@@ -1309,7 +1309,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 inline void
 connection::keepalive_cb (ev::timer &w, int revents)
 {
-  if (ev_now () >= last_activity + ::conf.keepalive + 30)
+  if (ev_now () >= last_activity + ::conf.keepalive + 15)
     {
       reset_connection ();
       establish_connection ();
@@ -1320,7 +1320,7 @@ connection::keepalive_cb (ev::timer &w, int revents)
            || THISNODE->connectmode != conf_node::C_ONDEMAND)
     {
       send_ping (si);
-      w.start (5);
+      w.start (3);
     }
   else if (ev_now () < last_activity + ::conf.keepalive + 10)
     // hold ondemand connections implicitly a few seconds longer

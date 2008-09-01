@@ -25,10 +25,10 @@ transport is listed first:
 This protocol is the best choice, performance-wise, as the minimum
 overhead per packet is only 38 bytes.
 
-It works by sending the VPN payload using raw ip frames (using the
+It works by sending the VPN payload using raw IP frames (using the
 protocol set by C<ip-proto>).
 
-Using raw ip frames has the drawback that many firewalls block "unknown"
+Using raw IP frames has the drawback that many firewalls block "unknown"
 protocols, so this transport only works if you have full IP connectivity
 between nodes.
 
@@ -40,9 +40,9 @@ sometimes tunnel through firewalls when other protocols can not.
 It works by prepending an ICMP header with type C<icmp-type> and a code
 of C<255>. The default C<icmp-type> is C<echo-reply>, so the resulting
 packets look like echo replies, which looks rather strange to network
-admins.
+administrators.
 
-This transport should only be used if other transports (i.e. raw ip) are
+This transport should only be used if other transports (i.e. raw IP) are
 not available or undesirable (due to their overhead).
 
 =head2 UDP
@@ -100,9 +100,9 @@ C<dns-hostname> directive).
 
 The only good side of this protocol is that it can tunnel through most
 firewalls mostly undetected, iff the local DNS server/forwarder is sane
-(which is true for most routers, WLAN gateways and nameservers).
+(which is true for most routers, wireless LAN gateways and nameservers).
 
-Finetuning needs to be done by editing C<src/vpn_dns.C> directly.
+Fine-tuning needs to be done by editing C<src/vpn_dns.C> directly.
 
 =head1 PART 2: The GNU VPE protocol
 
@@ -114,8 +114,8 @@ you some overview over the protocol.
 =head2 Anatomy of a VPN packet
 
 The exact layout and field lengths of a VPN packet is determined at
-compiletime and doesn't change. The same structure is used for all
-transort protocols, be it RAWIP or TCP.
+compile time and doesn't change. The same structure is used for all
+transport protocols, be it RAWIP or TCP.
 
  +------+------+--------+------+
  | HMAC | TYPE | SRCDST | DATA |
@@ -150,47 +150,47 @@ duplication and replay attacks.
 
 =head2 The authentication protocol
 
-Before hosts can exchange packets, they need to establish authenticity of
-the other side and a key. Every host has a private RSA key and the public
-RSA keys of all other hosts.
+Before nodes can exchange packets, they need to establish authenticity of
+the other side and a key. Every node has a private RSA key and the public
+RSA keys of all other nodes.
 
-A host establishes a simplex connection by sending the other host an
+A host establishes a simplex connection by sending the other node an
 RSA encrypted challenge containing a random challenge (consisting of
 the encryption key to use when sending packets, more random data and
 PKCS1_OAEP padding) and a random 16 byte "challenge-id" (used to detect
-duplicate auth packets). The destination host will respond by replying
+duplicate auth packets). The destination node will respond by replying
 with an (unencrypted) RIPEMD160 hash of the decrypted challenge, which
-will authenticate that host. The destination host will also set the
+will authenticate that node. The destination node will also set the
 outgoing encryption parameters as given in the packet.
 
-When the source host receives a correct auth reply (by verifying the
+When the source node receives a correct auth reply (by verifying the
 hash and the id, which will expire after 120 seconds), it will start to
-accept data packets from the destination host.
+accept data packets from the destination node.
 
-This means that a host can only initate a simplex connection, telling the
+This means that a node can only initiate a simplex connection, telling the
 other side the key it has to use when it sends packets. The challenge
 reply is only used to set the current IP address of the other side and
 protocol parameters.
 
 This protocol is completely symmetric, so to be able to send packets the
-destination host must send a challenge in the exact same way as already
-described (so, in essence, two simplex connections are created per host
+destination node must send a challenge in the exact same way as already
+described (so, in essence, two simplex connections are created per node
 pair).
 
 =head2 Retrying
 
-When there is no response to an auth request, the host will send auth
-requests in bursts with an exponential backoff. After some time it will
+When there is no response to an auth request, the node will send auth
+requests in bursts with an exponential back-off. After some time it will
 resort to PING packets, which are very small (8 bytes + protocol header)
-and lightweight (no RSA operations required). A host that receives ping
+and lightweight (no RSA operations required). A node that receives ping
 requests from an unconnected peer will respond by trying to create a
 connection.
 
-In addition to the exponential backoff, there is a global rate-limit on
+In addition to the exponential back-off, there is a global rate-limit on
 a per-IP base. It allows long bursts but will limit total packet rate to
 something like one control packet every ten seconds, to avoid accidental
 floods due to protocol problems (like a RSA key file mismatch between two
-hosts).
+nodes).
 
 The intervals between retries are limited by the C<max-retry>
 configuration value. A node with C<connect> = C<always> will always retry,
@@ -210,7 +210,7 @@ options, in order:
 
 =over 4
 
-=item If the two hosts should be able to reach each other directly (common
+=item If the two nodes should be able to reach each other directly (common
 protocol, port known), then GVPE will send the packet directly to the
 other node.
 
@@ -238,7 +238,7 @@ a config-file that disables all protocols for these other hosts. Another
 option is to disable all protocols on that host in the other config files.
 
 If two hosts cannot connect to each other because their IP address(es)
-are not known (such as dialup hosts), one side will send a I<mediated>
+are not known (such as dial-up hosts), one side will send a I<mediated>
 connection request to a router (routers must be configured to act as
 routers!), which will send both the originating and the destination host
 a connection info request with protocol information and IP address of the
