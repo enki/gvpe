@@ -1,5 +1,10 @@
 GVPE NEWS
 
+2.21 Wed Sep  3 06:56:27 CEST 2008
+	- add missing ev++.h include header to tarball, which everybody
+          who tested it apparently had in their include path :(. Caught
+          by Karl Kleinpaste.
+
 2.2  Mon Sep  1 06:28:09 CEST 2008
 	- protocol version 0.1, compatible with older releases,
           but upgrade is recommended to due changed ondemand behaviour.
