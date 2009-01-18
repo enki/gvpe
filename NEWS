@@ -1,6 +1,8 @@
 GVPE NEWS
 
+	- enabled icmp/tcp/http-proxy protocols by default.
 	- updated copyright in program greetings.
+        - fix some configure messages.
 
 2.21 Wed Sep  3 06:56:27 CEST 2008
 	- add missing ev++.h include header to tarball, which everybody
