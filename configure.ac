@@ -66,7 +66,6 @@ dnl AC_DEFINE([_XOPEN_SOURCE], 500, [Enable XOPEN extensions])
 ALL_LINGUAS=""
 
 dnl Checks for programs.
-AC_PROG_CC
 AC_PROG_CPP
 AC_PROG_CXX
 AC_PROG_GCC_TRADITIONAL
@@ -274,29 +273,47 @@ dnl   [AS_HELP_STRING(--enable-bridging,enable bridging support (default disable
 dnl   AC_DEFINE_UNQUOTED(ENABLE_BRIDGING, 1, [bridging support.])
 dnl )
 
+ICMP=1
 AC_ARG_ENABLE(icmp,
-  [AS_HELP_STRING(--enable-icmp,enable icmp protocol support (default disabled).)],
+  [AS_HELP_STRING(--disable-icmp,enable icmp protocol support (default enabled).)],
+  if test "x$enableval" = xno; then
+     ICMP=0
+  fi
+)
+if test "x$ICMP" = x1; then
   AC_DEFINE_UNQUOTED(ENABLE_ICMP, 1, [ICMP protocol support.])
-)
+fi
 
+TCP=1
 AC_ARG_ENABLE(tcp,
-  [AS_HELP_STRING(--enable-tcp,enable tcp protocol support (default disabled).)],
-  AC_DEFINE_UNQUOTED(ENABLE_TCP, 1, [TCP protocol support.])
+  [AS_HELP_STRING(--disable-tcp,enable tcp protocol support (default enabled).)],
+  if test "x$enableval" = xno; then
+     TCP=0
+  fi
 )
+if test "x$TCP" = x1; then
+  AC_DEFINE_UNQUOTED(ENABLE_TCP, 1, [TCP protocol support.])
+fi
+
+HTTP=1
+AC_ARG_ENABLE(http-proxy,
+  [AS_HELP_STRING(--disable-http-proxy,enable http proxy connect support (default enabled).)],
+  if test "x$enableval" = xno; then
+     HTTP=0
+  fi
+)
+if test "x$HTTP" = x1; then
+  AC_DEFINE_UNQUOTED(ENABLE_HTTP_PROXY, 1, [http proxy connect support.])
+fi
 
 AC_ARG_ENABLE(dns,
-  [AS_HELP_STRING(--enable-dns,enable dns tunnel protocol support (DOES NOT WORK).)],
+  [AS_HELP_STRING(--enable-dns,enable dns tunnel protocol support (default disabled).)],
   [
     AC_CHECK_HEADER(gmp.h,,[AC_MSG_ERROR([gmp.h not found, required for --enable-dns])])
     AC_CHECK_LIB(gmp,main,,[AC_MSG_ERROR([libgmp not found, required for --enable-dns])])
 
     AC_DEFINE_UNQUOTED(ENABLE_DNS, 1, [DNS tunnel protocol support.])
   ]
-)
-
-AC_ARG_ENABLE(http-proxy,
-  [AS_HELP_STRING(--enable-http-proxy,enable http proxy connect support (default disabled).)],
-  AC_DEFINE_UNQUOTED(ENABLE_HTTP_PROXY, 1, [http proxy connect support.])
 )
 
 HMAC=12
@@ -333,7 +350,7 @@ AC_DEFINE_UNQUOTED(ENABLE_COMPRESSION, $COMPRESS, [Enable compression support.])
 
 CIPHER=aes_128_cbc
 AC_ARG_ENABLE(cipher,
-  [AS_HELP_STRING(--enable-cipher,[
+  [AS_HELP_STRING(--enable-cipher=CIPHER,[
       Select the symmetric cipher (default "aes-128").
       Must be one of "bf" (blowfish), "aes-128" (rijndael), "aes-192" or "aes-256".])],
   if test "x$enableval" = xbf     ; then CIPHER=bf_cbc     ; fi
@@ -345,7 +362,7 @@ AC_DEFINE_UNQUOTED(ENABLE_CIPHER, EVP_${CIPHER}, [Select the symmetric cipher to
 
 DIGEST=ripemd160
 AC_ARG_ENABLE(digest,
-  [AS_HELP_STRING(--enable-digest,[
+  [AS_HELP_STRING(--enable-digest=CIPHER,[
       Select the digest algorithm to use (default "ripemd160"). Must be one of
       "sha512", "sha256", "sha1", "ripemd160", "md5" or "md4" (insecure).])],
   if test "x$enableval" = xsha512   ; then DIGEST=sha512   ; fi
