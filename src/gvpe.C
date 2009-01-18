@@ -99,7 +99,7 @@ usage (int status)
               ("  -c, --config=DIR           Read configuration options from DIR.\n"
                "  -D, --no-detach            Don't fork and detach.\n"
                "  -l, --log-level=LEVEL      Set logging level (info, notice, warn are common).\n"
-               "  -L, --mlock                Lock tinc into main memory.\n"
+               "  -L, --mlock                Lock gvpe into main memory.\n"
                "      --help                 Display this help and exit.\n"
                "      --version              Output version information and exit.\n\n"));
       printf (_("Report bugs to <gvpe@schmorp.de>.\n"));
@@ -237,7 +237,7 @@ main (int argc, char **argv, char **envp)
       printf (_
               ("Copyright (C) 2003-2008 Marc Lehmann <gvpe@schmorp.de> and others.\n"
                "See the AUTHORS file for a complete list.\n\n"
-               "tinc comes with ABSOLUTELY NO WARRANTY.  This is free software,\n"
+               "GVPE comes with ABSOLUTELY NO WARRANTY.  This is free software,\n"
                "and you are welcome to redistribute it under certain conditions;\n"
                "see the file COPYING for details.\n"));
 
