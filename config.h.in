@@ -40,9 +40,6 @@
    language is requested. */
 #undef ENABLE_NLS
 
-/* ROHC support */
-#undef ENABLE_ROHC
-
 /* TCP protocol support. */
 #undef ENABLE_TCP
 
@@ -65,6 +62,9 @@
 /* Define to 1 if you have the `clock_gettime' function. */
 #undef HAVE_CLOCK_GETTIME
 
+/* "use syscall interface for clock_gettime" */
+#undef HAVE_CLOCK_SYSCALL
+
 /* Cygwin */
 #undef HAVE_CYGWIN
 
@@ -80,6 +80,9 @@
 
 /* Define to 1 if you have the `epoll_ctl' function. */
 #undef HAVE_EPOLL_CTL
+
+/* Define to 1 if you have the `eventfd' function. */
+#undef HAVE_EVENTFD
 
 /* Define to 1 if you have the <ext/hash_map> header file. */
 #undef HAVE_EXT_HASH_MAP
@@ -252,6 +255,9 @@
 
 /* Define to 1 if you have the <sys/epoll.h> header file. */
 #undef HAVE_SYS_EPOLL_H
+
+/* Define to 1 if you have the <sys/eventfd.h> header file. */
+#undef HAVE_SYS_EVENTFD_H
 
 /* Define to 1 if you have the <sys/event.h> header file. */
 #undef HAVE_SYS_EVENT_H

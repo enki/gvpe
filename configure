@@ -2224,7 +2224,7 @@ fi
 
 # Define the identity of the package.
  PACKAGE=gvpe
- VERSION=2.21
+ VERSION=2.22
 
 
 cat >>confdefs.h <<_ACEOF

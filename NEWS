@@ -1,6 +1,7 @@
 GVPE NEWS
 
 TODO: libev update?
+2.22
 	- enabled icmp/tcp/http-proxy protocols by default.
 	- updated copyright in program greetings.
         - fix some configure messages.
