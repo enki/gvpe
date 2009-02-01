@@ -1,13 +1,14 @@
 GVPE NEWS
 
-TODO: libev update?
-2.22
+2.22 Sun Feb  1 17:25:28 CET 2009
+	- protocol version 0.1, compatible with older releases,
 	- enabled icmp/tcp/http-proxy protocols by default.
 	- updated copyright in program greetings.
         - fix some configure messages.
         - updated to libev 3.52.
 
 2.21 Wed Sep  3 06:56:27 CEST 2008
+	- protocol version 0.1, compatible with older releases,
 	- add missing ev++.h include header to tarball, which everybody
           who tested it apparently had in their include path :(. Caught
           by Karl Kleinpaste and Marcus Kong.
