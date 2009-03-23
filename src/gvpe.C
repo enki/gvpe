@@ -295,7 +295,7 @@ main (int argc, char **argv, char **envp)
       cleanup_and_exit (EXIT_FAILURE);
     }
 
-  slog (L_ERR, _("unable to setup network, unrecoverable error, exiting."));
+  slog (L_ERR, _("unrecoverable error while setting up network, exiting."));
   cleanup_and_exit (EXIT_FAILURE);
 }
 

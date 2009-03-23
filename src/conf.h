@@ -124,6 +124,7 @@ struct configuration
   conf_node default_node;
   conf_node *thisnode;
   int mtu;          // the mtu used for outgoing tunnel packets
+  int nfmark;       // the SO_MARK // netfilter mark // fwmark
   double rekey;     // rekey interval
   double keepalive; // keepalive probes interval
   char *ifname;     // the interface name (tap0 ...)

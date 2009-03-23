@@ -381,6 +381,20 @@ Sets the rekeying interval in seconds (default: C<3600>). Connections are
 reestablished every C<rekey> seconds, making them use a new encryption
 key.
 
+=item nfmark = integer
+
+This advanced option, when set to a nonzero value (default: C<0>), tries
+to set the netfilter mark (or fwmark) value on all sockets gvpe uses to
+send packets.
+
+This can be used to make gvpe use a different set of routing rules. For
+example, on GNU/Linux, the C<if-up> could set C<nfmark> to 1000 and then
+put all routing rules into table C<99> and then use an ip rule to make
+gvpe traffic avoid that routing table, in effect routing normal traffic
+via gvpe and gvpe traffic via the normal system routing tables:
+
+   ip rule add not fwmark 1000 lookup 99
+
 =back
 
 =head2 NODE SPECIFIC SETTINGS

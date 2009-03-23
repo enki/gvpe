@@ -104,6 +104,7 @@ struct vpn
   vpn ();
   ~vpn ();
 
+  int setup_socket (u8 prot, int family, int type, int proto);
   int setup ();
 
   void dump_status ();

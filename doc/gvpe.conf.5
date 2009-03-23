@@ -132,7 +132,7 @@
 .\" ========================================================================
 .\"
 .IX Title "GVPE.CONF 5"
-.TH GVPE.CONF 5 "2008-09-01" "2.2" "GNU Virtual Private Ethernet"
+.TH GVPE.CONF 5 "2009-03-23" "2.22" "GNU Virtual Private Ethernet"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -486,6 +486,21 @@ not recommended to use this feature.
 Sets the rekeying interval in seconds (default: \f(CW3600\fR). Connections are
 reestablished every \f(CW\*(C`rekey\*(C'\fR seconds, making them use a new encryption
 key.
+.IP "nfmark = integer" 4
+.IX Item "nfmark = integer"
+This advanced option, when set to a nonzero value (default: \f(CW0\fR), tries
+to set the netfilter mark (or fwmark) value on all sockets gvpe uses to
+send packets.
+.Sp
+This can be used to make gvpe use a different set of routing rules. For
+example, on GNU/Linux, the \f(CW\*(C`if\-up\*(C'\fR could set \f(CW\*(C`nfmark\*(C'\fR to 1000 and then
+put all routing rules into table \f(CW99\fR and then use an ip rule to make
+gvpe traffic avoid that routing table, in effect routing normal traffic
+via gvpe and gvpe traffic via the normal system routing tables:
+.Sp
+.Vb 1
+\&   ip rule add not fwmark 1000 lookup 99
+.Ve
 .Sh "\s-1NODE\s0 \s-1SPECIFIC\s0 \s-1SETTINGS\s0"
 .IX Subsection "NODE SPECIFIC SETTINGS"
 The following settings are node-specific, that is, every node can have

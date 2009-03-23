@@ -147,6 +147,7 @@ void configuration::init ()
   memset (this, 0, sizeof (*this));
 
   mtu       = DEFAULT_MTU;
+  nfmark    = 0;
   rekey     = DEFAULT_REKEY;
   keepalive = DEFAULT_KEEPALIVE;
   llevel    = L_INFO;
@@ -332,6 +333,8 @@ configuration_parser::parse_line (char *line)
     conf.keepalive = atoi (val);
   else if (!strcmp (var, "mtu"))
     conf.mtu = atoi (val);
+  else if (!strcmp (var, "nfmark"))
+    conf.nfmark = atoi (val);
   else if (!strcmp (var, "if-up"))
     free (conf.script_if_up), conf.script_if_up = strdup (val);
   else if (!strcmp (var, "node-up"))

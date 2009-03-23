@@ -122,6 +122,28 @@ vpn::script_if_up ()
 }
 
 int
+vpn::setup_socket (u8 prot, int family, int type, int proto)
+{
+  int fd = socket (family, type, proto);
+
+  if (fd < 0)
+    {
+      slog (L_ERR, _("unable to create %s socket: %s."), strprotocol (prot), strerror (errno));
+      return fd;
+    }
+
+  fcntl (fd, F_SETFL, O_NONBLOCK);
+  fcntl (fd, F_SETFD, FD_CLOEXEC);
+
+#ifdef SO_MARK
+  if (::conf.nfmark)
+    setsockopt (ipv4_fd, SOL_SOCKET, SO_MARK, &::conf.nfmark, sizeof ::conf.nfmark);
+#endif
+
+  return fd;
+}
+
+int
 vpn::setup ()
 {
   int success = 0;
@@ -131,13 +153,10 @@ vpn::setup ()
 
   if (THISNODE->protocols & PROT_IPv4 && ::conf.ip_proto)
     {
-      ipv4_fd = socket (PF_INET, SOCK_RAW, ::conf.ip_proto);
+      ipv4_fd = setup_socket (PROT_IPv4, PF_INET, SOCK_RAW, ::conf.ip_proto);
 
       if (ipv4_fd < 0)
         return -1;
-
-      fcntl (ipv4_fd, F_SETFL, O_NONBLOCK);
-      fcntl (ipv4_fd, F_SETFD, FD_CLOEXEC);
 
 #if defined(SOL_IP) && defined(IP_MTU_DISCOVER)
       // this I really consider a linux bug. I am neither connected
@@ -154,7 +173,7 @@ vpn::setup ()
       if (bind (ipv4_fd, si.sav4 (), si.salenv4 ()))
         {
           slog (L_ERR, _("can't bind ipv4 socket on %s: %s, exiting."), (const char *)si, strerror (errno));
-          exit (EXIT_FAILURE);
+          return -1;
         }
 
       ipv4_ev_watcher.start (ipv4_fd, EV_READ);
@@ -168,13 +187,10 @@ vpn::setup ()
 
   if (THISNODE->protocols & PROT_UDPv4 && THISNODE->udp_port)
     {
-      udpv4_fd = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+      udpv4_fd = setup_socket (PROT_UDPv4, PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
       if (udpv4_fd < 0)
         return -1;
-
-      fcntl (udpv4_fd, F_SETFL, O_NONBLOCK);
-      fcntl (udpv4_fd, F_SETFD, FD_CLOEXEC);
 
       // standard daemon practise...
       {
@@ -197,7 +213,7 @@ vpn::setup ()
       if (bind (udpv4_fd, si.sav4 (), si.salenv4 ()))
         {
           slog (L_ERR, _("can't bind udpv4 on %s: %s, exiting."), (const char *)si, strerror (errno));
-          exit (EXIT_FAILURE);
+          return -1;
         }
 
       udpv4_ev_watcher.start (udpv4_fd, EV_READ);
@@ -212,13 +228,10 @@ vpn::setup ()
 #if ENABLE_ICMP
   if (THISNODE->protocols & PROT_ICMPv4)
     {
-      icmpv4_fd = socket (PF_INET, SOCK_RAW, IPPROTO_ICMP);
+      icmpv4_fd = setup_socket (PROT_ICMPv4, PF_INET, SOCK_RAW, IPPROTO_ICMP);
 
       if (icmpv4_fd < 0)
         return -1;
-
-      fcntl (icmpv4_fd, F_SETFL, O_NONBLOCK);
-      fcntl (icmpv4_fd, F_SETFD, FD_CLOEXEC);
 
 #ifdef ICMP_FILTER
       {
@@ -246,7 +259,7 @@ vpn::setup ()
       if (bind (icmpv4_fd, si.sav4 (), si.salenv4 ()))
         {
           slog (L_ERR, _("can't bind icmpv4 on %s: %s, exiting."), (const char *)si, strerror (errno));
-          exit (EXIT_FAILURE);
+          return -1;
         }
 
       icmpv4_ev_watcher.start (icmpv4_fd, EV_READ);
@@ -259,13 +272,10 @@ vpn::setup ()
 #if ENABLE_TCP
   if (THISNODE->protocols & PROT_TCPv4 && THISNODE->tcp_port)
     {
-      tcpv4_fd = socket (PF_INET, SOCK_STREAM, IPPROTO_TCP);
+      tcpv4_fd = setup_socket (PROT_TCPv4, PF_INET, SOCK_STREAM, IPPROTO_TCP);
 
       if (tcpv4_fd < 0)
         return -1;
-
-      fcntl (tcpv4_fd, F_SETFL, O_NONBLOCK);
-      fcntl (tcpv4_fd, F_SETFD, FD_CLOEXEC);
 
       // standard daemon practise...
       {
@@ -278,13 +288,13 @@ vpn::setup ()
       if (bind (tcpv4_fd, si.sav4 (), si.salenv4 ()))
         {
           slog (L_ERR, _("can't bind tcpv4 on %s: %s, exiting."), (const char *)si, strerror (errno));
-          exit (EXIT_FAILURE);
+          return -1;
         }
 
       if (listen (tcpv4_fd, 5))
         {
           slog (L_ERR, _("can't listen tcpv4 on %s: %s, exiting."), (const char *)si, strerror (errno));
-          exit (EXIT_FAILURE);
+          return -1;
         }
 
       tcpv4_ev_watcher.start (tcpv4_fd, EV_READ);
@@ -302,13 +312,10 @@ vpn::setup ()
     {
       dns_forwarder.set (::conf.dns_forw_host, ::conf.dns_forw_port, PROT_DNSv4);
 
-      dnsv4_fd = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+      dnsv4_fd = setup_socket (PROT_DNSv4, PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
       if (dnsv4_fd < 0)
         return -1;
-
-      fcntl (dnsv4_fd, F_SETFL, O_NONBLOCK);
-      fcntl (dnsv4_fd, F_SETFD, FD_CLOEXEC);
 
 # if defined(SOL_IP) && defined(IP_MTU_DISCOVER)
       // this I really consider a linux bug. I am neither connected
@@ -333,7 +340,7 @@ vpn::setup ()
       if (bind (dnsv4_fd, si.sav4 (), si.salenv4 ()))
         {
           slog (L_ERR, _("can't bind dnsv4 on %s: %s, exiting."), (const char *)si, strerror (errno));
-          exit (EXIT_FAILURE);
+          return -1;
         }
 
       dnsv4_ev_watcher.start (dnsv4_fd, EV_READ);
@@ -345,8 +352,8 @@ vpn::setup ()
 
   if (!success)
     {
-      slog (L_ERR, _("no protocols enabled, exiting."));
-      exit (EXIT_FAILURE);
+      slog (L_ERR, _("no protocols enabled."));
+      return -1;
     }
 
   reconnect_all ();
@@ -356,8 +363,8 @@ vpn::setup ()
   tap = new tap_device ();
   if (!tap) //D this, of course, never catches
     {
-      slog (L_ERR, _("cannot create network interface '%s', exiting."), conf.ifname);
-      exit (EXIT_FAILURE);
+      slog (L_ERR, _("cannot create network interface '%s'."), conf.ifname);
+      return -1;
     }
   
   fcntl (tap->fd, F_SETFD, FD_CLOEXEC);
@@ -368,16 +375,16 @@ vpn::setup ()
   if (tap->if_up () &&
       !run_script (cb, true))
     {
-      slog (L_ERR, _("interface initialization command '%s' failed, exiting."),
+      slog (L_ERR, _("interface initialization command '%s' failed."),
             tap->if_up ());
-      exit (EXIT_FAILURE);
+      return -1;
     }
 
   cb.set<vpn, &vpn::script_if_up> (this);
   if (!run_script (cb, true))
     {
-      slog (L_ERR, _("if-up command execution failed, exiting."));
-      exit (EXIT_FAILURE);
+      slog (L_ERR, _("if-up command execution failed."));
+      return -1;
     }
 
   tap_ev_watcher.start (tap->fd, EV_READ);
