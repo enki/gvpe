@@ -137,7 +137,8 @@ vpn::setup_socket (u8 prot, int family, int type, int proto)
 
 #ifdef SO_MARK
   if (::conf.nfmark)
-    setsockopt (ipv4_fd, SOL_SOCKET, SO_MARK, &::conf.nfmark, sizeof ::conf.nfmark);
+    if (setsockopt (fd, SOL_SOCKET, SO_MARK, &::conf.nfmark, sizeof ::conf.nfmark))
+      slog (L_WARN, _("unable to set nfmark on %s socket: %s"), strprotocol (prot), strerror (errno));
 #endif
 
   return fd;
