@@ -1212,6 +1212,14 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                                   conf->nodename, (const char *)si, (const char *)rsi);
 
                             si = rsi;
+
+                            if (::conf.script_node_change)
+                              {
+                                run_script_cb *cb = new run_script_cb;
+                                cb->set<connection, &connection::script_node_change> (this);
+                                run_script_queued (cb, _("node-change command execution failed, continuing."));
+                              }
+
                         //  }
                         //else
                         //  slog (L_INFO, _("%s(%s): accepted packet from %s, not (yet) redirecting traffic."),
@@ -1242,7 +1250,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
       case vpn_packet::PT_CONNECT_REQ:
         if (ictx && octx && rsi == si && pkt->hmac_chk (ictx))
           {
-            connect_req_packet *p = (connect_req_packet *) pkt;
+            connect_req_packet *p = (connect_req_packet *)pkt;
 
             if (p->id > 0 && p->id <= vpn->conns.size ())
               {
@@ -1346,10 +1354,10 @@ void connection::script_init_env (const char *ext)
 {
   char *env;
   asprintf (&env, "IFUPDATA%s=%s", ext, conf->if_up_data); putenv (env);
-  asprintf (&env, "NODENAME%s=%s", ext, conf->nodename); putenv (env);
+  asprintf (&env, "NODENAME%s=%s", ext, conf->nodename);   putenv (env);
   asprintf (&env, "MAC%s=%02x:%02x:%02x:%02x:%02x:%02x", ext,
             0xfe, 0xfd, 0x80, 0x00, conf->id >> 8,
-            conf->id & 0xff); putenv (env);
+            conf->id & 0xff);                              putenv (env);
 }
 
 void connection::script_init_connect_env ()
@@ -1357,10 +1365,11 @@ void connection::script_init_connect_env ()
   vpn->script_init_env ();
 
   char *env;
-  asprintf (&env, "DESTID=%d",   conf->id); putenv (env);
-  asprintf (&env, "DESTNODE=%s", conf->nodename); putenv (env);
-  asprintf (&env, "DESTIP=%s",   si.ntoa ()); putenv (env);
-  asprintf (&env, "DESTPORT=%d", ntohs (si.port)); putenv (env);
+  asprintf (&env, "DESTID=%d",   conf->id);         putenv (env);
+  asprintf (&env, "DESTSI=%s",   (const char *)si); putenv (env);
+  asprintf (&env, "DESTNODE=%s", conf->nodename);   putenv (env);
+  asprintf (&env, "DESTIP=%s",   si.ntoa ());       putenv (env);
+  asprintf (&env, "DESTPORT=%d", ntohs (si.port));  putenv (env);
 }
 
 inline const char *
@@ -1375,6 +1384,22 @@ connection::script_node_up ()
             "%s/%s",
             confbase,
             ::conf.script_node_up ? ::conf.script_node_up : "node-up");
+
+  return filename;
+}
+
+inline const char *
+connection::script_node_change ()
+{
+  script_init_connect_env ();
+
+  putenv ((char *)"STATE=change");
+
+  char *filename;
+  asprintf (&filename,
+            "%s/%s",
+            confbase,
+            ::conf.script_node_change ? ::conf.script_node_change : "node-change");
 
   return filename;
 }

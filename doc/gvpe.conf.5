@@ -132,7 +132,7 @@
 .\" ========================================================================
 .\"
 .IX Title "GVPE.CONF 5"
-.TH GVPE.CONF 5 "2009-03-23" "2.22" "GNU Virtual Private Ethernet"
+.TH GVPE.CONF 5 "2009-06-01" "2.22" "GNU Virtual Private Ethernet"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -429,7 +429,7 @@ scripts will be run asynchronously, but execution is serialised, so there
 will only ever be one such script running.
 .Sp
 In addition to all the variables passed to \f(CW\*(C`if\-up\*(C'\fR scripts, the following
-environment variables will be set:
+environment variables will be set (values are just examples):
 .RS 4
 .IP "DESTNODE=branch2" 4
 .IX Item "DESTNODE=branch2"
@@ -437,17 +437,21 @@ The name of the remote node.
 .IP "DESTID=2" 4
 .IX Item "DESTID=2"
 The node id of the remote node.
+.IP "DESTSI=rawip/88.99.77.55:0" 4
+.IX Item "DESTSI=rawip/88.99.77.55:0"
+The \*(L"socket info\*(R" of the target node, protocol dependent but usually in
+the format protocol/ip:port.
 .IP "DESTIP=188.13.66.8" 4
 .IX Item "DESTIP=188.13.66.8"
 The numerical \s-1IP\s0 address of the remote node (gvpe accepts connections from
 everywhere, as long as the other node can authenticate itself).
 .IP "DESTPORT=655 # deprecated" 4
 .IX Item "DESTPORT=655 # deprecated"
-The \s-1UDP\s0 port used by the other side.
-.IP "STATE=UP" 4
-.IX Item "STATE=UP"
-Node-up scripts get called with STATE=UP, node-down scripts get called
-with STATE=DOWN.
+The protocol port used by the other side, if applicable.
+.IP "STATE=up" 4
+.IX Item "STATE=up"
+Node-up scripts get called with STATE=up, node-change scripts get called
+with STATE=change and node-down scripts get called with STATE=down.
 .RE
 .RS 4
 .Sp
@@ -463,6 +467,10 @@ mapping in some \s-1DNS\s0 zone:
 \&   } | nsupdate \-d \-k $CONFBASE:key.example.net.
 .Ve
 .RE
+.IP "node-change = relative-or-absolute-path" 4
+.IX Item "node-change = relative-or-absolute-path"
+Same as \f(CW\*(C`node\-change\*(C'\fR, but gets called whenever something about a
+connection changes (such as the source \s-1IP\s0 address).
 .IP "node-down = relative-or-absolute-path" 4
 .IX Item "node-down = relative-or-absolute-path"
 Same as \f(CW\*(C`node\-up\*(C'\fR, but gets called whenever a connection is lost.

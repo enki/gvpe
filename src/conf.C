@@ -187,15 +187,19 @@ void configuration::cleanup()
 
   rsa_key = 0;
 
-  free (pidfilename);   pidfilename   = 0;
-  free (ifname);        ifname        = 0;
-#if ENABLE_HTTP_PROXY
-  free (proxy_host);    proxy_host    = 0;
-  free (proxy_auth);    proxy_auth    = 0;
+  free (pidfilename);        pidfilename        = 0;
+  free (ifname);             ifname             = 0;
+#if ENABLE_HTTP_PROXY                           
+  free (proxy_host);         proxy_host         = 0;
+  free (proxy_auth);         proxy_auth         = 0;
+#endif                                          
+#if ENABLE_DNS                                  
+  free (dns_forw_host);      dns_forw_host      = 0;
 #endif
-#if ENABLE_DNS
-  free (dns_forw_host); dns_forw_host = 0;
-#endif
+  free (script_if_up);       script_if_up       = 0;
+  free (script_node_up);     script_node_up     = 0;
+  free (script_node_change); script_node_change = 0;
+  free (script_node_down);   script_node_down   = 0;
 }
 
 void
@@ -339,6 +343,8 @@ configuration_parser::parse_line (char *line)
     free (conf.script_if_up), conf.script_if_up = strdup (val);
   else if (!strcmp (var, "node-up"))
     free (conf.script_node_up), conf.script_node_up = strdup (val);
+  else if (!strcmp (var, "node-change"))
+    free (conf.script_node_change), conf.script_node_change = strdup (val);
   else if (!strcmp (var, "node-down"))
     free (conf.script_node_down), conf.script_node_down = strdup (val);
   else if (!strcmp (var, "pid-file"))

@@ -206,6 +206,7 @@ struct connection
   void script_init_env (const char *ext);
   void script_init_connect_env ();
   const char *script_node_up ();
+  const char *script_node_change ();
   const char *script_node_down ();
 
   void dump_status ();

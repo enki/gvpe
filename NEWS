@@ -1,6 +1,8 @@
 GVPE NEWS
 
 	- add nfmark support.
+        - add node-change script support.
+        - new DESTSI variable for node-xxx scripts.
 
 2.22 Sun Feb  1 17:25:28 CET 2009
 	- protocol version 0.1, compatible with older releases,

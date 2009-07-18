@@ -316,7 +316,7 @@ scripts will be run asynchronously, but execution is serialised, so there
 will only ever be one such script running.
 
 In addition to all the variables passed to C<if-up> scripts, the following
-environment variables will be set:
+environment variables will be set (values are just examples):
 
 =over 4
 
@@ -328,6 +328,11 @@ The name of the remote node.
 
 The node id of the remote node.
 
+=item DESTSI=rawip/88.99.77.55:0
+
+The "socket info" of the target node, protocol dependent but usually in
+the format protocol/ip:port.
+
 =item DESTIP=188.13.66.8
 
 The numerical IP address of the remote node (gvpe accepts connections from
@@ -335,12 +340,12 @@ everywhere, as long as the other node can authenticate itself).
 
 =item DESTPORT=655 # deprecated
 
-The UDP port used by the other side.
+The protocol port used by the other side, if applicable.
 
-=item STATE=UP
+=item STATE=up
 
-Node-up scripts get called with STATE=UP, node-down scripts get called
-with STATE=DOWN.
+Node-up scripts get called with STATE=up, node-change scripts get called
+with STATE=change and node-down scripts get called with STATE=down.
 
 =back
 
@@ -353,6 +358,11 @@ mapping in some DNS zone:
      echo update add $DESTNODE.lowttl.example.net. 1 in a $DESTIP
      echo   
    } | nsupdate -d -k $CONFBASE:key.example.net.
+
+=item node-change = relative-or-absolute-path
+
+Same as C<node-change>, but gets called whenever something about a
+connection changes (such as the source IP address).
 
 =item node-down = relative-or-absolute-path
 

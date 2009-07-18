@@ -139,6 +139,7 @@ struct configuration
 
   char *script_if_up;
   char *script_node_up;
+  char *script_node_change;
   char *script_node_down;
   char *pidfilename;
 
