@@ -52,7 +52,8 @@
 # define  RAND_pseudo_bytes RAND_bytes
 #endif
 
-#define MAGIC "vped\xbd\xc6\xdb\x82"	// 8 bytes of magic
+#define MAGIC_OLD "vped\xbd\xc6\xdb\x82"	// 8 bytes of magic (still used in the protocol)
+#define MAGIC     "gvpe\xbd\xc6\xdb\x82"	// 8 bytes of magic (understood but not generated)
 
 #define ULTRA_FAST 1
 #define HLOG 15
@@ -615,7 +616,7 @@ struct auth_req_packet : config_packet
   auth_req_packet (int dst, bool initiate_, u8 protocols_)
   {
     config_packet::setup (PT_AUTH_REQ, dst);
-    strncpy (magic, MAGIC, 8);
+    strncpy (magic, MAGIC_OLD, 8);
     initiate = !!initiate_;
     protocols = protocols_;
 
@@ -1055,7 +1056,8 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 
             slog (L_TRACE, "%s >> PT_AUTH_REQ(%s)", conf->nodename, p->initiate ? "initiate" : "reply");
 
-            if (p->chk_config () && !strncmp (p->magic, MAGIC, 8))
+            if (p->chk_config ()
+                && (!strncmp (p->magic, MAGIC_OLD, 8) || !strncmp (p->magic, MAGIC, 8)))
               {
                 if (p->prot_minor != PROTOCOL_MINOR)
                   slog (L_INFO, _("%s(%s): protocol minor version mismatch: ours is %d, %s's is %d."),

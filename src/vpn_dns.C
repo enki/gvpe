@@ -85,6 +85,7 @@
 #define RR_TYPE_A     1
 #define RR_TYPE_NULL 10
 #define RR_TYPE_TXT  16
+#define RR_TYPE_AAAA 28
 #define RR_TYPE_ANY 255
 
 #define RR_CLASS_IN   1
