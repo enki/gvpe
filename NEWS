@@ -1,5 +1,6 @@
 GVPE NEWS
 
+	- enable-max-mtu was actually enable-mtu, contrary to documentation.
 	- add nfmark support.
         - add node-change script support.
         - new DESTSI variable for node-xxx scripts.

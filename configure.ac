@@ -333,7 +333,7 @@ AC_ARG_ENABLE(rand-length,
 AC_DEFINE_UNQUOTED(RAND_SIZE, $RAND, [Add this many bytes of randomness to each packet.])
 
 MTU=1500
-AC_ARG_ENABLE(mtu,
+AC_ARG_ENABLE(max-mtu,
   [AS_HELP_STRING(--enable-max-mtu=BYTES,enable mtu sizes upto BYTES bytes (default 1500). Use 9100 for jumbogram support.)],
   MTU=$enableval
 )

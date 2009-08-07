@@ -1362,7 +1362,8 @@ Optional Features:
                           (rijndael), "aes-192" or "aes-256".
   --enable-digest=CIPHER  Select the digest algorithm to use (default
                           "ripemd160"). Must be one of "sha512", "sha256",
-                          "sha1", "ripemd160", "md5" or "md4" (insecure).
+                          "sha1" (somewhat insecure), "ripemd160", "md5"
+                          (insecure) or "md4" (insecure).
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -8781,7 +8782,8 @@ fi
 
 
 
-for ac_header in sys/inotify.h sys/epoll.h sys/event.h sys/queue.h port.h poll.h sys/select.h sys/eventfd.h
+
+for ac_header in sys/inotify.h sys/epoll.h sys/event.h sys/queue.h port.h poll.h sys/select.h sys/eventfd.h sys/signalfd.h
 do
 as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
 if { as_var=$as_ac_Header; eval "test \"\${$as_var+set}\" = set"; }; then
@@ -8928,7 +8930,8 @@ done
 
 
 
-for ac_func in inotify_init epoll_ctl kqueue port_create poll select eventfd
+
+for ac_func in inotify_init epoll_ctl kqueue port_create poll select eventfd signalfd
 do
 as_ac_var=`echo "ac_cv_func_$ac_func" | $as_tr_sh`
 { echo "$as_me:$LINENO: checking for $ac_func" >&5
@@ -9662,8 +9665,6 @@ _ACEOF
   LIBS="-lm $LIBS"
 
 fi
-
-
 
 
 
@@ -10701,9 +10702,9 @@ _ACEOF
 
 
 MTU=1500
-# Check whether --enable-mtu was given.
-if test "${enable_mtu+set}" = set; then
-  enableval=$enable_mtu; MTU=$enableval
+# Check whether --enable-max-mtu was given.
+if test "${enable_max_mtu+set}" = set; then
+  enableval=$enable_max_mtu; MTU=$enableval
 
 fi
 
