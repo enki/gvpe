@@ -427,7 +427,7 @@ vpndata_packet::setup (connection *conn, int dst, u8 *d, u32 l, u32 seqno)
 #if ENABLE_COMPRESSION
   u8 cdata[MAX_MTU];
 
-  if (conn->features & ENABLE_COMPRESSION)
+  if (conn->features & FEATURE_COMPRESSION)
     {
       u32 cl = lzf_compress (d, l, cdata + 2, (l - 2) & ~7);
 
