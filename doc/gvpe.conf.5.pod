@@ -239,7 +239,11 @@ other programs.
 The default is 47 (GRE), which has a good chance of tunneling
 through firewalls (but note that gvpe's rawip protocol is not GRE
 compatible). Other common choices are 50 (IPSEC, ESP), 51 (IPSEC, AH), 4
-(IPIP tunnels) or 98 (ENCAP, rfc1241)
+(IPIP tunnels) or 98 (ENCAP, rfc1241).
+
+Many versions of Linux seem to have a bug that causes them to reorder
+packets for some ip protocols (GRE, ESP) but not for others (AH), so
+choose wisely (that is, use 51, AH).
 
 =item http-proxy-host = hostname/ip
 
