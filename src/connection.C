@@ -1016,13 +1016,13 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
         // we send pings instead of auth packets after some retries,
         // so reset the retry counter and establish a connection
         // when we receive a ping.
-        if (!(ictx && octx))
+        if (!ictx)
           {
             if (auth_rate_limiter.can (rsi))
               send_auth_request (rsi, true);
           }
         else
-          // we would love to change thre socket address here, but ping's aren't
+          // we would love to change the socket address here, but ping's aren't
           // authenticated, so we best ignore it.
           send_ping (rsi, 1); // pong
 
@@ -1030,6 +1030,10 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 
       case vpn_packet::PT_PONG:
         slog (L_TRACE, "%s >> PT_PONG", conf->nodename);
+
+        // a PONG might mean that the other side doesn't really know
+        // about our desire for communication.
+        establish_connection ();
         break;
 
       case vpn_packet::PT_RESET:
