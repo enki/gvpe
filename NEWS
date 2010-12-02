@@ -2,7 +2,7 @@ GVPE NEWS
 
 TODO: compress docs?
 	- due to a bug, when packets were lost, a conenction could go into a
-          state where a ping/connection request from another ndoe would be
+          state where a ping/connection request from another node would be
           ignored.
         - due to a bug, compression was almost always enabled.
 	- enable-max-mtu was actually enable-mtu, contrary to documentation.

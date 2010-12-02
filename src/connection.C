@@ -1,6 +1,6 @@
 /*
     connection.C -- manage a single connection
-    Copyright (C) 2003-2008 Marc Lehmann <gvpe@schmorp.de>
+    Copyright (C) 2003-2008,2010 Marc Lehmann <gvpe@schmorp.de>
  
     This file is part of GVPE.
 
