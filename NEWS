@@ -1,7 +1,7 @@
 GVPE NEWS
 
 TODO: compress docs?
-	- due to a bug, when packets were lost, a conenction could go into a
+	- due to a bug, when packets were lost, a connection could go into a
           state where a ping/connection request from another node would be
           ignored.
         - due to a bug, compression was almost always enabled.
@@ -9,6 +9,7 @@ TODO: compress docs?
 	- add nfmark support.
         - add node-change script support.
         - new DESTSI variable for node-xxx scripts.
+        - updated codingstyle a bit, declared truly static stuff as static.
 
 2.22 Sun Feb  1 17:25:28 CET 2009
 	- protocol version 0.1, compatible with older releases,
