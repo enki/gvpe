@@ -53,7 +53,7 @@ struct ether_emu : map<u32, int>
 
 static struct ether_emu ether_emu;
 
-bool 
+bool
 ether_emu::tun_to_tap (tap_packet *pkt)
 {
   int dst;
@@ -99,7 +99,7 @@ ether_emu::tun_to_tap (tap_packet *pkt)
   return true;
 }
 
-bool 
+bool
 ether_emu::tap_to_tun (tap_packet *pkt)
 {
   if (pkt->is_arp ())

@@ -154,7 +154,7 @@ struct connection
   int retry_cnt;
 
   tstamp last_activity;	// time of last packet received
-  tstamp last_establish_attempt; 
+  tstamp last_establish_attempt;
   //tstamp last_si_change; // time we last changed the socket address
 
   u32 oseqno;

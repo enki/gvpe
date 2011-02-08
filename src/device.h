@@ -97,13 +97,13 @@ struct data_packet : net_packet
   u8 data_[MAXSIZE];
 };
 
-inline 
+inline
 u8 &net_packet::operator[] (u16 offset) const
 {
   return ((data_packet *)this)->data_[offset];
 }
 
-inline 
+inline
 u8 *net_packet::at (u16 offset) const
 {
   return &((*this)[offset]);

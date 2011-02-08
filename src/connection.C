@@ -1015,7 +1015,7 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
 {
   last_activity = ev_now ();
 
-  slog (L_NOISE, "%s >> received packet type %d from %d to %d.", 
+  slog (L_NOISE, "%s >> received packet type %d from %d to %d.",
         conf->nodename, pkt->typ (), pkt->src (), pkt->dst ());
 
   if (connectmode == conf_node::C_DISABLED)

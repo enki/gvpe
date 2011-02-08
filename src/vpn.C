@@ -523,7 +523,7 @@ vpn::send_vpn_packet (vpn_packet *pkt, const sockinfo &si, int tos)
       case PROT_UDPv4:
         return send_udpv4_packet (pkt, si, tos);
 
-#if ENABLE_TCP 
+#if ENABLE_TCP
       case PROT_TCPv4:
         return send_tcpv4_packet (pkt, si, tos);
 #endif
