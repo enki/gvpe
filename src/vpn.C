@@ -760,7 +760,8 @@ vpn::reconnect_all ()
     (*c)->establish_connection ();
 }
 
-bool vpn::can_direct (conf_node *src, conf_node *dst) const
+bool
+vpn::can_direct (conf_node *src, conf_node *dst) const
 {
   return src != dst
       && src->may_direct (dst)
@@ -771,7 +772,8 @@ bool vpn::can_direct (conf_node *src, conf_node *dst) const
 
 // only works for indirect and routed connections: find a router
 // from THISNODE to dst
-connection *vpn::find_router_for (const connection *dst)
+connection *
+vpn::find_router_for (const connection *dst)
 {
   connection *router = 0;
 
@@ -820,7 +822,8 @@ connection *vpn::find_router_for (const connection *dst)
   return router;
 }
 
-void vpn::connection_established (connection *c)
+void
+vpn::connection_established (connection *c)
 {
   for (conns_vector::iterator i = conns.begin (); i != conns.end (); ++i)
     {
@@ -838,7 +841,8 @@ void vpn::connection_established (connection *c)
     }
 }
 
-void vpn::send_connect_request (connection *c)
+void
+vpn::send_connect_request (connection *c)
 {
   connection *r = find_router_for (c);
 

@@ -77,15 +77,15 @@ static int do_mlock = 0;
 static int do_detach = 1;
 
 static struct option const long_options[] =
-    {
-      {"config", required_argument, NULL, 'c'},
-      {"help", no_argument, &show_help, 1},
-      {"version", no_argument, &show_version, 1},
-      {"no-detach", no_argument, &do_detach, 0},
-      {"log-level", required_argument, NULL, 'l'},
-      {"mlock", no_argument, &do_mlock, 1},
-      {NULL, 0, NULL, 0}
-    };
+{
+  {"config", required_argument, NULL, 'c'},
+  {"help", no_argument, &show_help, 1},
+  {"version", no_argument, &show_version, 1},
+  {"no-detach", no_argument, &do_detach, 0},
+  {"log-level", required_argument, NULL, 'l'},
+  {"mlock", no_argument, &do_mlock, 1},
+  {NULL, 0, NULL, 0}
+};
 
 static void
 usage (int status)
@@ -108,7 +108,7 @@ usage (int status)
   exit (status);
 }
 
-void
+static void
 parse_options (int argc, char **argv, char **envp)
 {
   int r;
@@ -151,10 +151,9 @@ parse_options (int argc, char **argv, char **envp)
     }
 }
 
-/*
-  Close network connections, and terminate neatly
-*/
-void cleanup_and_exit(int c)
+// close network connections, and terminate neatly
+static void
+cleanup_and_exit (int c)
 {
   network.shutdown_all ();
 
@@ -166,35 +165,33 @@ void cleanup_and_exit(int c)
   exit (c);
 }
 
-/*
-  Signal handlers.
-*/
-RETSIGTYPE
+// signal handlers
+static RETSIGTYPE
 sigterm_handler (int a)
 {
   network.events |= vpn::EVENT_SHUTDOWN;
   network.event.start ();
 }
 
-RETSIGTYPE
+static RETSIGTYPE
 sighup_handler (int a)
 {
   network.events |= vpn::EVENT_RECONNECT;
   network.event.start ();
 }
 
-RETSIGTYPE
+static RETSIGTYPE
 sigusr1_handler (int a)
 {
   network.dump_status ();
 }
 
-RETSIGTYPE
+static RETSIGTYPE
 sigusr2_handler (int a)
 {
 }
 
-void
+static void
 setup_signals (void)
 {
   struct sigaction act;

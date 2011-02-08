@@ -233,4 +233,3 @@ tap_device::send (tap_packet *pkt)
           strerror (errno));
 }
     
-

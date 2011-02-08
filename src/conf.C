@@ -59,7 +59,8 @@ char *identname;
 
 struct configuration conf;
 
-u8 best_protocol (u8 protset)
+u8
+best_protocol (u8 protset)
 {
   if (protset & PROT_IPv4  ) return PROT_IPv4;
   if (protset & PROT_ICMPv4) return PROT_ICMPv4;
@@ -70,7 +71,8 @@ u8 best_protocol (u8 protset)
   return 0;
 }
 
-const char *strprotocol (u8 protocol)
+const char *
+strprotocol (u8 protocol)
 {
   if (protocol & PROT_IPv4  ) return "rawip";
   if (protocol & PROT_ICMPv4) return "icmp";
@@ -142,7 +144,8 @@ conf_node::~conf_node ()
 #endif
 }
 
-void configuration::init ()
+void
+configuration::init ()
 {
   memset (this, 0, sizeof (*this));
 
@@ -180,7 +183,8 @@ void configuration::init ()
   conf.pidfilename = strdup (LOCALSTATEDIR "/run/gvpe.pid");
 }
 
-void configuration::cleanup()
+void
+configuration::cleanup ()
 {
   if (rsa_key)
     RSA_free (rsa_key);
@@ -497,7 +501,8 @@ configuration_parser::parse_line (char *line)
   return 0;
 }
 
-void conf_node::finalise ()
+void
+conf_node::finalise ()
 {
   if (max_queue < 1)
     {
@@ -512,7 +517,8 @@ void conf_node::finalise ()
     }
 }
 
-void configuration_parser::parse_argv ()
+void
+configuration_parser::parse_argv ()
 {
   for (int i = 0; i < argc; ++i)
     {
@@ -629,7 +635,8 @@ configuration_parser::configuration_parser (configuration &conf,
     (*i)->finalise ();
 }
 
-char *configuration::config_filename (const char *name, const char *dflt)
+char *
+configuration::config_filename (const char *name, const char *dflt)
 {
   char *fname;
 
@@ -679,5 +686,4 @@ configuration::~configuration ()
 {
   cleanup ();
 }
-
 

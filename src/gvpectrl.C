@@ -77,16 +77,16 @@ static int quiet;
 static int generate_keys;
 
 static struct option const long_options[] =
-    {
-      {"config", required_argument, NULL, 'c'},
-      {"kill", optional_argument, NULL, 'k'},
-      {"help", no_argument, &show_help, 1},
-      {"version", no_argument, &show_version, 1},
-      {"generate-keys", no_argument, NULL, 'g'},
-      {"quiet", no_argument, &quiet, 1},
-      {"show-config", no_argument, &show_config, 's'},
-      {NULL, 0, NULL, 0}
-    };
+{
+  {"config", required_argument, NULL, 'c'},
+  {"kill", optional_argument, NULL, 'k'},
+  {"help", no_argument, &show_help, 1},
+  {"version", no_argument, &show_version, 1},
+  {"generate-keys", no_argument, NULL, 'g'},
+  {"quiet", no_argument, &quiet, 1},
+  {"show-config", no_argument, &show_config, 's'},
+  {NULL, 0, NULL, 0}
+};
 
 static void
 usage (int status)
@@ -110,7 +110,7 @@ usage (int status)
   exit (status);
 }
 
-void
+static void
 parse_options (int argc, char **argv, char **envp)
 {
   int r;
@@ -120,73 +120,72 @@ parse_options (int argc, char **argv, char **envp)
     {
       switch (r)
         {
-        case 0:		/* long option */
-          break;
+          case 0:		/* long option */
+            break;
 
-        case 'c':		/* config file */
-          confbase = strdup (optarg);
-          break;
+          case 'c':		/* config file */
+            confbase = strdup (optarg);
+            break;
 
-        case 'k':		/* kill old gvpes */
-          if (optarg)
-            {
-              if (!strcasecmp (optarg, "HUP"))
-                kill_gvpe = SIGHUP;
-              else if (!strcasecmp (optarg, "TERM"))
-                kill_gvpe = SIGTERM;
-              else if (!strcasecmp (optarg, "KILL"))
-                kill_gvpe = SIGKILL;
-              else if (!strcasecmp (optarg, "USR1"))
-                kill_gvpe = SIGUSR1;
-              else if (!strcasecmp (optarg, "USR2"))
-                kill_gvpe = SIGUSR2;
-              else if (!strcasecmp (optarg, "INT"))
-                kill_gvpe = SIGINT;
-              else if (!strcasecmp (optarg, "ALRM"))
-                kill_gvpe = SIGALRM;
-              else
-                {
-                  kill_gvpe = atoi (optarg);
+          case 'k':		/* kill old gvpes */
+            if (optarg)
+              {
+                if (!strcasecmp (optarg, "HUP"))
+                  kill_gvpe = SIGHUP;
+                else if (!strcasecmp (optarg, "TERM"))
+                  kill_gvpe = SIGTERM;
+                else if (!strcasecmp (optarg, "KILL"))
+                  kill_gvpe = SIGKILL;
+                else if (!strcasecmp (optarg, "USR1"))
+                  kill_gvpe = SIGUSR1;
+                else if (!strcasecmp (optarg, "USR2"))
+                  kill_gvpe = SIGUSR2;
+                else if (!strcasecmp (optarg, "INT"))
+                  kill_gvpe = SIGINT;
+                else if (!strcasecmp (optarg, "ALRM"))
+                  kill_gvpe = SIGALRM;
+                else
+                  {
+                    kill_gvpe = atoi (optarg);
 
-                  if (!kill_gvpe)
-                    {
-                      fprintf (stderr,
-                               _
-                               ("Invalid argument `%s'; SIGNAL must be a number or one of HUP, TERM, KILL, USR1, USR2, WINCH, INT or ALRM.\n"),
-                               optarg);
-                      usage (1);
-                    }
-                }
-            }
-          else
-            kill_gvpe = SIGTERM;
+                    if (!kill_gvpe)
+                      {
+                        fprintf (stderr,
+                                 _
+                                 ("Invalid argument `%s'; SIGNAL must be a number or one of HUP, TERM, KILL, USR1, USR2, WINCH, INT or ALRM.\n"),
+                                 optarg);
+                        usage (1);
+                      }
+                  }
+              }
+            else
+              kill_gvpe = SIGTERM;
 
-          break;
+            break;
 
-        case 'g':		/* generate public/private keypair */
-          generate_keys = RSA_KEYBITS;
-          break;
+          case 'g':		/* generate public/private keypair */
+            generate_keys = RSA_KEYBITS;
+            break;
 
-        case 's':
-          show_config = 1;
-          break;
+          case 's':
+            show_config = 1;
+            break;
 
-        case 'q':
-          quiet = 1;
-          break;
+          case 'q':
+            quiet = 1;
+            break;
 
-        case '?':
-          usage (1);
+          case '?':
+            usage (1);
 
-        default:
-          break;
+          default:
+            break;
         }
     }
 }
 
-/* This function prettyprints the key generation process */
-
-void
+// this function prettyprints the key generation process
+static void
 indicator (int a, int b, void *p)
 {
   if (quiet)
@@ -194,43 +193,43 @@ indicator (int a, int b, void *p)
 
   switch (a)
     {
-    case 0:
-      fprintf (stderr, ".");
-      break;
+      case 0:
+        fprintf (stderr, ".");
+        break;
 
-    case 1:
-      fprintf (stderr, "+");
-      break;
+      case 1:
+        fprintf (stderr, "+");
+        break;
 
-    case 2:
-      fprintf (stderr, "-");
-      break;
+      case 2:
+        fprintf (stderr, "-");
+        break;
 
-    case 3:
-      switch (b)
-        {
-        case 0:
-          fprintf (stderr, " p\n");
-          break;
+      case 3:
+        switch (b)
+          {
+          case 0:
+            fprintf (stderr, " p\n");
+            break;
 
-        case 1:
-          fprintf (stderr, " q\n");
-          break;
+          case 1:
+            fprintf (stderr, " q\n");
+            break;
 
-        default:
-          fprintf (stderr, "?");
-        }
-      break;
+          default:
+            fprintf (stderr, "?");
+          }
+        break;
 
-    default:
-      fprintf (stderr, "?");
+      default:
+        fprintf (stderr, "?");
     }
 }
 
 /*
  * generate public/private RSA keypairs for all hosts that don't have one.
  */
-int
+static int
 keygen (int bits)
 {
   RSA *rsa_key;

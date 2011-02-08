@@ -43,7 +43,8 @@ loglevel log_level = L_INFO;
 const char *log_identity = "";
 static int logto = LOGTO_STDERR;
 
-loglevel string_to_loglevel (const char *s)
+loglevel
+string_to_loglevel (const char *s)
 {
   if (!strcmp (s, "noise"))    return L_NOISE;
   if (!strcmp (s, "trace"))    return L_TRACE;
@@ -57,7 +58,8 @@ loglevel string_to_loglevel (const char *s)
   return L_NONE;
 }
 
-void log_to (int mask)
+void
+log_to (int mask)
 {
   if (logto & LOGTO_SYSLOG)
     closelog ();
@@ -68,7 +70,8 @@ void log_to (int mask)
     openlog (log_identity, LOG_CONS | LOG_PID, LOG_DAEMON);
 }
 
-void slog_ (const loglevel l, const char *m, ...)
+void
+slog_ (const loglevel l, const char *m, ...)
 {
   if (l >= log_level)
     {
@@ -101,13 +104,15 @@ void slog_ (const loglevel l, const char *m, ...)
     }
 }
 
-void fatal (const char *m)
+void
+fatal (const char *m)
 {
   slog (L_CRIT, m);
   exit (EXIT_FAILURE);
 }
 
-extern void require_failed (const char *file, int line, const char *info)
+void
+require_failed (const char *file, int line, const char *info)
 {
   slog (L_CRIT, "FATAL: This program encountered a SHOULD NOT HAPPEN condition and will exit:");
   slog (L_CRIT, "FATAL+ %s:%d '%s' is false", file, line, info);

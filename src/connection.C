@@ -66,26 +66,29 @@
 static std::queue< std::pair<run_script_cb *, const char *> > rs_queue;
 static ev::child rs_child_ev;
 
-void // c++ requires external linkage here, apparently :(
-rs_child_cb (ev::child &w, int revents)
+namespace
 {
-  w.stop ();
+  void // c++ requires external linkage here, apparently :(
+  rs_child_cb (ev::child &w, int revents)
+  {
+    w.stop ();
 
-  if (rs_queue.empty ())
-    return;
+    if (rs_queue.empty ())
+      return;
 
-  pid_t pid = run_script (*rs_queue.front ().first, false);
-  if (pid)
-    {
-      w.set (pid);
-      w.start ();
-    }
-  else
-    slog (L_WARN, rs_queue.front ().second);
+    pid_t pid = run_script (*rs_queue.front ().first, false);
+    if (pid)
+      {
+        w.set (pid);
+        w.start ();
+      }
+    else
+      slog (L_WARN, rs_queue.front ().second);
 
-  delete rs_queue.front ().first;
-  rs_queue.pop ();
-}
+    delete rs_queue.front ().first;
+    rs_queue.pop ();
+  }
+};
 
 // despite the fancy name, this is quite a hack
 static void
@@ -193,7 +196,8 @@ struct rsa_cache : list<rsa_entry>
 
 } rsa_cache;
 
-void rsa_cache::cleaner_cb (ev::timer &w, int revents)
+void
+rsa_cache::cleaner_cb (ev::timer &w, int revents)
 {
   if (empty ())
     w.stop ();
@@ -228,7 +232,8 @@ pkt_queue::~pkt_queue ()
   delete [] queue;
 }
 
-void pkt_queue::expire_cb (ev::timer &w, int revents)
+void
+pkt_queue::expire_cb (ev::timer &w, int revents)
 {
   ev_tstamp expire = ev_now () - max_ttl;
 
@@ -249,7 +254,8 @@ void pkt_queue::expire_cb (ev::timer &w, int revents)
     }
 }
 
-void pkt_queue::put (net_packet *p)
+void
+pkt_queue::put (net_packet *p)
 {
   ev_tstamp now = ev_now ();
 
@@ -268,7 +274,8 @@ void pkt_queue::put (net_packet *p)
   i = ni;
 }
 
-net_packet *pkt_queue::get ()
+net_packet *
+pkt_queue::get ()
 {
   if (empty ())
     return 0;
@@ -302,9 +309,10 @@ struct net_rate_limiter : list<net_rateinfo>
   bool can (u32 host);
 };
 
-net_rate_limiter auth_rate_limiter, reset_rate_limiter;
+static net_rate_limiter auth_rate_limiter, reset_rate_limiter;
 
-bool net_rate_limiter::can (u32 host)
+bool
+net_rate_limiter::can (u32 host)
 {
   iterator i;
 
@@ -361,7 +369,8 @@ bool net_rate_limiter::can (u32 host)
 
 unsigned char hmac_packet::hmac_digest[EVP_MAX_MD_SIZE];
 
-void hmac_packet::hmac_gen (crypto_ctx *ctx)
+void
+hmac_packet::hmac_gen (crypto_ctx *ctx)
 {
   unsigned int xlen;
 
@@ -389,7 +398,8 @@ hmac_packet::hmac_chk (crypto_ctx *ctx)
   return !memcmp (hmac, hmac_digest, HMACLENGTH);
 }
 
-void vpn_packet::set_hdr (ptype type_, unsigned int dst)
+void
+vpn_packet::set_hdr (ptype type_, unsigned int dst)
 {
   type = type_;
 
@@ -404,18 +414,18 @@ void vpn_packet::set_hdr (ptype type_, unsigned int dst)
 #define DATAHDR (sizeof (u32) + RAND_SIZE)
 
 struct vpndata_packet : vpn_packet
-  {
-    u8 data[MAXVPNDATA + DATAHDR]; // seqno
+{
+  u8 data[MAXVPNDATA + DATAHDR]; // seqno
 
-    void setup (connection *conn, int dst, u8 *d, u32 len, u32 seqno);
-    tap_packet *unpack (connection *conn, u32 &seqno);
+  void setup (connection *conn, int dst, u8 *d, u32 len, u32 seqno);
+  tap_packet *unpack (connection *conn, u32 &seqno);
+
 private:
-
-    const u32 data_hdr_size () const
-    {
-      return sizeof (vpndata_packet) - sizeof (net_packet) - MAXVPNDATA - DATAHDR;
-    }
-  };
+  const u32 data_hdr_size () const
+  {
+    return sizeof (vpndata_packet) - sizeof (net_packet) - MAXVPNDATA - DATAHDR;
+  }
+};
 
 void
 vpndata_packet::setup (connection *conn, int dst, u8 *d, u32 l, u32 seqno)
@@ -564,7 +574,8 @@ struct config_packet : vpn_packet
   }
 };
 
-void config_packet::setup (ptype type, int dst)
+void
+config_packet::setup (ptype type, int dst)
 {
   prot_major = PROTOCOL_MAJOR;
   prot_minor = PROTOCOL_MINOR;
@@ -582,7 +593,8 @@ void config_packet::setup (ptype type, int dst)
   set_hdr (type, dst);
 }
 
-bool config_packet::chk_config () const
+bool
+config_packet::chk_config () const
 {
   if (prot_major != PROTOCOL_MAJOR)
     slog (L_WARN, _("major version mismatch (remote %d <=> local %d)"), prot_major, PROTOCOL_MAJOR);
@@ -986,7 +998,8 @@ connection::inject_data_packet (tap_packet *pkt)
     }
 }
 
-void connection::inject_vpn_packet (vpn_packet *pkt, int tos)
+void
+connection::inject_vpn_packet (vpn_packet *pkt, int tos)
 {
   if (ictx && octx)
     send_vpn_packet (pkt, si, tos);
@@ -1344,7 +1357,8 @@ connection::keepalive_cb (ev::timer &w, int revents)
     reset_connection ();
 }
 
-void connection::send_connect_request (int id)
+void
+connection::send_connect_request (int id)
 {
   connect_req_packet *p = new connect_req_packet (conf->id, id, conf->protocols);
 
@@ -1356,7 +1370,8 @@ void connection::send_connect_request (int id)
   delete p;
 }
 
-void connection::script_init_env (const char *ext)
+void
+connection::script_init_env (const char *ext)
 {
   char *env;
   asprintf (&env, "IFUPDATA%s=%s", ext, conf->if_up_data); putenv (env);
@@ -1366,7 +1381,8 @@ void connection::script_init_env (const char *ext)
             conf->id & 0xff);                              putenv (env);
 }
 
-void connection::script_init_connect_env ()
+void
+connection::script_init_connect_env ()
 {
   vpn->script_init_env ();
 
@@ -1458,7 +1474,8 @@ connection::~connection ()
   shutdown ();
 }
 
-void connection_init ()
+void
+connection_init ()
 {
   auth_rate_limiter.clear ();
   reset_rate_limiter.clear ();

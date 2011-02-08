@@ -170,12 +170,14 @@ basecoder::basecoder (const char *cmap)
     }
 }
 
-unsigned int basecoder::encode_len (unsigned int len)
+unsigned int
+basecoder::encode_len (unsigned int len)
 {
   return enc_len [len];
 }
 
-unsigned int basecoder::decode_len (unsigned int len)
+unsigned int
+basecoder::decode_len (unsigned int len)
 {
   while (len && !dec_len [len])
     --len;
@@ -183,7 +185,8 @@ unsigned int basecoder::decode_len (unsigned int len)
   return dec_len [len];
 }
 
-unsigned int basecoder::encode (char *dst, u8 *src, unsigned int len)
+unsigned int
+basecoder::encode (char *dst, u8 *src, unsigned int len)
 {
   if (!len || len > MAX_DEC_LEN)
     return 0;
@@ -212,7 +215,8 @@ unsigned int basecoder::encode (char *dst, u8 *src, unsigned int len)
   return elen;
 }
 
-unsigned int basecoder::decode (u8 *dst, char *src, unsigned int len)
+unsigned int
+basecoder::decode (u8 *dst, char *src, unsigned int len)
 {
   if (!len || len > MAX_ENC_LEN)
     return 0;
@@ -281,7 +285,8 @@ static basecoder cdc26 ("dPhZrQmJkBtSvLxAeFwGyO");
 
 #define HDRSIZE 6
  
-inline void encode_header (char *data, int clientid, int seqno, int retry = 0)
+inline void
+encode_header (char *data, int clientid, int seqno, int retry = 0)
 {
   seqno &= SEQNO_MASK;
 
@@ -296,7 +301,8 @@ inline void encode_header (char *data, int clientid, int seqno, int retry = 0)
   cdc26.encode (data, hdr, 3);
 }
 
-inline void decode_header (char *data, int &clientid, int &seqno)
+inline void
+decode_header (char *data, int &clientid, int &seqno)
 {
   u8 hdr[3];
 
@@ -339,7 +345,8 @@ byte_stream::~byte_stream ()
   delete data;
 }
 
-void byte_stream::remove (int count)
+void
+byte_stream::remove (int count)
 {
   if (count > fill)
     assert (count <= fill);
@@ -347,7 +354,8 @@ void byte_stream::remove (int count)
   memmove (data, data + count, fill -= count);
 }
 
-bool byte_stream::put (u8 *data, unsigned int datalen)
+bool
+byte_stream::put (u8 *data, unsigned int datalen)
 {
   if (maxsize - fill < datalen)
     return false;
@@ -357,7 +365,8 @@ bool byte_stream::put (u8 *data, unsigned int datalen)
   return true;
 }
 
-bool byte_stream::put (vpn_packet *pkt)
+bool
+byte_stream::put (vpn_packet *pkt)
 {
   if (maxsize - fill < pkt->len + 2)
     return false;
@@ -449,7 +458,8 @@ struct dns_cfg
 
 int dns_cfg::next_uid;
 
-void dns_cfg::reset (int clientid)
+void
+dns_cfg::reset (int clientid)
 {
   id1 = 'G';
   id2 = 'V';
@@ -473,7 +483,8 @@ void dns_cfg::reset (int clientid)
   r4 = r5 = r6 = r7 = 0;
 }
 
-bool dns_cfg::valid ()
+bool
+dns_cfg::valid ()
 {
   // although the protocol itself allows for some configurability,
   // only the following encoding/decoding settings are implemented.
@@ -498,7 +509,8 @@ struct dns_packet : net_packet
   int decode_label (char *data, int size, int &offs);
 };
 
-int dns_packet::decode_label (char *data, int size, int &offs)
+int
+dns_packet::decode_label (char *data, int size, int &offs)
 {
   char *orig = data;
 
@@ -534,10 +546,11 @@ int dns_packet::decode_label (char *data, int size, int &offs)
 
 /////////////////////////////////////////////////////////////////////////////
 
-static u16 dns_id = 0; // TODO: should be per-vpn
-
-static u16 next_id ()
+static
+u16 next_id ()
 {
+  static u16 dns_id = 0; // TODO: should be per-vpn
+
   if (!dns_id)
     dns_id = time (0);
 
@@ -615,7 +628,8 @@ dns_snd::~dns_snd ()
   delete pkt;
 }
 
-static void append_domain (dns_packet &pkt, int &offs, const char *domain)
+static void
+append_domain (dns_packet &pkt, int &offs, const char *domain)
 {
   // add tunnel domain
   for (;;)
@@ -638,7 +652,8 @@ static void append_domain (dns_packet &pkt, int &offs, const char *domain)
     }
 }
 
-void dns_snd::gen_stream_req (int seqno, byte_stream &stream)
+void
+dns_snd::gen_stream_req (int seqno, byte_stream &stream)
 {
   stdhdr = true;
   this->seqno = seqno;
@@ -686,7 +701,8 @@ void dns_snd::gen_stream_req (int seqno, byte_stream &stream)
   pkt->len = offs;
 }
 
-void dns_snd::gen_syn_req ()
+void
+dns_snd::gen_syn_req ()
 {
   timeout = ev_now () + INITIAL_SYN_TIMEOUT;
 
@@ -761,7 +777,8 @@ dns_connection::~dns_connection ()
     delete *i;
 }
 
-void dns_connection::receive_rep (dns_rcv *r)
+void
+dns_connection::receive_rep (dns_rcv *r)
 {
   if (r->datalen)
     {

@@ -40,7 +40,8 @@
 static void *pkt_cachep[PKTCACHESIZE];
 static int pkt_cachen = 0;
 
-void *net_packet::operator new(size_t s)
+void *
+net_packet::operator new(size_t s)
 {
   if (s > sizeof (data_packet))
     {
@@ -59,7 +60,8 @@ void *net_packet::operator new(size_t s)
     }
 }
 
-void net_packet::operator delete(void *p)
+void
+net_packet::operator delete(void *p)
 {
   if (p)
     {

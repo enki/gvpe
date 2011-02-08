@@ -44,14 +44,16 @@
 // all ipv4-based protocols
 #define PROTv4 (PROT_UDPv4 | PROT_TCPv4 | PROT_ICMPv4 | PROT_IPv4 | PROT_DNSv4)
 
-void sockinfo::set (const sockaddr_in *sa, u8 prot_)
+void
+sockinfo::set (const sockaddr_in *sa, u8 prot_)
 {
   host = sa->sin_addr.s_addr;
   port = prot_ & (PROT_IPv4 | PROT_ICMPv4) ? 0 : sa->sin_port;
   prot = prot_;
 }
 
-void sockinfo::set (const char *hostname, u16 port_, u8 prot_)
+void
+sockinfo::set (const char *hostname, u16 port_, u8 prot_)
 {
   prot = prot_;
   host = 0;
