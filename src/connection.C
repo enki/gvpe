@@ -847,7 +847,7 @@ connection::send_connect_info (int rid, const sockinfo &rsi, u8 rprotocols)
 inline void
 connection::establish_connection_cb (ev::timer &w, int revents)
 {
-  if (!ictx
+  if (!(ictx && octx)
       && conf != THISNODE
       && connectmode != conf_node::C_NEVER
       && connectmode != conf_node::C_DISABLED
