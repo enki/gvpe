@@ -426,9 +426,12 @@ Allow direct connections to this node. See C<deny-direct> for more info.
 
 =item compress = yes|true|on | no|false|off
 
-Wether to compress data packets sent to this node (default: C<yes>).
-Compression is really cheap even on slow computers and has no size
-overhead at all, so enabling this is often a good idea.
+For the current node, this specified whether it will accept compressed
+packets, and for all other nodes, this specifies whether to try to
+compress data packets sent to this node (default: C<yes>). Compression is
+really cheap even on slow computers, has no size overhead at all and will
+only be used when the other side supports compression, so enabling this is
+often a good idea.
 
 =item connect = ondemand | never | always | disabled
 
@@ -564,7 +567,7 @@ script in the environment variable C<IFUPDATA>.
 
 =item inherit-tos = yes|true|on | no|false|off
 
-Wether to inherit the TOS settings of packets sent to the tunnel when
+Whether to inherit the TOS settings of packets sent to the tunnel when
 sending packets to this node (default: C<yes>). If set to C<yes> then
 outgoing tunnel packets will have the same TOS setting as the packets sent
 to the tunnel device, which is usually what you want.
