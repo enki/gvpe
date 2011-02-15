@@ -26,7 +26,7 @@ endif
 COMMON = global.h conf.h conf.C util.h util.C \
          slog.h slog.C netcompat.h ev_cpp.h ev_cpp.C 
 
-gvpe_SOURCES = gvpe.C hash_map.h vpn.h vpn.C vpn_tcp.C vpn_dns.C \
+gvpe_SOURCES = gvpe.C vpn.h vpn.C vpn_tcp.C vpn_dns.C \
                sockinfo.h sockinfo.C \
                lzf/lzf.h lzf/lzfP.h \
                connection.h connection.C callback.h device.h device.C \

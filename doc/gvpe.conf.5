@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "GVPE.CONF 5"
-.TH GVPE.CONF 5 "2010-09-10" "2.22" "GNU Virtual Private Ethernet"
+.TH GVPE.CONF 5 "2011-02-12" "2.24" "GNU Virtual Private Ethernet"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -516,9 +516,12 @@ set within a node section only apply to the given node.
 Allow direct connections to this node. See \f(CW\*(C`deny\-direct\*(C'\fR for more info.
 .IP "compress = yes|true|on | no|false|off" 4
 .IX Item "compress = yes|true|on | no|false|off"
-Wether to compress data packets sent to this node (default: \f(CW\*(C`yes\*(C'\fR).
-Compression is really cheap even on slow computers and has no size
-overhead at all, so enabling this is often a good idea.
+For the current node, this specified whether it will accept compressed
+packets, and for all other nodes, this specifies whether to try to
+compress data packets sent to this node (default: \f(CW\*(C`yes\*(C'\fR). Compression is
+really cheap even on slow computers, has no size overhead at all and will
+only be used when the other side supports compression, so enabling this is
+often a good idea.
 .IP "connect = ondemand | never | always | disabled" 4
 .IX Item "connect = ondemand | never | always | disabled"
 Sets the connect mode (default: \f(CW\*(C`always\*(C'\fR). It can be \f(CW\*(C`always\*(C'\fR (always
@@ -644,7 +647,7 @@ The value specified using this directive will be passed to the \f(CW\*(C`if\-up\
 script in the environment variable \f(CW\*(C`IFUPDATA\*(C'\fR.
 .IP "inherit-tos = yes|true|on | no|false|off" 4
 .IX Item "inherit-tos = yes|true|on | no|false|off"
-Wether to inherit the \s-1TOS\s0 settings of packets sent to the tunnel when
+Whether to inherit the \s-1TOS\s0 settings of packets sent to the tunnel when
 sending packets to this node (default: \f(CW\*(C`yes\*(C'\fR). If set to \f(CW\*(C`yes\*(C'\fR then
 outgoing tunnel packets will have the same \s-1TOS\s0 setting as the packets sent
 to the tunnel device, which is usually what you want.

@@ -1,6 +1,6 @@
 /*
     connection.C -- manage a single connection
-    Copyright (C) 2003-2008,2010 Marc Lehmann <gvpe@schmorp.de>
+    Copyright (C) 2003-2008,2010,2011 Marc Lehmann <gvpe@schmorp.de>
  
     This file is part of GVPE.
 
@@ -833,8 +833,9 @@ connection::send_auth_response (const sockinfo &si, const rsaid &id, const rsach
 void
 connection::send_connect_info (int rid, const sockinfo &rsi, u8 rprotocols)
 {
-  slog (L_TRACE, "%s << PT_CONNECT_INFO(%s,%s)", conf->nodename,
-                 vpn->conns[rid - 1]->conf->nodename, (const char *)rsi);
+  slog (L_TRACE, "%s << PT_CONNECT_INFO(%s,%s,p%02x)", conf->nodename,
+                 vpn->conns[rid - 1]->conf->nodename, (const char *)rsi,
+                 conf->protocols);
 
   connect_info_packet *r = new connect_info_packet (conf->id, rid, rsi, rprotocols);
 
@@ -1069,12 +1070,14 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
       case vpn_packet::PT_AUTH_REQ:
         if (auth_rate_limiter.can (rsi))
           {
-            auth_req_packet *p = (auth_req_packet *) pkt;
+            auth_req_packet *p = (auth_req_packet *)pkt;
 
-            slog (L_TRACE, "%s >> PT_AUTH_REQ(%s)", conf->nodename, p->initiate ? "initiate" : "reply");
+            slog (L_TRACE, "%s >> PT_AUTH_REQ(%s,p%02x,f%02x)",
+                  conf->nodename, p->initiate ? "initiate" : "reply",
+                  p->protocols, p->features);
 
             if (p->chk_config ()
-                && (!strncmp (p->magic, MAGIC_OLD, 8) || !strncmp (p->magic, MAGIC, 8)))
+                && (!memcmp (p->magic, MAGIC_OLD, 8) || !memcmp (p->magic, MAGIC, 8)))
               {
                 if (p->prot_minor != PROTOCOL_MINOR)
                   slog (L_INFO, _("%s(%s): protocol minor version mismatch: ours is %d, %s's is %d."),
@@ -1276,8 +1279,10 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                 connection *c = vpn->conns[p->id - 1];
                 conf->protocols = p->protocols;
 
-                slog (L_TRACE, "%s >> PT_CONNECT_REQ(%s) [%d]",
-                               conf->nodename, vpn->conns[p->id - 1]->conf->nodename, c->ictx && c->octx);
+                slog (L_TRACE, "%s >> PT_CONNECT_REQ(%s,p%02x) [%d]",
+                               conf->nodename, vpn->conns[p->id - 1]->conf->nodename,
+                               p->protocols,
+                               c->ictx && c->octx);
 
                 if (c->ictx && c->octx)
                   {
@@ -1310,9 +1315,12 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                 protocol = best_protocol (c->conf->protocols & THISNODE->protocols & p->si.supported_protocols (c->conf));
                 p->si.upgrade_protocol (protocol, c->conf);
 
-                slog (L_TRACE, "%s >> PT_CONNECT_INFO(%s,%s) [%d]",
-                               conf->nodename, vpn->conns[p->id - 1]->conf->nodename,
-                               (const char *)p->si, !c->ictx && !c->octx);
+                slog (L_TRACE, "%s >> PT_CONNECT_INFO(%s,%s,p%02x) [%d]",
+                               conf->nodename,
+                               vpn->conns[p->id - 1]->conf->nodename,
+                               (const char *)p->si,
+                               p->protocols,
+                               !c->ictx && !c->octx);
 
                 const sockinfo &dsi = forward_si (p->si);
 
@@ -1360,10 +1368,11 @@ connection::keepalive_cb (ev::timer &w, int revents)
 void
 connection::send_connect_request (int id)
 {
-  connect_req_packet *p = new connect_req_packet (conf->id, id, conf->protocols);
+  connect_req_packet *p = new connect_req_packet (conf->id, id, THISNODE->protocols);
 
-  slog (L_TRACE, "%s << PT_CONNECT_REQ(%s)",
-                 conf->nodename, vpn->conns[id - 1]->conf->nodename);
+  slog (L_TRACE, "%s << PT_CONNECT_REQ(%s,p%02x)",
+                 conf->nodename, vpn->conns[id - 1]->conf->nodename,
+                 THISNODE->protocols);
   p->hmac_set (octx);
   send_vpn_packet (p, si);
 
@@ -1456,9 +1465,6 @@ connection::connection (struct vpn *vpn, conf_node *conf)
 
   last_establish_attempt = 0.;
   octx = ictx = 0;
-
-  if (!conf->protocols) // make sure some protocol is enabled
-    conf->protocols = PROT_UDPv4;
 
   connectmode = conf->connectmode;
 

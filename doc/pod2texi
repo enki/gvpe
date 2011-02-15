@@ -29,6 +29,7 @@ sub out {
 }
 
 sub TEX::view_seq_code { "\@t{$_[1]}" }
+sub TEX::view_seq_file { "\@file{$_[1]}" }
 sub TEX::view_seq_bold { "\@strong{$_[1]}" }
 sub TEX::view_seq_italic { "\@emph{$_[1]}" }
 

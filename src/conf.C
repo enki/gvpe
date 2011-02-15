@@ -107,25 +107,6 @@ conf_node::may_direct (struct conf_node *other)
   return true;
 }
 
-void
-conf_node::print ()
-{
-  printf ("%4d  fe:fd:80:00:0%1x:%02x  %c  %-8.8s  %-10.10s  %s%s%d\n",
-          id,
-          id >> 8, id & 0xff,
-          compress ? 'Y' : 'N',
-          connectmode   == C_ONDEMAND ? "ondemand"
-          : connectmode == C_NEVER    ? "never"
-          : connectmode == C_ALWAYS   ? "always"
-          : connectmode == C_DISABLED ? "disabled"
-          :                             "",
-          nodename,
-          hostname ? hostname : "",
-          hostname ? ":" : "",
-          hostname ? udp_port : 0
-          );
-}
-
 conf_node::~conf_node ()
 {
 #if 0
@@ -653,6 +634,26 @@ configuration::config_filename (const char *name, const char *dflt)
 }
 
 void
+conf_node::print ()
+{
+  printf ("%4d  fe:fd:80:00:0%1x:%02x  %c  %-8.8s  %-10.10s   %02x  %s%s%d\n",
+          id,
+          id >> 8, id & 0xff,
+          compress ? 'Y' : 'N',
+          connectmode   == C_ONDEMAND ? "ondemand"
+          : connectmode == C_NEVER    ? "never"
+          : connectmode == C_ALWAYS   ? "always"
+          : connectmode == C_DISABLED ? "disabled"
+          :                             "",
+          nodename,
+          protocols,
+          hostname ? hostname : "",
+          hostname ? ":" : "",
+          hostname ? udp_port : 0
+          );
+}
+
+void
 configuration::print ()
 {
   printf (_("\nConfiguration\n\n"));
@@ -666,8 +667,8 @@ configuration::print ()
   printf (_("rsa key size:       %d\n"), rsa_key ? RSA_size (rsa_key) * 8 : -1);
   printf ("\n");
 
-  printf ("%4s  %-17s %s %-8.8s  %-10.10s  %s\n",
-          _("ID#"), _("MAC"), _("Com"), _("Conmode"), _("Node"), _("Host:Port"));
+  printf ("%4s  %-17s %s %-8.8s  %-10.10s  %04s %s\n",
+          _("ID#"), _("MAC"), _("Com"), _("Conmode"), _("Node"), _("Prot"), _("Host:Port"));
 
   for (node_vector::iterator i = nodes.begin (); i != nodes.end (); ++i)
     (*i)->print ();

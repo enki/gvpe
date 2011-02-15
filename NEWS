@@ -1,5 +1,13 @@
 GVPE NEWS
 
+	- INCOMPATIBLE CHANGE: no longer enable udp protocol if no other
+          protocols are enabled - this is necessary when you have nodes with
+          completely unknown protocols, to force mediated connection requests.
+        - fix a bug where nodes would tell the other side that it supports
+          the same protocols as that other side, instead of its own.
+
+2.24 Sat Feb 12 05:15:48 CET 2011
+	- protocol version 0.1, compatible with older releases.
 	- due to a bug, when packets were lost, a connection could go into a
           state where a ping/connection request from another node would be
           ignored, leading to connections not being re-established.
@@ -12,20 +20,20 @@ GVPE NEWS
         - clarify compression docs.
 
 2.22 Sun Feb  1 17:25:28 CET 2009
-	- protocol version 0.1, compatible with older releases,
+	- protocol version 0.1, compatible with older releases.
 	- enabled icmp/tcp/http-proxy protocols by default.
 	- updated copyright in program greetings.
         - fix some configure messages.
         - updated to libev 3.52.
 
 2.21 Wed Sep  3 06:56:27 CEST 2008
-	- protocol version 0.1, compatible with older releases,
+	- protocol version 0.1, compatible with older releases.
 	- add missing ev++.h include header to tarball, which everybody
           who tested it apparently had in their include path :(. Caught
           by Karl Kleinpaste and Marcus Kong.
 
 2.2  Mon Sep  1 06:28:09 CEST 2008
-	- protocol version 0.1, compatible with older releases,
+	- protocol version 0.1, compatible with older releases.
           but upgrade is recommended to due changed ondemand behaviour.
         - new per-node options max-ttl and max-queue.
         - convert from iom.C to libev, a high-performance event loop

@@ -18,13 +18,13 @@ src/connection.h
 src/device-cygwin.C
 src/device-linux.C
 src/device-tincd.C
+src/device-darwin.C
 src/device.C
 src/device.h
 src/ether_emu.C
 src/global.h
 src/gvpe.C
 src/gvpectrl.C
-src/hash_map.h
 src/lzf/lzf.h
 src/lzf/lzfP.h
 src/lzf/lzf_c.c

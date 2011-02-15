@@ -2,7 +2,7 @@
     gvpe.C -- the main file for gvpe
     Copyright (C) 1998-2002 Ivo Timmermans <ivo@o2w.nl>
                   2000-2002 Guus Sliepen <guus@sliepen.eu.org>
-                  2003-2008 Marc Lehmann <gvpe@schmorp.de>
+                  2003-2011 Marc Lehmann <gvpe@schmorp.de>
  
     This file is part of GVPE.
 
