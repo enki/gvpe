@@ -532,13 +532,7 @@ when gvpe was compiled using the C<--enable-tcp> option.
 
 See gvpe.protocol(7) for a description of the UDP transport protocol.
 
-Enable the UDPv4 transport using the C<udp-port> port (default: C<no>,
-unless no other protocol is enabled for a node, in which case this
-protocol is enabled automatically).
-
-NOTE: Please specify C<enable-udp = yes> if you want to use it even though
-it might get switched on automatically, as some future version might
-default to another default protocol.
+Enable the UDPv4 transport using the C<udp-port> port (default: C<no>).
 
 =item hostname = hostname | ip    [can not be defaulted]
 
