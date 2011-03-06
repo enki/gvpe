@@ -253,7 +253,8 @@ keygen (int bits)
 
       f = fopen (fname, "a");
 
-      if (!f)
+      /* some libcs are buggy and require an extra seek to the end */
+      if (!f || fseek (f, 0, SEEK_END))
         {
           perror (fname);
           exit (EXIT_FAILURE);

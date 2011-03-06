@@ -119,8 +119,14 @@ charmap::charmap (const char *cmap)
 
   for (size = 0; cmap [size]; size++)
     {
-      enc [size] = cmap [size];
-      dec [(u8)enc [size]] = size;
+      char c = cmap [size];
+
+      enc [size] = c;
+      dec [(u8)c] = size;
+
+      // allow lowercase/uppercase aliases if possible
+      if (c >= 'A' && c <= 'Z' && dec [c + ('a' - 'A')] == INVALID) dec [c + ('a' - 'A')] = size;
+      if (c >= 'a' && c <= 'z' && dec [c - ('a' - 'A')] == INVALID) dec [c - ('a' - 'A')] = size;
     }
 
   assert (size < 256);
@@ -821,8 +827,10 @@ dns_connection::receive_rep (dns_rcv *r)
 
         if (!rcvdq.put (r->data, r->datalen))
           {
-            slog (L_ERR, "DNS: !rcvdq.put (r->data, r->datalen)");
-            abort (); // MUST never overflow, can be caused by data corruption, TODO
+            // MUST never overflow, can be caused by data corruption, TODO
+            slog (L_CRIT, "DNS: !rcvdq.put (r->data, r->datalen)");
+            c->dnsv4_reset_connection ();
+            return;
           }
 
         while (vpn_packet *pkt = rcvdq.get ())
@@ -831,7 +839,6 @@ dns_connection::receive_rep (dns_rcv *r)
             si.host = htonl (c->conf->id); si.port = 0; si.prot = PROT_DNSv4;
 
             vpn->recv_vpn_packet (pkt, si);
-
             delete pkt;
           }
 
@@ -1139,9 +1146,7 @@ vpn::dnsv4_client (dns_packet &pkt)
                           {
                             slog (L_DEBUG, _("DNS: got tunnel RST request"));
 
-                            delete dns; c->dns = 0;
-
-                            return;
+                            c->dnsv4_reset_connection ();
                           }
                         else if (ip [3] == CMD_IP_SYN)
                           {
@@ -1149,10 +1154,7 @@ vpn::dnsv4_client (dns_packet &pkt)
                             dns->established = true;
                           }
                         else if (ip [3] == CMD_IP_REJ)
-                          {
-                            slog (L_DEBUG, _("DNS: got tunnel REJ reply, server does not like us, aborting."));
-                            abort ();
-                          }
+                          slog (L_ERR, _("DNS: got tunnel REJ reply, server does not like us."));
                         else
                           slog (L_INFO, _("DNS: got unknown meta command %02x"), ip [3]);
                       }

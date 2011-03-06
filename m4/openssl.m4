@@ -38,4 +38,12 @@ AC_DEFUN(tinc_OPENSSL,
       [AC_MSG_ERROR([OpenSSL depends on libdl.])]
     )]
   )
+
+  AC_CHECK_FUNC(inflate,
+    [],
+    [AC_CHECK_LIB(z, inflate,
+      [LIBS="$LIBS -lz"],
+      [AC_MSG_ERROR([OpenSSL depends on libz.])]
+    )]
+  )
 ])
