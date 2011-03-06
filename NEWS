@@ -10,6 +10,7 @@ GVPE NEWS
         - add zlib when found, as openssl depends on it in newer versions.
         - work around append-bugs in uclibc by using an extra seek.
         - new "include" directive for the config file.
+        - gvpectrl no longer evaluates any "on" directives.
         - major, but incremental, dns transport improvements:
            - do not simply abort in some error cases in the dns transport,
              but try to recover.

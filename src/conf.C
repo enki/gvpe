@@ -214,7 +214,7 @@ configuration::clear ()
   else if (!strcmp (val, "on"))		target = trueval;	\
   else if (!strcmp (val, "off"))	target = falseval;	\
   else								\
-    return _("illegal boolean value, only 'yes|true|on' or 'no|false|off' allowed. (ignored)"); \
+    return _("illegal boolean value, only 'yes|true|on' or 'no|false|off' allowed, ignored"); \
 } while (0)
 
 const char *
@@ -242,13 +242,13 @@ configuration_parser::parse_line (char *line)
   char *val = strtok (NULL, "\t\n\r =");
 
   if (!val || val[0] == '#')
-    return _("no value given for variable. (ignored)");
+    return _("no value given for variable, ignored");
 
   else if (!strcmp (var, "on"))
     {
-      if (!::thisnode
-          || (val[0] == '!' && strcmp (val + 1, ::thisnode))
-          || !strcmp (val, ::thisnode))
+      if (::thisnode
+          && ((val[0] == '!' && strcmp (val + 1, ::thisnode))
+              || !strcmp (val, ::thisnode)))
         return parse_line (strtok (NULL, "\n\r"));
     }
 
@@ -265,7 +265,7 @@ configuration_parser::parse_line (char *line)
       loglevel l = string_to_loglevel (val);
 
       if (l == L_NONE)
-        return _("unknown loglevel. (skipping)");
+        return _("unknown loglevel, ignored");
     }
   else if (!strcmp (var, "ip-proto"))
     conf.ip_proto = atoi (val);
@@ -451,7 +451,7 @@ configuration_parser::parse_line (char *line)
       else if (!strcmp (val, "disabled"))
         node->connectmode = conf_node::C_DISABLED;
       else
-        return _("illegal value for 'connectmode', use one of 'ondemand', 'never', 'always' or 'disabled'. (ignored)");
+        return _("illegal value for 'connectmode', use one of 'ondemand', 'never', 'always' or 'disabled', ignored");
     }
   else if (!strcmp (var, "inherit-tos"))
     parse_bool (node->inherit_tos, "inherit-tos", true, false);
@@ -558,7 +558,6 @@ configuration_parser::parse_file (const char *fname)
     {
       char line [2048];
       int lineno = 0;
-      node = &conf.default_node;
 
       while (fgets (line, sizeof (line), f))
         {
@@ -590,6 +589,7 @@ configuration_parser::configuration_parser (configuration &conf,
   char *fname;
 
   conf.clear ();
+  node = &conf.default_node;
 
   asprintf (&fname, "%s/gvpe.conf", confbase);
   parse_file (fname);
