@@ -91,7 +91,7 @@ traffic even if it doesn't need to transport packets.
 In addition, the same problems as the TCP transport also plague this
 protocol.
 
-It's only use is to tunnel through firewalls that do not allow direct
+Its only use is to tunnel through firewalls that do not allow direct
 internet access. Similar to using a HTTP proxy (as the TCP transport
 does), it uses a local DNS server/forwarder (given by the C<dns-forw-host>
 configuration value) as a proxy to send and receive data as a client,

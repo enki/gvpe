@@ -30,19 +30,50 @@ extend to the end of the line. They can be used on their own lines, or
 after any directives. Whitespace is allowed around the C<=> sign or after
 values, but not within the variable names or values themselves.
 
-The only exception to the above is the "on" directive that can prefix any
-C<name = value> setting and will only "execute" it on the named node, or
-(if the nodename starts with "!") on all nodes except the named one.
+All settings are applied "in order", that is, later settings of the same
+variable overwrite earlier ones.
 
-For example, set the MTU to C<1450> everywhere, loglevel to C<noise> on
-branch1, and connect to C<ondemand> everywhere but on branch2:
+The only exceptions to the above are the "on" and "include" directives:
+
+=over 4
+
+=item on nodename ...
+
+=item on !nodename ...
+
+You can prefix any configuration directive with C<on> and a nodename. GVPE
+will will only "execute" it on the named node, or (if the nodename starts
+with C<!>) on all nodes except the named one.
+
+Example: set the MTU to C<1450> everywhere, C<loglevel> to C<noise> on
+C<branch1>, and C<connect> to C<ondemand> everywhere but on branch2.
 
    mtu = 1450
    on branch1 loglevel = noise
    on !branch2 connect = ondemand
 
-All settings are applied "in order", that is, later settings of the same
-variable overwrite earlier ones.
+=item include relative-or-absolute-path
+
+Reads the specified file (the path must not contain whitespace or C<=>
+characters) and evaluate all config directives in it as if they were
+spelled out in place of the C<include> directive.
+
+The path is a printf format string, that is, you must escape any C<%>
+by doubling it, and you can have a single C<%s> inside, which will be
+replaced by the current nodename.
+
+Relative paths are interpreted relative to the GVPE config directory.
+
+Example: include the file F<local.conf> in the config directory on every
+node.
+
+   include local.conf
+
+Example: include a file F<conf/>nodenameF<.conf>
+
+   include conf/%s.conf
+
+=back
 
 =head1 ANATOMY OF A CONFIG FILE
 
@@ -78,6 +109,15 @@ The DNS server to forward DNS requests to for the DNS tunnel protocol
 
 The port where the C<dns-forw-host> is to be contacted (default: C<53>,
 which is fine in most cases).
+
+=item dns-case-preserving = yes|true|on | no|false|off
+
+Sets whether the DNS transport forwarding server preserves case (DNS
+servers have to, but some access systems are even more broken than others)
+(default: true).
+
+Normally, when the forwarding server changes the case of domain names then
+GVPE will automatically set this to false.
 
 =item dns-max-outstanding = integer-number-of-requests
 

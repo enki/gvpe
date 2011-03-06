@@ -926,9 +926,6 @@ connection::reset_connection ()
 
   delete ictx; ictx = 0;
   delete octx; octx = 0;
-#if ENABLE_DNS
-  dnsv4_reset_connection ();
-#endif
 
   si.host = 0;
 

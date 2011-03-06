@@ -151,6 +151,7 @@ struct configuration
 
 #if ENABLE_DNS
   char *dns_forw_host;
+  bool dns_case_preserving;
   u16 dns_forw_port;
   float dns_timeout_factor;
   float dns_send_interval;
@@ -164,7 +165,7 @@ struct configuration
 
   // create a filename from string, replacing %s by the nodename
   // and using relative paths under confbase.
-  char *config_filename (const char *name, const char *dflt);
+  char *config_filename (const char *name, const char *dflt = 0);
 
   void print ();
 
@@ -184,6 +185,7 @@ struct configuration_parser
 
   configuration_parser (configuration &conf, bool need_keys, int argc, char **argv);
 
+  void parse_file (const char *fname);
   const char *parse_line (char *line);
   void parse_argv ();
 };

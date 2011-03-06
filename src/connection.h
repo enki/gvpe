@@ -170,8 +170,6 @@ struct connection
 
 #if ENABLE_DNS
   struct dns_connection *dns;
-
-  void dnsv4_reset_connection ();
 #endif
 
   enum conf_node::connectmode connectmode;

@@ -3,14 +3,25 @@ GVPE NEWS
 	- INCOMPATIBLE CHANGE: no longer enable udp protocol if no other
           protocols are enabled - this is necessary when you have nodes with
           completely unknown protocols, to force mediated connection requests.
-	- protocol version 0.1, compatible with older releases.
+        - INCOMPATIBLE CHANGE: dns transport protocol bumped to version 2.
+	- core protocol version 0.1, compatible with older releases.
         - fix a bug where nodes would tell the other side that it supports
           the same protocols as that other side, instead of its own.
-        - do not simply abort in some error cases in the dns transport.
-        - allow lowercase/uppercase alises for dns encodings that do
-          not rely on case.
         - add zlib when found, as openssl depends on it in newer versions.
         - work around append-bugs in uclibc by using an extra seek.
+        - new "include" directive for the config file.
+        - major, but incremental, dns transport improvements:
+           - do not simply abort in some error cases in the dns transport,
+             but try to recover.
+           - allow lowercase/uppercase alises for base-n encodings that do
+             not rely on case.
+           - use base26 instead of base22 encoding for dns syn's, and
+             base36 instead of base22 for headers (saves one byte/packet).
+           - back off far quicker in dns tunnel when idling - increases
+             latency on an idle link somewhat, but avoids hundreds of
+             needless packets.
+           - poll more aggressively when idling in dns (poll once per
+             second as opposed to once per 5 seconds).
 
 2.24 Sat Feb 12 05:15:48 CET 2011
 	- protocol version 0.1, compatible with older releases.

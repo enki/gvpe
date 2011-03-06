@@ -1,6 +1,6 @@
 /*
     vpn_dns.C -- handle the dns tunnel part of the protocol.
-    Copyright (C) 2003-2008 Marc Lehmann <gvpe@schmorp.de>
+    Copyright (C) 2003-2011 Marc Lehmann <gvpe@schmorp.de>
  
     This file is part of GVPE.
 
@@ -61,8 +61,8 @@
 
 #include "vpn.h"
 
-#define MAX_POLL_INTERVAL 5.  // how often to poll minimally when the server has no data
-#define ACTIVITY_INTERVAL 5.
+#define MIN_POLL_INTERVAL 0.1 // poll at most this often when no data received
+#define MAX_POLL_INTERVAL 1.  // how often to poll minimally when the server has no data
 
 #define INITIAL_TIMEOUT     0.1 // retry timeouts
 #define INITIAL_SYN_TIMEOUT 2. // retry timeout for initial syn
@@ -93,9 +93,23 @@
 #define CMD_IP_1   207
 #define CMD_IP_2    46
 #define CMD_IP_3   236
-#define CMD_IP_RST  29
-#define CMD_IP_SYN 113
-#define CMD_IP_REJ  32
+
+#define CMD_IP_RST  29 // some error, reset and retry
+#define CMD_IP_REJ  32 // do not want you
+#define CMD_IP_SYN 113 // connection established
+#define CMD_IP_CSE 213 // connection established, but likely case mismatch
+
+static bool
+is_uc (char c)
+{
+  return 'A' <= c && c <= 'Z';
+}
+
+static bool
+is_lc (char c)
+{
+  return 'a' <= c && c <= 'z';
+}
 
 // works for cmaps up to 255 (not 256!)
 struct charmap
@@ -125,8 +139,8 @@ charmap::charmap (const char *cmap)
       dec [(u8)c] = size;
 
       // allow lowercase/uppercase aliases if possible
-      if (c >= 'A' && c <= 'Z' && dec [c + ('a' - 'A')] == INVALID) dec [c + ('a' - 'A')] = size;
-      if (c >= 'a' && c <= 'z' && dec [c - ('a' - 'A')] == INVALID) dec [c - ('a' - 'A')] = size;
+      if (is_uc (c) && dec [c + ('a' - 'A')] == INVALID) dec [c + ('a' - 'A')] = size;
+      if (is_lc (c) && dec [c - ('a' - 'A')] == INVALID) dec [c - ('a' - 'A')] = size;
     }
 
   assert (size < 256);
@@ -143,11 +157,11 @@ struct basecoder
   unsigned int enc_len [MAX_DEC_LEN];
   unsigned int dec_len [MAX_ENC_LEN];
 
-  unsigned int encode_len (unsigned int len);
-  unsigned int decode_len (unsigned int len);
+  unsigned int encode_len (unsigned int len) const;
+  unsigned int decode_len (unsigned int len) const;
 
-  unsigned int encode (char *dst, u8 *src, unsigned int len);
-  unsigned int decode (u8 *dst, char *src, unsigned int len);
+  unsigned int encode (char *dst, u8 *src, unsigned int len) const;
+  unsigned int decode (u8 *dst, char *src, unsigned int len) const;
 
   basecoder (const char *cmap);
 };
@@ -177,13 +191,13 @@ basecoder::basecoder (const char *cmap)
 }
 
 unsigned int
-basecoder::encode_len (unsigned int len)
+basecoder::encode_len (unsigned int len) const
 {
   return enc_len [len];
 }
 
 unsigned int
-basecoder::decode_len (unsigned int len)
+basecoder::decode_len (unsigned int len) const
 {
   while (len && !dec_len [len])
     --len;
@@ -192,7 +206,7 @@ basecoder::decode_len (unsigned int len)
 }
 
 unsigned int
-basecoder::encode (char *dst, u8 *src, unsigned int len)
+basecoder::encode (char *dst, u8 *src, unsigned int len) const
 {
   if (!len || len > MAX_DEC_LEN)
     return 0;
@@ -222,7 +236,7 @@ basecoder::encode (char *dst, u8 *src, unsigned int len)
 }
 
 unsigned int
-basecoder::decode (u8 *dst, char *src, unsigned int len)
+basecoder::decode (u8 *dst, char *src, unsigned int len) const
 {
   if (!len || len > MAX_ENC_LEN)
     return 0;
@@ -281,30 +295,28 @@ test::test ()
 }
 #endif
 
-//static basecoder cdc64 ("_dDpPhHzZrR06QqMmjJkKBb34TtSsvVlL81xXaAeEFf92WwGgYyoO57UucCNniI-");
-//static basecoder cdc63 ("_dDpPhHzZrR06QqMmjJkKBb34TtSsvVlL81xXaAeEFf92WwGgYyoO57UucCNniI");
-static basecoder cdc62 ("dDpPhHzZrR06QqMmjJkKBb34TtSsvVlL81xXaAeEFf92WwGgYyoO57UucCNniI");
-//static basecoder cdc36 ("dphzr06qmjkb34tsvl81xaef92wgyo57ucni"); // unused as of yet
-static basecoder cdc26 ("dPhZrQmJkBtSvLxAeFwGyO");
+static basecoder cdc62 ("dDpPhHzZrR06QqMmjJkKBb34TtSsvVlL81xXaAeEFf92WwGgYyoO57UucCNniI"); // a-zA-Z0-9
+static basecoder cdc36 ("dPhZr06QmJkB34tSvL81xAeF92wGyO57uCnI"); // a-z0-9 for case-changers
+static basecoder cdc26 ("dPhZrQmJkBtSvLxAeFwGyOuCnI"); // a-z
 
 /////////////////////////////////////////////////////////////////////////////
 
-#define HDRSIZE 6
+#define HDRSIZE 5
  
 inline void
 encode_header (char *data, int clientid, int seqno, int retry = 0)
 {
+  assert (clientid < 256);
+
   seqno &= SEQNO_MASK;
 
   u8 hdr[3] = {
-    clientid,
-    (seqno >> 8) | (retry << 6),
     seqno,
+    (seqno >> 8) | (retry << 6),
+    clientid,
   };
 
-  assert (clientid < 256);
-
-  cdc26.encode (data, hdr, 3);
+  cdc36.encode (data, hdr, 3);
 }
 
 inline void
@@ -312,10 +324,10 @@ decode_header (char *data, int &clientid, int &seqno)
 {
   u8 hdr[3];
 
-  cdc26.decode (hdr, data, HDRSIZE);
+  cdc36.decode (hdr, data, HDRSIZE);
 
-  clientid = hdr[0];
-  seqno = ((hdr[1] << 8) | hdr[2]) & SEQNO_MASK;
+  clientid = hdr[2];
+  seqno = ((hdr[1] << 8) | hdr[0]) & SEQNO_MASK;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -438,28 +450,30 @@ struct dns_cfg
 {
   static int next_uid;
 
-  u8 id1, id2, id3, id4;
+  u8 chksum;
+  u8 rrtype;
+  u16 uid; // to make request unique
 
   u8 version;
   u8 flags;
-  u8 rrtype;
-  u8 def_ttl;
+  u16 max_size;
+
+  u8 id1, id2, id3, id4;
 
   u16 client;
-  u16 uid; // to make request unique
+  u8 def_ttl;
+  u8 r0;
 
-  u16 max_size;
-  u8 seq_cdc;
-  u8 req_cdc;
+  u8 syn_cdc; // cdc en/decoder for syn (A?) requests
+  u8 hdr_cdc; // cdc en/decoder for regular request headers
+  u8 req_cdc; // cdc en/decoder for regular (ANY?) request data
+  u8 rep_cdc; // cdc en/decoder for regular (TXT) replies, 0 == 8 bit encoding
 
-  u8 rep_cdc;
-  u8 delay; // time in 0.01s units that the server may delay replying packets
-  u8 r3, r4;
-
-  u8 r5, r6, r7, r8;
+  u8 r1, r2, r3, r4;
 
   void reset (int clientid);
   bool valid ();
+  u8 get_chksum ();
 };
 
 int dns_cfg::next_uid;
@@ -467,26 +481,45 @@ int dns_cfg::next_uid;
 void
 dns_cfg::reset (int clientid)
 {
+  // this ID must result in some mixed-case characters in cdc26-encoding
   id1 = 'G';
   id2 = 'V';
   id3 = 'P';
   id4 = 'E';
 
-  version  = 1;
+  version  = 2;
 
   rrtype   = RR_TYPE_TXT;
   flags    = 0;
   def_ttl  = 0;
-  seq_cdc  = 26;
-  req_cdc  = 62;
+  syn_cdc  = 26;
+  hdr_cdc  = 36;
+  req_cdc  = conf.dns_case_preserving ? 62 : 36;
   rep_cdc  = 0;
   max_size = htons (MAX_PKT_SIZE);
   client   = htons (clientid);
-  uid      = next_uid++;
-  delay    = 0;
+  uid      = ++next_uid;
 
-  r3 = r4 = 0;
-  r4 = r5 = r6 = r7 = 0;
+  r0 = r1 = r2 = r3 = r4 = 0;
+
+  chksum = get_chksum ();
+}
+
+// simple but not trivial chksum
+u8
+dns_cfg::get_chksum ()
+{
+  unsigned int sum = 0xff00; // only 16 bits required
+
+  u8 old_chksum = chksum;
+  chksum = 0;
+
+  for (unsigned int i = 0; i < sizeof (*this); ++i)
+    sum += ((u8 *)this)[i] * (i + 1);
+
+  chksum = old_chksum;
+
+  return sum + (sum >> 8);
 }
 
 bool
@@ -498,10 +531,12 @@ dns_cfg::valid ()
       && id2 == 'V'
       && id3 == 'P'
       && id4 == 'E'
-      && seq_cdc == 26
-      && req_cdc == 62
+      && version == 2
+      && syn_cdc == 26
+      && hdr_cdc == 36
+      && (req_cdc == 36 || req_cdc == 62)
       && rep_cdc == 0
-      && version == 1;
+      && chksum == get_chksum ();
 }
 
 struct dns_packet : net_packet
@@ -581,6 +616,7 @@ struct dns_connection
   dns_cfg cfg;
 
   bool established;
+  const basecoder *cdc;
 
   tstamp last_received;
   tstamp last_sent;
@@ -594,6 +630,9 @@ struct dns_connection
 
   inline void time_cb (ev::timer &w, int revents); ev::timer tw;
   void receive_rep (dns_rcv *r);
+
+  void reset (); // quite like tcp RST
+  void set_cfg (); // to be called after any cfg changes
 
   dns_connection (connection *c);
   ~dns_connection ();
@@ -677,12 +716,12 @@ dns_snd::gen_stream_req (int seqno, byte_stream &stream)
   char enc[256], *encp = enc;
   encode_header (enc, THISNODE->id, seqno);
 
-  int datalen = cdc62.decode_len (dlen - (dlen + MAX_LBL_SIZE - 1) / MAX_LBL_SIZE - HDRSIZE);
+  int datalen = dns->cdc->decode_len (dlen - (dlen + MAX_LBL_SIZE - 1) / MAX_LBL_SIZE - HDRSIZE);
 
   if (datalen > stream.size ())
     datalen = stream.size ();
 
-  int enclen = cdc62.encode (enc + HDRSIZE, stream.begin (), datalen) + HDRSIZE;
+  int enclen = dns->cdc->encode (enc + HDRSIZE, stream.begin (), datalen) + HDRSIZE;
   stream.remove (datalen);
 
   while (enclen)
@@ -765,6 +804,30 @@ dns_connection::dns_connection (connection *c)
 
   vpn = c->vpn;
 
+  reset ();
+}
+
+dns_connection::~dns_connection ()
+{
+  reset ();
+}
+
+void
+dns_connection::reset ()
+{
+  while (!rcvpq.empty ())
+    {
+      delete rcvpq.back ();
+      rcvpq.pop_back ();
+    }
+
+  for (int i = vpn->dns_sndpq.size (); i--; )
+    if (vpn->dns_sndpq [i]->dns == this)
+      {
+        vpn->dns_sndpq [i] = vpn->dns_sndpq.back ();
+        vpn->dns_sndpq.pop_back ();
+      }
+
   established = false;
 
   rcvseq = repseq = sndseq = 0;
@@ -775,12 +838,10 @@ dns_connection::dns_connection (connection *c)
   min_latency = INITIAL_TIMEOUT;
 }
 
-dns_connection::~dns_connection ()
+void
+dns_connection::set_cfg ()
 {
-  for (vector<dns_rcv *>::iterator i = rcvpq.begin ();
-       i != rcvpq.end ();
-       ++i)
-    delete *i;
+  cdc = cfg.req_cdc == 36 ? &cdc36 : &cdc62;
 }
 
 void
@@ -829,7 +890,7 @@ dns_connection::receive_rep (dns_rcv *r)
           {
             // MUST never overflow, can be caused by data corruption, TODO
             slog (L_CRIT, "DNS: !rcvdq.put (r->data, r->datalen)");
-            c->dnsv4_reset_connection ();
+            reset ();
             return;
           }
 
@@ -891,9 +952,6 @@ vpn::dnsv4_server (dns_packet &pkt)
               int client, seqno;
               decode_header (qname, client, seqno);
 
-              u8 data[MAXSIZE];
-              int datalen = cdc62.decode (data, qname + HDRSIZE, qlen - (dlen + 1 + HDRSIZE));
-
               if (0 < client && client <= conns.size ())
                 {
                   connection *c = conns [client - 1];
@@ -902,6 +960,9 @@ vpn::dnsv4_server (dns_packet &pkt)
 
                   if (dns)
                     {
+                      u8 data[MAXSIZE];
+                      int datalen = dns->cdc->decode (data, qname + HDRSIZE, qlen - (dlen + 1 + HDRSIZE));
+
                       for (vector<dns_rcv *>::iterator i = dns->rcvpq.end (); i-- != dns->rcvpq.begin (); )
                         if (SEQNO_EQ ((*i)->seqno, seqno))
                           {
@@ -1012,8 +1073,6 @@ vpn::dnsv4_server (dns_packet &pkt)
               pkt [offs++] = 0; pkt [offs++] = cfg.def_ttl; // TTL
               pkt [offs++] = 0; pkt [offs++] = 4; // rdlength
 
-              slog (L_INFO, _("DNS: client %d connects"), client);
-
               pkt [offs++] = CMD_IP_1; pkt [offs++] = CMD_IP_2; pkt [offs++] = CMD_IP_3;
               pkt [offs++] = CMD_IP_REJ;
 
@@ -1023,11 +1082,20 @@ vpn::dnsv4_server (dns_packet &pkt)
 
                   if (cfg.valid ())
                     {
-                      pkt [offs - 1] = CMD_IP_SYN;
+                      slog (L_INFO, _("DNS: client %d connects (version %d, req_cdc %d)"), client, cfg.version, cfg.req_cdc);
+
+                      // check for any encoding mismatches - hints at a case problem
+                      char qname2 [MAX_ENC_LEN];
+                      cdc26.encode (qname2, (u8 *)&cfg, sizeof (dns_cfg));
 
                       delete c->dns;
+
+                      pkt [offs - 1] = memcmp (qname, qname2, cdc26.encode_len (sizeof (dns_cfg)))
+                                       ? CMD_IP_CSE : CMD_IP_SYN;
+
                       c->dns = new dns_connection (c);
                       c->dns->cfg = cfg;
+                      c->dns->set_cfg ();
                     }
                 }
             }
@@ -1057,8 +1125,9 @@ vpn::dnsv4_client (dns_packet &pkt)
         int seqno = (*i)->seqno;
         u8 data[MAXSIZE], *datap = data;
         //printf ("rcv pkt %x\n", seqno);//D
+        bool back_off = (*i)->retry;
 
-        if ((*i)->retry)
+        if (back_off)
           {
             dns->send_interval *= 1.01;
             if (dns->send_interval > MAX_SEND_INTERVAL)
@@ -1108,7 +1177,7 @@ vpn::dnsv4_client (dns_packet &pkt)
                     ttl |= pkt [offs++];
                 u16 rdlen = pkt [offs++] << 8; rdlen |= pkt [offs++];
 
-                if (qtype == RR_TYPE_NULL || qtype == RR_TYPE_TXT)
+                if (qtype == RR_TYPE_NULL || qtype == RR_TYPE_TXT || qtype == dns->cfg.rrtype)
                   {
                     if (rdlen <= MAXSIZE - offs)
                       {
@@ -1144,19 +1213,41 @@ vpn::dnsv4_client (dns_packet &pkt)
 
                         if (ip [3] == CMD_IP_RST)
                           {
-                            slog (L_DEBUG, _("DNS: got tunnel RST request"));
+                            slog (L_DEBUG, _("DNS: got tunnel RST request."));
 
-                            c->dnsv4_reset_connection ();
+                            dns->reset ();
+                            return;
                           }
                         else if (ip [3] == CMD_IP_SYN)
                           {
                             slog (L_DEBUG, _("DNS: got tunnel SYN reply, server likes us."));
                             dns->established = true;
                           }
+                        else if (ip [3] == CMD_IP_CSE)
+                          {
+                            if (conf.dns_case_preserving)
+                              {
+                                slog (L_INFO, _("DNS: got tunnel CSE reply, globally downgrading to case-insensitive protocol."));
+                                conf.dns_case_preserving = false;
+                                dns->reset ();
+                                return;
+                              }
+                            else
+                              {
+                                slog (L_DEBUG, _("DNS: got tunnel CSE reply, server likes us."));
+                                dns->established = true;
+                              }
+                          }
                         else if (ip [3] == CMD_IP_REJ)
-                          slog (L_ERR, _("DNS: got tunnel REJ reply, server does not like us."));
+                          {
+                            slog (L_ERR, _("DNS: got tunnel REJ reply, server does not like us."));
+                            dns->tw.start (60.);
+                          }
                         else
-                          slog (L_INFO, _("DNS: got unknown meta command %02x"), ip [3]);
+                          {
+                            slog (L_INFO, _("DNS: got unknown meta command %02x"), ip [3]);
+                            dns->tw.start (60.);
+                          }
                       }
                     else
                       slog (L_INFO, _("DNS: got spurious a record %d.%d.%d.%d"),
@@ -1184,6 +1275,16 @@ vpn::dnsv4_client (dns_packet &pkt)
         // todo: pkt now used
         if (datap)
           dns->receive_rep (new dns_rcv (seqno, data, datap - data));
+        else if (dns_sndpq.empty ()) // no data received, and nothing to send - idle
+          {
+            dns->send_interval *= 1.1;
+
+            if (dns->send_interval < MIN_POLL_INTERVAL)
+              dns->send_interval = MIN_POLL_INTERVAL;
+
+            if (dns->send_interval > MAX_POLL_INTERVAL && !back_off)
+              dns->send_interval = MAX_POLL_INTERVAL;
+          }
 
         break;
       }
@@ -1232,12 +1333,6 @@ vpn::send_dnsv4_packet (vpn_packet *pkt, const sockinfo &si, int tos)
 
   // always return true even if the buffer overflows
   return true;
-}
-
-void
-connection::dnsv4_reset_connection ()
-{
-  //delete dns; dns = 0; //TODO
 }
 
 #define NEXT(w) do { if (next > (w)) next = w; } while (0)
@@ -1290,6 +1385,7 @@ dns_connection::time_cb (ev::timer &w, int revents)
               send = new dns_snd (this);
 
               cfg.reset (THISNODE->id);
+              set_cfg ();
               send->gen_syn_req ();
             }
         }

@@ -1,6 +1,6 @@
 /*
-    conf.c -- configuration code
-    Copyright (C) 2003-2008 Marc Lehmann <gvpe@schmorp.de>
+    conf.C -- configuration code
+    Copyright (C) 2003-2008,2011 Marc Lehmann <gvpe@schmorp.de>
  
     This file is part of GVPE.
 
@@ -153,6 +153,7 @@ configuration::init ()
 #if ENABLE_DNS
   default_node.dns_port    = 0; // default is 0 == client
 
+  dns_case_preserving = true;
   dns_forw_host       = strdup ("127.0.0.1");
   dns_forw_port       = 53;
   dns_timeout_factor  = DEFAULT_DNS_TIMEOUT_FACTOR;
@@ -199,6 +200,12 @@ configuration::clear ()
   init ();
 }
 
+//static bool
+//is_true (const char *name)
+//{
+  //re
+//}
+
 #define parse_bool(target,name,trueval,falseval) do {		\
   if      (!strcmp (val, "yes"))	target = trueval;	\
   else if (!strcmp (val, "no"))		target = falseval;	\
@@ -237,18 +244,23 @@ configuration_parser::parse_line (char *line)
   if (!val || val[0] == '#')
     return _("no value given for variable. (ignored)");
 
-  if (!strcmp (var, "on"))
+  else if (!strcmp (var, "on"))
     {
       if (!::thisnode
           || (val[0] == '!' && strcmp (val + 1, ::thisnode))
           || !strcmp (val, ::thisnode))
         return parse_line (strtok (NULL, "\n\r"));
-      else
-        return 0;
+    }
+
+  else if (!strcmp (var, "include"))
+    {
+      char *fname = conf.config_filename (val);
+      parse_file (fname);
+      free (fname);
     }
 
   // truly global
-  if (!strcmp (var, "loglevel"))
+  else if (!strcmp (var, "loglevel"))
     {
       loglevel l = string_to_loglevel (val);
 
@@ -370,6 +382,12 @@ configuration_parser::parse_line (char *line)
       conf.dns_max_outstanding = atoi (val);
 #endif
     }
+  else if (!strcmp (var, "dns-case-preserving"))
+    {
+#if ENABLE_DNS
+      parse_bool (conf.dns_case_preserving, "dns-case-preserving", true, false);
+#endif
+    }
   else if (!strcmp (var, "http-proxy-host"))
     {
 #if ENABLE_HTTP_PROXY
@@ -477,7 +495,7 @@ configuration_parser::parse_line (char *line)
 
   // unknown or misplaced
   else
-    return _("unknown configuration directive. (ignored)");
+    return _("unknown configuration directive - ignored");
 
   return 0;
 }
@@ -533,23 +551,12 @@ configuration_parser::parse_argv ()
     }
 }
 
-configuration_parser::configuration_parser (configuration &conf,
-                                            bool need_keys,
-                                            int argc,
-                                            char **argv)
-: conf (conf),need_keys (need_keys), argc (argc), argv (argv)
+void
+configuration_parser::parse_file (const char *fname)
 {
-  char *fname;
-  FILE *f;
-
-  conf.clear ();
-
-  asprintf (&fname, "%s/gvpe.conf", confbase);
-  f = fopen (fname, "r");
-
-  if (f)
+  if (FILE *f = fopen (fname, "r"))
     {
-      char line[16384];
+      char line [2048];
       int lineno = 0;
       node = &conf.default_node;
 
@@ -572,13 +579,25 @@ configuration_parser::configuration_parser (configuration &conf,
       slog (L_ERR, _("unable to read config file '%s': %s"), fname, strerror (errno));
       exit (EXIT_FAILURE);
     }
+}
 
+configuration_parser::configuration_parser (configuration &conf,
+                                            bool need_keys,
+                                            int argc,
+                                            char **argv)
+: conf (conf),need_keys (need_keys), argc (argc), argv (argv)
+{
+  char *fname;
+
+  conf.clear ();
+
+  asprintf (&fname, "%s/gvpe.conf", confbase);
+  parse_file (fname);
   free (fname);
 
   fname = conf.config_filename (conf.prikeyfile, "hostkey");
 
-  f = fopen (fname, "r");
-  if (f)
+  if (FILE *f = fopen (fname, "r"))
     {
       conf.rsa_key = RSA_new ();
 
@@ -601,6 +620,8 @@ configuration_parser::configuration_parser (configuration &conf,
         exit (EXIT_FAILURE);
     }
 
+  free (fname);
+
   if (need_keys && ::thisnode
       && conf.rsa_key && conf.thisnode && conf.thisnode->rsa_key)
     if (BN_cmp (conf.rsa_key->n, conf.thisnode->rsa_key->n) != 0
@@ -609,8 +630,6 @@ configuration_parser::configuration_parser (configuration &conf,
         slog (L_NOTICE, _("private hostkey and public node key mismatch: is '%s' the correct node?"), ::thisnode);
         exit (EXIT_FAILURE);
       }
-
-  free (fname);
 
   for (configuration::node_vector::iterator i = conf.nodes.begin(); i != conf.nodes.end(); ++i)
     (*i)->finalise ();
