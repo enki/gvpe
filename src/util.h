@@ -154,8 +154,6 @@ rsa_decrypt (RSA *key, const rsacrypt &encr, rsaclear &chg)
 
 /*****************************************************************************/
 
-// run work_cb in another thread, call done_cb in main thread when finished
-// only one work_cb will execute at any one time.
 void async (callback<void ()> work_cb, callback<void ()> done_cb);
 
 #endif
