@@ -134,10 +134,10 @@ rsa_hash (const rsaid &id, const rsachallenge &chg, rsaresponse &h)
   EVP_MD_CTX ctx;
 
   EVP_MD_CTX_init (&ctx);
-  require (EVP_DigestInit (&ctx, RSA_HASH));
-  require (EVP_DigestUpdate(&ctx, &chg, sizeof chg));
-  require (EVP_DigestUpdate(&ctx, &id, sizeof id));
-  require (EVP_DigestFinal (&ctx, (unsigned char *)&h, 0));
+  require (EVP_DigestInit   (&ctx, RSA_HASH));
+  require (EVP_DigestUpdate (&ctx, &chg, sizeof chg));
+  require (EVP_DigestUpdate (&ctx, &id, sizeof id));
+  require (EVP_DigestFinal  (&ctx, (unsigned char *)&h, 0));
   EVP_MD_CTX_cleanup (&ctx);
 }
 

@@ -2,7 +2,7 @@
     util.h -- process management and other utility functions
     Copyright (C) 1998-2002 Ivo Timmermans <ivo@o2w.nl>
                   2000-2002 Guus Sliepen <guus@sliepen.eu.org>
-                  2003-2008 Marc Lehmann <gvpe@schmorp.de>
+                  2003-2011 Marc Lehmann <gvpe@schmorp.de>
  
     This file is part of GVPE.
 
@@ -121,7 +121,7 @@ struct sliding_window
     }
 };
 
-typedef callback<const char * ()> run_script_cb;
+typedef callback<const char *()> run_script_cb;
 
 // run a shell script (or actually an external program).
 pid_t run_script (const run_script_cb &cb, bool wait);
@@ -151,6 +151,12 @@ rsa_decrypt (RSA *key, const rsacrypt &encr, rsaclear &chg)
                               (unsigned char *)&encr, (unsigned char *)&chg,
                               key, RSA_PKCS1_OAEP_PADDING) > 0;
 }
+
+/*****************************************************************************/
+
+// run work_cb in another thread, call done_cb in main thread when finished
+// only one work_cb will execute at any one time.
+void async (callback<void ()> work_cb, callback<void ()> done_cb);
 
 #endif
 

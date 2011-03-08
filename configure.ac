@@ -245,6 +245,22 @@ if test "x$openssl_include" != x; then
 fi
 dnl tinc_ZLIB
 
+AC_ARG_ENABLE(threads,
+  [AS_HELP_STRING(--enable-threads,try to use threads for long-running asynchronous operations (default enabled).)],
+  [try_threads=$enableval],
+  [try_threads=yes]
+)
+
+if test "x$try_threads" = xyes; then
+   AC_CHECK_HEADER(pthread.h,[
+      LIBS="$LIBS -lpthread"
+      AC_COMPILE_IFELSE(
+         [AC_LANG_PROGRAM([#include <pthread.h>], [pthread_t id; pthread_create (&id, 0, 0, 0);])],
+         [AC_DEFINE_UNQUOTED(ENABLE_PTHREADS, 1, [POSIX thread support.])]
+      )
+   ])
+fi
+
 AC_ARG_ENABLE(static-daemon,
   [AS_HELP_STRING(--enable-static-daemon,enable statically linked daemon.)],
   [LDFLAGS_DAEMON=-static]
@@ -420,6 +436,11 @@ grep ENABLE_ config.h | sed -e 's/^/*** /'
 if test "x$DIGEST" = xmd4; then
 echo "***"
 echo "*** WARNING: The digest you have chosen ($DIGEST) is known to be insecure"
+fi
+
+if test "x$DIGEST" = xmd5; then
+echo "***"
+echo "*** WARNING: The digest you have chosen ($DIGEST) is probably insecure"
 fi
 
 if test "$HMAC" -lt 12; then

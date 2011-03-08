@@ -40,6 +40,9 @@
    language is requested. */
 #undef ENABLE_NLS
 
+/* POSIX thread support. */
+#undef ENABLE_PTHREADS
+
 /* TCP protocol support. */
 #undef ENABLE_TCP
 
@@ -62,7 +65,7 @@
 /* Define to 1 if you have the `clock_gettime' function. */
 #undef HAVE_CLOCK_GETTIME
 
-/* "use syscall interface for clock_gettime" */
+/* Define to 1 to use the syscall interface for clock_gettime */
 #undef HAVE_CLOCK_SYSCALL
 
 /* Cygwin */
@@ -90,6 +93,9 @@
 /* Define to 1 if you have the <fcntl.h> header file. */
 #undef HAVE_FCNTL_H
 
+/* Define to 1 if the floor function is available */
+#undef HAVE_FLOOR
+
 /* FreeBSD */
 #undef HAVE_FREEBSD
 
@@ -114,11 +120,11 @@
 /* Define to 1 if you have the `gmp' library (-lgmp). */
 #undef HAVE_LIBGMP
 
-/* Define to 1 if you have the `m' library (-lm). */
-#undef HAVE_LIBM
-
 /* Define to 1 if you have the `nsl' library (-lnsl). */
 #undef HAVE_LIBNSL
+
+/* Define to 1 if you have the `pthread' library (-lpthread). */
+#undef HAVE_LIBPTHREAD
 
 /* Define to 1 if you have the `rt' library (-lrt). */
 #undef HAVE_LIBRT

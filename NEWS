@@ -23,6 +23,7 @@ GVPE NEWS
              needless packets.
            - poll more aggressively when idling in dns (poll once per
              second as opposed to once per 5 seconds).
+        - upgrade to libev 4 API.
 
 2.24 Sat Feb 12 05:15:48 CET 2011
 	- protocol version 0.1, compatible with older releases.

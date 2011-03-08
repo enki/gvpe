@@ -734,6 +734,7 @@ enable_iftype
 with_kernel
 with_openssl_include
 with_openssl_lib
+enable_threads
 enable_static_daemon
 enable_icmp
 enable_tcp
@@ -1394,6 +1395,8 @@ Optional Features:
                           "tincd/mingw" "tincd/raw_socket" "tincd/uml_socket";
                           Broken combinations are: "tincd/cygwin"; The default
                           is to autodetect.
+  --enable-threads        try to use threads for long-running asynchronous
+                          operations (default enabled).
   --enable-static-daemon  enable statically linked daemon.
   --disable-icmp          enable icmp protocol support (default enabled).
   --disable-tcp           enable tcp protocol support (default enabled).
@@ -8368,6 +8371,46 @@ if test "x$openssl_include" != x; then
    CXXFLAGS="$CXXFLAGS -I$openssl_include"
 fi
 
+# Check whether --enable-threads was given.
+if test "${enable_threads+set}" = set; then :
+  enableval=$enable_threads; try_threads=$enableval
+else
+  try_threads=yes
+
+fi
+
+
+if test "x$try_threads" = xyes; then
+   ac_fn_cxx_check_header_mongrel "$LINENO" "pthread.h" "ac_cv_header_pthread_h" "$ac_includes_default"
+if test "x$ac_cv_header_pthread_h" = x""yes; then :
+
+      LIBS="$LIBS -lpthread"
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <pthread.h>
+int
+main ()
+{
+pthread_t id; pthread_create (&id, 0, 0, 0);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define ENABLE_PTHREADS 1
+_ACEOF
+
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+fi
+
+
+fi
+
 # Check whether --enable-static-daemon was given.
 if test "${enable_static_daemon+set}" = set; then :
   enableval=$enable_static_daemon; LDFLAGS_DAEMON=-static
@@ -10189,6 +10232,11 @@ grep ENABLE_ config.h | sed -e 's/^/*** /'
 if test "x$DIGEST" = xmd4; then
 echo "***"
 echo "*** WARNING: The digest you have chosen ($DIGEST) is known to be insecure"
+fi
+
+if test "x$DIGEST" = xmd5; then
+echo "***"
+echo "*** WARNING: The digest you have chosen ($DIGEST) is probably insecure"
 fi
 
 if test "$HMAC" -lt 12; then

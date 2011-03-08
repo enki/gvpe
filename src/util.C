@@ -1,6 +1,6 @@
 /*
     util.C -- process management and other utility functions
-    Copyright (C) 2003-2008 Marc Lehmann <gvpe@schmorp.de>
+    Copyright (C) 2003-2011 Marc Lehmann <gvpe@schmorp.de>
     
     Some of these are taken from tinc, see the AUTHORS file.
  
@@ -37,12 +37,18 @@
 #include <cstdlib>
 #include <cstring>
 
+#include <queue>
+
 #include <errno.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <time.h>
+
+#if ENABLE_PTHREADS
+# include <pthread.h>
+#endif
 
 #include "netcompat.h"
 
@@ -139,6 +145,8 @@ detach (int do_detach)
   return 0;
 }
 
+/*****************************************************************************/
+
 pid_t
 run_script (const run_script_cb &cb, bool wait)
 {
@@ -192,6 +200,99 @@ run_script (const run_script_cb &cb, bool wait)
 
   return pid;
 }
+
+/*****************************************************************************/
+
+#if 0 /* not yet used */
+
+#if ENABLE_PTHREADS
+struct async_cb
+{
+  callback<void ()> work_cb;
+  callback<void ()> done_cb;
+};
+
+static ev::async async_done_w;
+static std::queue< callback<void ()> > async_q;
+
+static callback<void ()> work_cb;
+
+static void *
+async_exec (void *)
+{
+  work_cb ();
+  async_done_w.send ();
+
+  return 0;
+}
+
+static void
+async_q_next ()
+{
+  work_cb = async_q.front (); async_q.pop ();
+
+  sigset_t fullsigset, oldsigset;
+  pthread_attr_t attr;
+  pthread_t tid;
+
+  pthread_attr_init (&attr);
+  pthread_attr_setdetachstate (&attr, PTHREAD_CREATE_DETACHED);
+  //pthread_attr_setstacksize (&attr, PTHREAD_STACK_MIN < X_STACKSIZE ? X_STACKSIZE : PTHREAD_STACK_MIN);
+  sigfillset (&fullsigset);
+  pthread_sigmask (SIG_SETMASK, &fullsigset, &oldsigset);
+
+  if (pthread_create (&tid, &attr, async_exec, 0))
+    async_exec (0);
+
+  pthread_sigmask (SIG_SETMASK, &oldsigset, 0);
+  pthread_attr_destroy (&attr);
+}
+
+namespace {
+  void
+  async_done (ev::async &w, int revents)
+  {
+    callback<void ()> done_cb = async_q.front (); async_q.pop ();
+
+    if (async_q.empty ())
+      async_done_w.stop ();
+    else
+      async_q_next ();
+
+    done_cb ();
+  }
+};
+
+void
+async (callback<void ()> work_cb, callback<void ()> done_cb)
+{
+  bool was_empty = async_q.empty ();
+
+  async_q.push (work_cb);
+  async_q.push (done_cb);
+
+  if (was_empty)
+    {
+      async_done_w.set<async_done> ();
+      async_done_w.start ();
+      async_q_next ();
+    }
+}
+
+#else
+
+void
+async (callback<void ()> work_cb, callback<void ()> done_cb)
+{
+  work_cb ();
+  done_cb ();
+}
+
+#endif
+
+#endif
+
+/*****************************************************************************/
 
 #if ENABLE_HTTP_PROXY
 // works like strdup

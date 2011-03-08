@@ -208,6 +208,17 @@ setup_signals (void)
   act.sa_handler = sigterm_handler; sigaction (SIGTERM, &act, NULL);
 }
 
+struct Xob {//D
+  void wcbx ()
+  {
+    printf ("wcbx %p\n", pthread_self());
+  }
+  void dcbx ()
+  {
+    printf ("dcbx %p\n", pthread_self());
+  }
+};
+
 int
 main (int argc, char **argv, char **envp)
 {
@@ -288,7 +299,7 @@ main (int argc, char **argv, char **envp)
 
   if (!network.setup ())
     {
-      ev_loop (EV_DEFAULT_ 0);
+      ev_run (EV_DEFAULT_ 0);
       cleanup_and_exit (EXIT_FAILURE);
     }
 
