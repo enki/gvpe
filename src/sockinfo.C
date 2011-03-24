@@ -129,26 +129,20 @@ sockinfo::supported_protocols (conf_node *conf)
 {
   u8 protocols = prot;
 
-  if (prot & (PROT_UDPv4 | PROT_TCPv4))
+  if (prot & (PROT_IPv4 | PROT_ICMPv4 | PROT_UDPv4 | PROT_TCPv4))
     protocols |= PROT_IPv4 | PROT_ICMPv4;
 
-  if (conf
-      && prot & PROTv4
-      && conf->protocols & PROT_UDPv4
-      && conf->udp_port)
-    protocols |= PROT_UDPv4;
+  if (conf && prot & PROTv4)
+    {
+      if (conf->protocols & PROT_UDPv4 && conf->udp_port)
+        protocols |= PROT_UDPv4;
 
-  if (conf
-      && prot & PROTv4
-      && conf->protocols & PROT_TCPv4
-      && conf->tcp_port)
-    protocols |= PROT_TCPv4;
+      if (conf->protocols & PROT_TCPv4 && conf->tcp_port)
+        protocols |= PROT_TCPv4;
 
-  if (conf
-      && prot & PROTv4
-      && conf->protocols & PROT_DNSv4
-      && conf->dns_port)
-    protocols |= PROT_DNSv4;
+      if (conf->protocols & PROT_DNSv4 && conf->dns_port)
+        protocols |= PROT_DNSv4;
+    }
 
   return protocols;
 }

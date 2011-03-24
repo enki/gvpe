@@ -1312,17 +1312,23 @@ connection::recv_vpn_packet (vpn_packet *pkt, const sockinfo &rsi)
                 protocol = best_protocol (c->conf->protocols & THISNODE->protocols & p->si.supported_protocols (c->conf));
                 p->si.upgrade_protocol (protocol, c->conf);
 
-                slog (L_TRACE, "%s >> PT_CONNECT_INFO(%s,%s,p%02x) [%d]",
+                slog (L_TRACE, "%s >> PT_CONNECT_INFO(%s,%s,protocols=%02x,protocol=%02x,upgradable=%02x) [%d]",
                                conf->nodename,
                                vpn->conns[p->id - 1]->conf->nodename,
                                (const char *)p->si,
                                p->protocols,
+                               protocol,
+                               p->si.supported_protocols (c->conf),
                                !c->ictx && !c->octx);
 
                 const sockinfo &dsi = forward_si (p->si);
 
                 if (dsi.valid ())
                   c->send_auth_request (dsi, true);
+                else
+                  slog (L_INFO, "connect info for %s received (%s), but still unable to contact.",
+                                 vpn->conns[p->id - 1]->conf->nodename,
+                                 (const char *)p->si);
               }
             else
               slog (L_WARN,
