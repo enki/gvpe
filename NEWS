@@ -4,6 +4,8 @@ GVPE NEWS
           protocols are enabled - this is necessary when you have nodes with
           completely unknown protocols, to force mediated connection requests.
         - INCOMPATIBLE CHANGE: dns transport protocol bumped to version 2.
+        - configure didn't detect openssl 1.0 because SHA1_version became private
+          (patch by TANIGUCHI Takaki).
 	- core protocol version 0.1, compatible with older releases.
         - fix a bug where nodes would tell the other side that it supports
           the same protocols as that other side, instead of its own.
@@ -11,6 +13,7 @@ GVPE NEWS
         - work around append-bugs in uclibc by using an extra seek.
         - new "include" directive for the config file.
         - gvpectrl no longer evaluates any "on" directives.
+        - icmp and rawip protocols weren't upgradable to each other.
         - major, but incremental, dns transport improvements:
            - do not simply abort in some error cases in the dns transport,
              but try to recover.

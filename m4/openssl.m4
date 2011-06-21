@@ -24,7 +24,7 @@ AC_DEFUN(tinc_OPENSSL,
 
   CPPFLAGS="$tinc_ac_save_CPPFLAGS"
 
-  AC_CHECK_LIB(crypto, SHA1_version,
+  AC_CHECK_LIB(crypto, SHA1_Init,
     [LIBS="$LIBS -lcrypto"],
     [AC_MSG_ERROR([OpenSSL libraries not found.])]
   )
